@@ -27,8 +27,8 @@ class SettingController extends BaseController
         'Mail.encryption'     => 'tls',
         'Mail.fromEmail'      => 'noreply@example.com',
         'Mail.fromName'       => 'CI4 RBAC',
-        'App.navbarBg'        => '#6777ef',
-        'App.sidebarActive'   => '#6777ef',
+        'App.authAsideStart'  => '#2f3f63',
+        'App.authAsideEnd'    => '#1b2338',
     ];
 
     /**
@@ -280,21 +280,21 @@ class SettingController extends BaseController
     }
 
     /**
-     * Update pengaturan tampilan (warna navbar & sidebar)
+     * Update pengaturan tampilan (warna background auth aside)
      */
     public function updateAppearance()
     {
         $rules = [
-            'navbar_bg'      => 'required|max_length[7]|regex_match[/^#[0-9A-Fa-f]{6}$/]',
-            'sidebar_active' => 'required|max_length[7]|regex_match[/^#[0-9A-Fa-f]{6}$/]',
+            'auth_aside_start' => 'required|max_length[7]|regex_match[/^#[0-9A-Fa-f]{6}$/]',
+            'auth_aside_end'   => 'required|max_length[7]|regex_match[/^#[0-9A-Fa-f]{6}$/]',
         ];
 
         if (! $this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        setting('App.navbarBg', $this->request->getPost('navbar_bg'));
-        setting('App.sidebarActive', $this->request->getPost('sidebar_active'));
+        setting('App.authAsideStart', $this->request->getPost('auth_aside_start'));
+        setting('App.authAsideEnd', $this->request->getPost('auth_aside_end'));
 
         return redirect()->to('/admin/settings?tab=appearance')->with('success', 'Pengaturan tampilan berhasil diperbarui.');
     }
@@ -311,7 +311,7 @@ class SettingController extends BaseController
             'general' => ['App.siteName', 'App.siteNameShort', 'App.siteDescription', 'App.siteFooter', 'App.siteVersion', 'App.siteLogo', 'App.siteFavicon'],
             'auth'    => ['App.defaultRole', 'Auth.allowRegistration', 'App.maintenanceMode', 'App.maintenanceMsg'],
             'mail'       => ['Mail.protocol', 'Mail.hostname', 'Mail.port', 'Mail.username', 'Mail.password', 'Mail.encryption', 'Mail.fromEmail', 'Mail.fromName', 'Email.protocol', 'Email.SMTPHost', 'Email.SMTPPort', 'Email.SMTPUser', 'Email.SMTPPass', 'Email.SMTPCrypto', 'Email.fromEmail', 'Email.fromName'],
-            'appearance' => ['App.navbarBg', 'App.sidebarActive'],
+            'appearance' => ['App.authAsideStart', 'App.authAsideEnd'],
             default      => array_keys($this->defaults),
         };
 

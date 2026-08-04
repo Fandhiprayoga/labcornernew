@@ -203,7 +203,7 @@ $s = function (string $key) use ($settings) {
             <section class="flex flex-col gap-3">
               <div class="flex flex-col gap-1">
                 <h2 class="page__section-title">Warna Tema</h2>
-                <p class="page__section-description">Kustomisasi warna navbar dan sidebar.</p>
+                <p class="page__section-description">Kustomisasi dua warna gradient untuk latar auth aside.</p>
               </div>
               <form action="<?= base_url('admin/settings/update/appearance') ?>" method="post">
                 <?= csrf_field() ?>
@@ -212,31 +212,31 @@ $s = function (string $key) use ($settings) {
                     <div class="grid grid-cols-12 gap-4">
                       <div class="col-span-12 sm:col-span-6">
                         <div class="field">
-                          <label for="navbar_bg" class="field__label">Warna Navbar <span class="text-danger">*</span></label>
+                          <label for="auth_aside_start" class="field__label">Warna Gradient Awal <span class="text-danger">*</span></label>
                           <div class="flex items-center gap-2">
-                            <input type="color" id="navbar_bg_picker"
-                                   value="<?= old('navbar_bg', $s('App.navbarBg') ?: '#6777ef') ?>"
+                            <input type="color" id="auth_aside_start_picker"
+                                   value="<?= old('auth_aside_start', $s('App.authAsideStart') ?: '#2f3f63') ?>"
                                    style="width: 44px; height: 36px; padding: 2px; cursor: pointer; border: 1px solid var(--color-border); border-radius: 6px;"
-                                   oninput="document.getElementById('navbar_bg').value=this.value; updatePreview()">
-                            <input type="text" class="input" id="navbar_bg" name="navbar_bg"
-                                   value="<?= old('navbar_bg', $s('App.navbarBg') ?: '#6777ef') ?>"
+                                   oninput="document.getElementById('auth_aside_start').value=this.value; updatePreview()">
+                            <input type="text" class="input" id="auth_aside_start" name="auth_aside_start"
+                                   value="<?= old('auth_aside_start', $s('App.authAsideStart') ?: '#2f3f63') ?>"
                                    pattern="^#[0-9A-Fa-f]{6}$" maxlength="7" required
-                                   oninput="document.getElementById('navbar_bg_picker').value=this.value; updatePreview()">
+                                   oninput="document.getElementById('auth_aside_start_picker').value=this.value; updatePreview()">
                           </div>
                         </div>
                       </div>
                       <div class="col-span-12 sm:col-span-6">
                         <div class="field">
-                          <label for="sidebar_active" class="field__label">Warna Menu Aktif Sidebar <span class="text-danger">*</span></label>
+                          <label for="auth_aside_end" class="field__label">Warna Gradient Akhir <span class="text-danger">*</span></label>
                           <div class="flex items-center gap-2">
-                            <input type="color" id="sidebar_active_picker"
-                                   value="<?= old('sidebar_active', $s('App.sidebarActive') ?: '#6777ef') ?>"
+                            <input type="color" id="auth_aside_end_picker"
+                                   value="<?= old('auth_aside_end', $s('App.authAsideEnd') ?: '#1b2338') ?>"
                                    style="width: 44px; height: 36px; padding: 2px; cursor: pointer; border: 1px solid var(--color-border); border-radius: 6px;"
-                                   oninput="document.getElementById('sidebar_active').value=this.value; updatePreview()">
-                            <input type="text" class="input" id="sidebar_active" name="sidebar_active"
-                                   value="<?= old('sidebar_active', $s('App.sidebarActive') ?: '#6777ef') ?>"
+                                   oninput="document.getElementById('auth_aside_end').value=this.value; updatePreview()">
+                            <input type="text" class="input" id="auth_aside_end" name="auth_aside_end"
+                                   value="<?= old('auth_aside_end', $s('App.authAsideEnd') ?: '#1b2338') ?>"
                                    pattern="^#[0-9A-Fa-f]{6}$" maxlength="7" required
-                                   oninput="document.getElementById('sidebar_active_picker').value=this.value; updatePreview()">
+                                   oninput="document.getElementById('auth_aside_end_picker').value=this.value; updatePreview()">
                           </div>
                         </div>
                       </div>
@@ -244,14 +244,14 @@ $s = function (string $key) use ($settings) {
 
                     <!-- Live Preview -->
                     <div class="mt-4 p-3 rounded" style="background: var(--color-surface-raised); border: 1px solid var(--color-border); max-width: 400px;">
-                      <div id="preview-navbar" style="height: 24px; border-radius: 4px; margin-bottom: 8px; background: <?= $s('App.navbarBg') ?: '#6777ef' ?>;"></div>
-                      <div class="flex">
-                        <div style="width: 100px; background: var(--color-surface-sunken); border-radius: 4px; padding: 8px;">
-                          <div style="background: rgba(128,128,128,0.1); border-radius: 3px; padding: 4px 6px; margin-bottom: 4px; font-size: 10px; opacity: 0.6;">Dashboard</div>
-                          <div id="preview-sidebar-active" style="border-radius: 3px; padding: 4px 6px; margin-bottom: 4px; color: #fff; font-size: 10px; font-weight: 600; background: <?= $s('App.sidebarActive') ?: '#6777ef' ?>;">Users</div>
-                          <div style="background: rgba(128,128,128,0.1); border-radius: 3px; padding: 4px 6px; font-size: 10px; opacity: 0.6;">Settings</div>
+                      <div id="preview-auth-aside"
+                           style="min-height: 140px; border-radius: 8px; padding: 12px; color: #fff; background: linear-gradient(160deg, <?= $s('App.authAsideStart') ?: '#2f3f63' ?> 0%, <?= $s('App.authAsideEnd') ?: '#1b2338' ?> 55%);">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+                          <div style="width:28px; height:28px; border-radius:6px; background: rgba(255,255,255,0.16);"></div>
+                          <div style="font-size:11px; font-weight:600;">Brand</div>
                         </div>
-                        <div style="flex:1; margin-left: 8px; background: var(--color-surface); border-radius: 4px; padding: 12px; font-size: 10px; opacity: 0.4;">Konten halaman</div>
+                        <div style="font-size:16px; line-height:1.2; font-weight:300; margin-bottom:8px;">Akses aman,<br>proses lebih tertata.</div>
+                        <div style="font-size:11px; opacity:0.75;">Pratinjau latar gradient untuk area auth aside.</div>
                       </div>
                     </div>
 
@@ -521,12 +521,12 @@ $s = function (string $key) use ($settings) {
   }
 
   function updatePreview() {
-    var nc = document.getElementById('navbar_bg') ? document.getElementById('navbar_bg').value : '#6777ef';
-    var sc = document.getElementById('sidebar_active') ? document.getElementById('sidebar_active').value : '#6777ef';
-    var pn = document.getElementById('preview-navbar');
-    var ps = document.getElementById('preview-sidebar-active');
-    if (pn) pn.style.background = nc;
-    if (ps) ps.style.background = sc;
+    var start = document.getElementById('auth_aside_start') ? document.getElementById('auth_aside_start').value : '#2f3f63';
+    var end = document.getElementById('auth_aside_end') ? document.getElementById('auth_aside_end').value : '#1b2338';
+    var preview = document.getElementById('preview-auth-aside');
+    if (preview) {
+      preview.style.background = 'linear-gradient(160deg, ' + start + ' 0%, ' + end + ' 55%)';
+    }
   }
 
   function toggleSmtp() {
