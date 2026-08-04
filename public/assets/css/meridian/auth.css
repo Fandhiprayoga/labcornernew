@@ -23,6 +23,26 @@
   flex-direction: column;
   gap: --spacing(6);
 }
+.auth__maintenance {
+  max-width: 28rem;
+  align-items: center;
+  text-align: center;
+  gap: --spacing(4);
+}
+.auth__maintenance-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-danger, #ef4444);
+}
+.auth__maintenance-copy {
+  display: flex;
+  flex-direction: column;
+  gap: --spacing(2);
+}
+.auth__maintenance-meta {
+  margin: 0;
+}
 .auth__aside {
   display: none;
   flex: 1 1 0;

@@ -3,8 +3,8 @@
 <div class="page__section">
   <div class="grid grid-cols-12 gap-4">
     <div class="col-span-12 lg:col-span-4">
-      <div class="card text-center">
-        <div class="card__body">
+      <div class="card text-center h-full">
+        <div class="card__body h-full flex flex-col items-center justify-center">
           <span class="avatar avatar--xl avatar--circle mx-auto mb-3" data-stisla-avatar>
             <span class="avatar__fallback" style="font-size: 2rem;"><?= esc(strtoupper(substr($currentUser->username, 0, 2))) ?></span>
           </span>
@@ -28,7 +28,7 @@
     </div>
 
     <div class="col-span-12 lg:col-span-8">
-      <div class="card">
+      <div class="card h-full">
         <div class="card__header">
           <span class="card__title">Edit Profil</span>
         </div>
