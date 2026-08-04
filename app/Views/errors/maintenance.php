@@ -1,5 +1,13 @@
 <?= $this->extend('layouts/auth') ?>
 
+<?= $this->section('auth_pitch_title') ?>
+Layanan sedang <span>dalam pemeliharaan</span> <span>terjadwal.</span>
+<?= $this->endSection() ?>
+
+<?= $this->section('auth_pitch_lede') ?>
+Kami sedang meningkatkan kualitas sistem agar layanan kembali tersedia dengan performa yang lebih optimal.
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 <div class="auth__form auth__maintenance">
   <div class="auth__maintenance-icon" aria-hidden="true">
@@ -13,7 +21,7 @@
   </div>
 
   <div class="auth__maintenance-copy">
-    <h2 class="text-lg font-semibold">Sedang Dalam Pemeliharaan</h2>
+    <h2 class="text-lg font-semibold">Layanan Sedang Dalam Pemeliharaan</h2>
     <p class="text-muted-foreground">
       <?= esc(setting('App.maintenanceMsg') ?? 'Sistem sedang dalam pemeliharaan. Silakan coba beberapa saat lagi.') ?>
     </p>
@@ -24,11 +32,11 @@
 
   <?php if (auth()->loggedIn()): ?>
     <a href="<?= base_url('logout') ?>" class="button button--outline button--danger w-full">
-      Logout
+      Keluar
     </a>
   <?php else: ?>
     <a href="<?= base_url('login') ?>" class="button button--primary w-full">
-      Login sebagai Admin
+      Masuk sebagai Administrator
     </a>
   <?php endif; ?>
 

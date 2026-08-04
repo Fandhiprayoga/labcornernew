@@ -1,22 +1,30 @@
 <?= $this->extend('layouts/auth') ?>
 
+<?= $this->section('auth_pitch_title') ?>
+Mulai akun <span>baru</span> <span>secara sistematis.</span>
+<?= $this->endSection() ?>
+
+<?= $this->section('auth_pitch_lede') ?>
+Buat akun baru untuk mulai menggunakan aplikasi melalui proses yang jelas dan terstruktur.
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 <?php if (! setting('Auth.allowRegistration')): ?>
 <div class="auth__form">
   <div>
     <h1 class="text-2xl text-danger">Registrasi Ditutup</h1>
-    <p class="text-muted-foreground mt-1">Registrasi user baru saat ini tidak diizinkan.</p>
+    <p class="text-muted-foreground mt-1">Registrasi pengguna baru saat ini tidak diizinkan.</p>
   </div>
   <a href="<?= url_to('login') ?>" class="button button--primary button--block button--lg">
-    Kembali ke Login
+    Kembali ke Halaman Masuk
   </a>
 </div>
 <?php $this->endSection(); return; endif; ?>
 
 <div class="auth__form">
   <div>
-    <h1 class="text-2xl">Buat Akun Baru</h1>
-    <p class="text-muted-foreground mt-1">Daftar untuk mengakses dashboard.</p>
+    <h1 class="text-2xl">Pendaftaran Akun Baru</h1>
+    <p class="text-muted-foreground mt-1">Silakan lengkapi formulir untuk memperoleh akses dashboard.</p>
   </div>
 
   <?php if (session('error') !== null) : ?>
@@ -49,7 +57,7 @@
             </g>
           </svg>
         </span>
-        <input type="text" class="input" id="username" name="username" value="<?= old('username') ?>" placeholder="Username" autocomplete="username" required autofocus>
+        <input type="text" class="input" id="username" name="username" value="<?= old('username') ?>" placeholder="Nama pengguna" autocomplete="username" required autofocus>
       </div>
     </div>
 
@@ -109,7 +117,7 @@
     </div>
 
     <button type="submit" class="button button--primary button--block button--lg">
-      Daftar
+      Daftarkan Akun
       <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 12h16m0 0l-6-6m6 6l-6 6" />
       </svg>
@@ -117,7 +125,7 @@
   </form>
 
   <p class="text-center text-sm text-muted-foreground">
-    Sudah punya akun? <a href="<?= url_to('login') ?>" class="link">Login</a>
+    Sudah memiliki akun? <a href="<?= url_to('login') ?>" class="link">Masuk</a>
   </p>
 </div>
 <?= $this->endSection() ?>

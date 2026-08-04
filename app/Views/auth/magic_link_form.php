@@ -1,10 +1,18 @@
 <?= $this->extend('layouts/auth') ?>
 
+<?= $this->section('auth_pitch_title') ?>
+Pulihkan akses <span>secara aman</span> <span>dan efisien.</span>
+<?= $this->endSection() ?>
+
+<?= $this->section('auth_pitch_lede') ?>
+Sistem akan mengirim tautan masuk ke email Anda agar proses autentikasi tetap praktis.
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 <div class="auth__form">
   <div>
-    <h1 class="text-2xl">Magic Link</h1>
-    <p class="text-muted-foreground mt-1">Masukkan email Anda untuk menerima link login.</p>
+    <h1 class="text-2xl">Tautan Masuk</h1>
+    <p class="text-muted-foreground mt-1">Silakan masukkan alamat email untuk menerima tautan masuk.</p>
   </div>
 
   <?php if (session('error') !== null) : ?>

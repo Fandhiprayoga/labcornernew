@@ -19,6 +19,19 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
   <title><?= $title ?? 'Auth' ?> &mdash; <?= esc(setting('App.siteName') ?? 'CI4 Shield RBAC') ?></title>
 
+  <?php
+    $authPitchTitle = trim($this->renderSection('auth_pitch_title'));
+    $authPitchLede = trim($this->renderSection('auth_pitch_lede'));
+
+    if ($authPitchTitle === '') {
+      $authPitchTitle = 'Akses aman, <span>proses</span> <span>lebih tertata.</span>';
+    }
+
+    if ($authPitchLede === '') {
+      $authPitchLede = 'Kelola akun dan aktivitas Anda melalui alur yang jelas, efisien, dan konsisten.';
+    }
+  ?>
+
   <link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>" />
   <?= $this->renderSection('css') ?>
 </head>
@@ -67,10 +80,8 @@
         </span>
       </a>
       <div class="auth__pitch">
-        <h2 class="auth__pitch-title">Secure <span>Access,</span> <span>Simplified.</span></h2>
-        <p class="auth__pitch-lede">
-          Role-based access control and user management — all from one calm dashboard.
-        </p>
+        <h2 class="auth__pitch-title"><?= $authPitchTitle ?></h2>
+        <p class="auth__pitch-lede"><?= $authPitchLede ?></p>
       </div>
     </aside>
   </main>

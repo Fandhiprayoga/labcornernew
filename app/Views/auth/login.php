@@ -1,10 +1,18 @@
 <?= $this->extend('layouts/auth') ?>
 
+<?= $this->section('auth_pitch_title') ?>
+Masuk dan <span>lanjutkan aktivitas</span> <span>secara terarah.</span>
+<?= $this->endSection() ?>
+
+<?= $this->section('auth_pitch_lede') ?>
+Akses dashboard Anda melalui langkah yang ringkas dengan pengalaman yang konsisten.
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 <div class="auth__form">
   <div>
     <h1 class="text-2xl">Selamat Datang</h1>
-    <p class="text-muted-foreground mt-1">Silakan login ke dashboard Anda.</p>
+    <p class="text-muted-foreground mt-1">Silakan masuk ke dashboard Anda.</p>
   </div>
 
   <?php if (session('error') !== null) : ?>
@@ -50,7 +58,7 @@
     <div class="field">
       <div class="flex items-center justify-between gap-2">
         <label for="password" class="field__label">Password</label>
-        <a href="<?= url_to('magic-link') ?>" class="link text-xs">Lupa Password?</a>
+        <a href="<?= url_to('magic-link') ?>" class="link text-xs">Lupa Kata Sandi?</a>
       </div>
       <div class="input-group input-group--lg">
         <span class="input-group__text">
@@ -76,11 +84,11 @@
 
     <div class="field__item">
       <input class="checkbox" type="checkbox" name="remember" id="remember-me" <?php if (old('remember')): ?>checked<?php endif ?>>
-      <label class="field__label" for="remember-me">Ingat Saya</label>
+      <label class="field__label" for="remember-me">Tetap Masuk</label>
     </div>
 
     <button type="submit" class="button button--primary button--block button--lg">
-      Login
+      Masuk
       <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 12h16m0 0l-6-6m6 6l-6 6" />
       </svg>
@@ -89,7 +97,7 @@
 
   <?php if (setting('Auth.allowRegistration')): ?>
   <p class="text-center text-sm text-muted-foreground">
-    Belum punya akun? <a href="<?= url_to('register') ?>" class="link">Daftar</a>
+    Belum memiliki akun? <a href="<?= url_to('register') ?>" class="link">Daftar</a>
   </p>
   <?php endif ?>
 </div>
