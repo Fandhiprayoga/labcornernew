@@ -55,7 +55,7 @@
             <div class="field">
               <label for="password" class="field__label">Password Baru</label>
               <div class="input-group">
-                <input type="password" class="input" id="password" name="password">
+                <input type="password" class="input" id="password" name="password" autocomplete="new-password" autocapitalize="off" spellcheck="false">
               </div>
               <small class="text-muted-foreground text-xs">Kosongkan jika tidak ingin mengubah password.</small>
             </div>
