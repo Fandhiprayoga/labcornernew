@@ -46,8 +46,10 @@
                       <?php
                         $badgeClass = match($group) {
                           'superadmin' => 'danger',
-                          'admin'      => 'warning',
-                          'manager'    => 'info',
+                          'kepala_lab' => 'warning',
+                          'laboran'    => 'info',
+                          'asisten_lab' => 'success',
+                          'user'       => 'primary',
                           default      => 'primary',
                         };
                       ?>

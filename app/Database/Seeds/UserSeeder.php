@@ -23,16 +23,22 @@ class UserSeeder extends Seeder
                 'group'    => 'superadmin',
             ],
             [
-                'username' => 'admin',
-                'email'    => 'admin@example.com',
+                'username' => 'kepala.lab',
+                'email'    => 'kepala.lab@example.com',
                 'password' => 'password123',
-                'group'    => 'admin',
+                'group'    => 'kepala_lab',
             ],
             [
-                'username' => 'manager',
-                'email'    => 'manager@example.com',
+                'username' => 'laboran',
+                'email'    => 'laboran@example.com',
                 'password' => 'password123',
-                'group'    => 'manager',
+                'group'    => 'laboran',
+            ],
+            [
+                'username' => 'asisten.lab',
+                'email'    => 'asisten.lab@example.com',
+                'password' => 'password123',
+                'group'    => 'asisten_lab',
             ],
             [
                 'username' => 'user',
@@ -65,8 +71,9 @@ class UserSeeder extends Seeder
 
         echo "\n=== Default Login Credentials ===\n";
         echo "Super Admin : superadmin@example.com / password123\n";
-        echo "Admin       : admin@example.com / password123\n";
-        echo "Manager     : manager@example.com / password123\n";
+        echo "Kepala Lab  : kepala.lab@example.com / password123\n";
+        echo "Laboran     : laboran@example.com / password123\n";
+        echo "Asisten Lab : asisten.lab@example.com / password123\n";
         echo "User        : user@example.com / password123\n";
         echo "=================================\n";
     }

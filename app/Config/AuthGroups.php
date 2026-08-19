@@ -25,17 +25,21 @@ class AuthGroups extends ShieldAuthGroups
             'title'       => 'Super Admin',
             'description' => 'Kontrol penuh terhadap seluruh sistem.',
         ],
-        'admin' => [
-            'title'       => 'Admin',
-            'description' => 'Administrator harian sistem.',
+        'kepala_lab' => [
+            'title'       => 'Kepala Laboratorium',
+            'description' => 'Penanggung jawab operasional dan pelaporan laboratorium.',
         ],
-        'manager' => [
-            'title'       => 'Manager',
-            'description' => 'Manajer yang dapat melihat laporan dan mengelola data.',
+        'laboran' => [
+            'title'       => 'Laboran',
+            'description' => 'Petugas yang membantu operasional dan administrasi laboratorium.',
+        ],
+        'asisten_lab' => [
+            'title'       => 'Asisten Laboratorium',
+            'description' => 'Petugas pendamping kegiatan operasional laboratorium.',
         ],
         'user' => [
             'title'       => 'User',
-            'description' => 'Pengguna umum dengan akses terbatas.',
+            'description' => 'Pengguna yang mengajukan dan memantau layanan laboratorium.',
         ],
     ];
 
@@ -55,6 +59,18 @@ class AuthGroups extends ShieldAuthGroups
         'users.edit'          => 'Dapat mengedit pengguna',
         'users.delete'        => 'Dapat menghapus pengguna',
         'users.manage-roles'  => 'Dapat mengatur role pengguna',
+
+        // Room management
+        'rooms.list'          => 'Dapat melihat daftar ruangan',
+        'rooms.create'        => 'Dapat membuat ruangan baru',
+        'rooms.edit'          => 'Dapat mengedit ruangan',
+        'rooms.delete'        => 'Dapat menghapus ruangan',
+
+        // Faculty management
+        'faculties.list'      => 'Dapat melihat daftar fakultas',
+        'faculties.create'    => 'Dapat membuat fakultas baru',
+        'faculties.edit'      => 'Dapat mengedit fakultas',
+        'faculties.delete'    => 'Dapat menghapus fakultas',
 
         // Role management
         'roles.list'          => 'Dapat melihat daftar role',
@@ -81,23 +97,38 @@ class AuthGroups extends ShieldAuthGroups
             'admin.*',
             'users.*',
             'roles.*',
+            'rooms.*',
+            'faculties.*',
             'dashboard.*',
             'reports.*',
         ],
-        'admin' => [
+        'kepala_lab' => [
             'admin.access',
-            'users.list',
             'users.create',
             'users.edit',
             'users.delete',
+            'users.list',
+            'users.manage-roles',
+            'rooms.*',
+            'faculties.*',
+            'admin.settings',
             'dashboard.*',
             'reports.*',
         ],
-        'manager' => [
+        'laboran' => [
             'admin.access',
             'users.list',
-            'dashboard.*',
-            'reports.*',
+            'dashboard.access',
+            'dashboard.stats',
+            'reports.view',
+            'reports.export',
+            'rooms.list',
+            'faculties.list',
+        ],
+        'asisten_lab' => [
+            'dashboard.access',
+            'dashboard.stats',
+            'reports.view',
         ],
         'user' => [
             'dashboard.access',

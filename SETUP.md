@@ -5,7 +5,7 @@ Boilerplate project CodeIgniter 4 dengan **CodeIgniter Shield** untuk autentikas
 ## Fitur
 
 - ✅ Autentikasi (Login, Register, Logout) menggunakan CodeIgniter Shield
-- ✅ Role-Based Access Control (RBAC) dengan 4 role default
+- ✅ Role-Based Access Control (RBAC) dengan 5 role default
 - ✅ Template Dashboard Stisla yang sudah di-slice
 - ✅ Manajemen User (CRUD)
 - ✅ Manajemen Role & Permission Matrix
@@ -19,9 +19,10 @@ Boilerplate project CodeIgniter 4 dengan **CodeIgniter Shield** untuk autentikas
 | Role | Deskripsi |
 |------|-----------|
 | **Super Admin** | Kontrol penuh terhadap seluruh sistem |
-| **Admin** | Administrator harian sistem |
-| **Manager** | Melihat laporan dan mengelola data |
-| **User** | Pengguna umum dengan akses terbatas |
+| **Kepala Laboratorium** | Penanggung jawab operasional dan pelaporan laboratorium |
+| **Laboran** | Membantu operasional dan administrasi laboratorium |
+| **Asisten Laboratorium** | Mendampingi kegiatan operasional laboratorium |
+| **User** | Mengajukan dan memantau layanan laboratorium |
 
 ## Instalasi
 
@@ -79,9 +80,38 @@ Akses di browser: `http://localhost:8080`
 | Role | Email | Password |
 |------|-------|----------|
 | Super Admin | superadmin@example.com | password123 |
-| Admin | admin@example.com | password123 |
-| Manager | manager@example.com | password123 |
+| Kepala Laboratorium | kepala.lab@example.com | password123 |
+| Laboran | laboran@example.com | password123 |
+| Asisten Laboratorium | asisten.lab@example.com | password123 |
 | User | user@example.com | password123 |
+
+## Master Ruangan
+
+Menu **Master Ruangan** digunakan untuk mengelola data referensi ruangan laboratorium. Field yang tersedia:
+
+- Kode ruangan (unik)
+- Nama ruangan
+- Gedung dan lantai
+- Kapasitas (orang)
+- Jenis ruangan: laboratorium, kelas, meeting, gudang, atau lainnya
+- Status: aktif atau nonaktif
+- Keterangan
+
+Migration tabel ruangan dijalankan bersama migration lain dengan perintah:
+
+```bash
+php spark migrate
+```
+
+Hak aksesnya mengikuti RBAC:
+
+| Role | Akses |
+|------|-------|
+| Super Admin | Lihat, tambah, edit, dan hapus ruangan |
+| Kepala Laboratorium | Lihat, tambah, edit, dan hapus ruangan |
+| Laboran | Hanya melihat daftar ruangan |
+| Asisten Laboratorium | Tidak memiliki akses menu |
+| User | Tidak memiliki akses menu |
 
 ## Struktur Folder
 

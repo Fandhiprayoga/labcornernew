@@ -83,6 +83,31 @@ function isDropdownActive(array $paths): string {
           </li>
           <?php endif; ?>
 
+          <!-- Room Management -->
+          <?php if (activeGroupCan('rooms.list')): ?>
+          <li class="sidebar__item <?= isMenuActive('admin/rooms') ?>">
+            <a class="sidebar__button" href="<?= base_url('admin/rooms') ?>" <?= isMenuActive('admin/rooms') ? 'aria-current="page"' : '' ?>>
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M4 21V3h16v18h-2V5H6v16z" opacity=".5" />
+                <path fill="currentColor" d="M8 8h3v3H8zm5 0h3v3h-3zM8 13h3v3H8zm5 0h3v3h-3z" />
+              </svg>
+              <span>Master Ruangan</span>
+            </a>
+          </li>
+          <?php endif; ?>
+
+          <!-- Faculty Management -->
+          <?php if (activeGroupCan('faculties.list')): ?>
+          <li class="sidebar__item <?= isMenuActive('admin/faculties') ?>">
+            <a class="sidebar__button" href="<?= base_url('admin/faculties') ?>" <?= isMenuActive('admin/faculties') ? 'aria-current="page"' : '' ?>>
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M3 10.5 12 4l9 6.5v2H3zM5 14h2v5H5zm4 0h2v5H9zm4 0h2v5h-2zm4 0h2v5h-2zM3 21h18v-1.5H3z" />
+              </svg>
+              <span>Master Fakultas</span>
+            </a>
+          </li>
+          <?php endif; ?>
+
           <!-- Role Management -->
           <?php if (activeGroupIs('superadmin')): ?>
           <li class="sidebar__item" data-state="<?= isDropdownActive(['admin/roles']) ? 'open' : 'closed' ?>">
