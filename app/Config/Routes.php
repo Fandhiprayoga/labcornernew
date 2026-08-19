@@ -70,6 +70,16 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
             $routes->post('delete/(:segment)', 'FacultyController::delete/$1', ['filter' => 'permission:faculties.delete']);
         });
 
+        // Study Program Management
+        $routes->group('study-programs', static function ($routes) {
+            $routes->get('/', 'StudyProgramController::index', ['filter' => 'permission:study-programs.list']);
+            $routes->get('create', 'StudyProgramController::create', ['filter' => 'permission:study-programs.create']);
+            $routes->post('store', 'StudyProgramController::store', ['filter' => 'permission:study-programs.create']);
+            $routes->get('edit/(:segment)', 'StudyProgramController::edit/$1', ['filter' => 'permission:study-programs.edit']);
+            $routes->post('update/(:segment)', 'StudyProgramController::update/$1', ['filter' => 'permission:study-programs.edit']);
+            $routes->post('delete/(:segment)', 'StudyProgramController::delete/$1', ['filter' => 'permission:study-programs.delete']);
+        });
+
         // Role Management (superadmin only)
         $routes->group('roles', ['filter' => 'role:superadmin'], static function ($routes) {
             $routes->get('/', 'RoleController::index');

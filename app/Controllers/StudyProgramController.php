@@ -1,0 +1,152 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Models\FacultyModel;
+use App\Models\StudyProgramModel;
+
+class StudyProgramController extends BaseController
+{
+    protected FacultyModel $facultyModel;
+    protected StudyProgramModel $studyProgramModel;
+
+    public function __construct()
+    {
+        $this->facultyModel = new FacultyModel();
+        $this->studyProgramModel = new StudyProgramModel();
+    }
+
+    public function index()
+    {
+        return $this->renderView('study_programs/index', [
+            'title' => 'Manajemen Program Studi',
+            'page_title' => 'Manajemen Program Studi',
+            'studyPrograms' => $this->studyProgramModel
+                ->select('study_programs.*, faculties.code AS faculty_code, faculties.name AS faculty_name')
+                ->join('faculties', 'faculties.id = study_programs.faculty_id')
+                ->orderBy('faculties.code', 'ASC')
+                ->orderBy('study_programs.code', 'ASC')
+                ->findAll(),
+        ]);
+    }
+
+    public function create()
+    {
+        return $this->renderForm('Tambah Program Studi', 'Tambah Program Studi');
+    }
+
+    public function store()
+    {
+        if (! $this->validate($this->validationRules()) || ! $this->hasActiveFaculty()) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $this->studyProgramModel->insert($this->studyProgramData() + ['uuid' => $this->generateUuid()]);
+
+        return redirect()->to('/admin/study-programs')->with('success', 'Program studi berhasil ditambahkan.');
+    }
+
+    public function edit(string $uuid)
+    {
+        $studyProgram = $this->findStudyProgram($uuid);
+
+        if (! $studyProgram) {
+            return redirect()->to('/admin/study-programs')->with('error', 'Program studi tidak ditemukan.');
+        }
+
+        return $this->renderForm('Edit Program Studi', 'Edit Program Studi', $studyProgram);
+    }
+
+    public function update(string $uuid)
+    {
+        $studyProgram = $this->findStudyProgram($uuid);
+
+        if (! $studyProgram) {
+            return redirect()->to('/admin/study-programs')->with('error', 'Program studi tidak ditemukan.');
+        }
+
+        if (! $this->validate($this->validationRules((int) $studyProgram['id'])) || ! $this->hasActiveFaculty()) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $this->studyProgramModel->update($studyProgram['id'], $this->studyProgramData());
+
+        return redirect()->to('/admin/study-programs')->with('success', 'Program studi berhasil diperbarui.');
+    }
+
+    public function delete(string $uuid)
+    {
+        $studyProgram = $this->findStudyProgram($uuid);
+
+        if (! $studyProgram) {
+            return redirect()->to('/admin/study-programs')->with('error', 'Program studi tidak ditemukan.');
+        }
+
+        $this->studyProgramModel->delete($studyProgram['id']);
+
+        return redirect()->to('/admin/study-programs')->with('success', 'Program studi berhasil dihapus.');
+    }
+
+    private function renderForm(string $title, string $pageTitle, ?array $studyProgram = null)
+    {
+        return $this->renderView($studyProgram ? 'study_programs/edit' : 'study_programs/create', [
+            'title' => $title,
+            'page_title' => $pageTitle,
+            'faculties' => $this->facultyModel->where('status', 'active')->orderBy('name', 'ASC')->findAll(),
+            'studyProgram' => $studyProgram,
+        ]);
+    }
+
+    private function findStudyProgram(string $uuid): ?array
+    {
+        return $this->studyProgramModel->where('uuid', $uuid)->first();
+    }
+
+    private function validationRules(?int $id = null): array
+    {
+        $uniqueCode = $id === null ? 'is_unique[study_programs.code]' : "is_unique[study_programs.code,id,{$id}]";
+
+        return [
+            'faculty_id' => 'required|integer|is_not_unique[faculties.id]',
+            'code' => "required|alpha_numeric_punct|min_length[2]|max_length[30]|{$uniqueCode}",
+            'name' => 'required|min_length[3]|max_length[150]',
+            'degree' => 'required|in_list[D1,D2,D3,D4,S1,S2,S3,Profesi]',
+            'status' => 'required|in_list[active,inactive]',
+            'description' => 'permit_empty|max_length[500]',
+        ];
+    }
+
+    private function hasActiveFaculty(): bool
+    {
+        $facultyId = (int) $this->request->getPost('faculty_id');
+
+        if ($facultyId > 0 && $this->facultyModel->where('status', 'active')->find($facultyId)) {
+            return true;
+        }
+
+        $this->validator->setError('faculty_id', 'Fakultas yang dipilih tidak tersedia atau tidak aktif.');
+
+        return false;
+    }
+
+    private function studyProgramData(): array
+    {
+        return [
+            'faculty_id' => (int) $this->request->getPost('faculty_id'),
+            'code' => strtoupper(trim((string) $this->request->getPost('code'))),
+            'name' => trim((string) $this->request->getPost('name')),
+            'degree' => $this->request->getPost('degree'),
+            'status' => $this->request->getPost('status'),
+            'description' => trim((string) $this->request->getPost('description')),
+        ];
+    }
+
+    private function generateUuid(): string
+    {
+        $bytes = random_bytes(16);
+        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+
+        return vsprintf('%s%s%s%s-%s%s-%s%s-%s%s-%s%s%s%s%s%s', str_split(bin2hex($bytes), 2));
+    }
+}

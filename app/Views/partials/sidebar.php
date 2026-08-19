@@ -108,6 +108,19 @@ function isDropdownActive(array $paths): string {
           </li>
           <?php endif; ?>
 
+          <!-- Study Program Management -->
+          <?php if (activeGroupCan('study-programs.list')): ?>
+          <li class="sidebar__item <?= isMenuActive('admin/study-programs') ?>">
+            <a class="sidebar__button" href="<?= base_url('admin/study-programs') ?>" <?= isMenuActive('admin/study-programs') ? 'aria-current="page"' : '' ?>>
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M4 4h16v16H4z" opacity=".35" />
+                <path fill="currentColor" d="M7 7h2v2H7zm4 0h6v2h-6zM7 11h2v2H7zm4 0h6v2h-6zM7 15h2v2H7zm4 0h6v2h-6z" />
+              </svg>
+              <span>Program Studi</span>
+            </a>
+          </li>
+          <?php endif; ?>
+
           <!-- Role Management -->
           <?php if (activeGroupIs('superadmin')): ?>
           <li class="sidebar__item" data-state="<?= isDropdownActive(['admin/roles']) ? 'open' : 'closed' ?>">
