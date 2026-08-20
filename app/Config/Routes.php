@@ -70,6 +70,16 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
             $routes->post('delete/(:num)', 'LaboratoryController::delete/$1', ['filter' => 'permission:laboratories.delete']);
         });
 
+        // Laboratory Laboran Assignment
+        $routes->group('laboratory-laborans', static function ($routes) {
+            $routes->get('/', 'LaboratoryLaboranController::index', ['filter' => 'permission:laboratory-laborans.list']);
+            $routes->get('create', 'LaboratoryLaboranController::create', ['filter' => 'permission:laboratory-laborans.create']);
+            $routes->post('store', 'LaboratoryLaboranController::store', ['filter' => 'permission:laboratory-laborans.create']);
+            $routes->get('edit/(:num)', 'LaboratoryLaboranController::edit/$1', ['filter' => 'permission:laboratory-laborans.edit']);
+            $routes->post('update/(:num)', 'LaboratoryLaboranController::update/$1', ['filter' => 'permission:laboratory-laborans.edit']);
+            $routes->post('delete/(:num)', 'LaboratoryLaboranController::delete/$1', ['filter' => 'permission:laboratory-laborans.delete']);
+        });
+
         // Faculty Management
         $routes->group('faculties', static function ($routes) {
             $routes->get('/', 'FacultyController::index', ['filter' => 'permission:faculties.list']);

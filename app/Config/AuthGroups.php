@@ -72,6 +72,12 @@ class AuthGroups extends ShieldAuthGroups
         'laboratories.edit'   => 'Dapat mengedit laboratorium',
         'laboratories.delete' => 'Dapat menghapus laboratorium',
 
+        // Laboratory laboran assignment
+        'laboratory-laborans.list'   => 'Dapat melihat daftar penugasan laboran',
+        'laboratory-laborans.create' => 'Dapat menugaskan laboran ke laboratorium',
+        'laboratory-laborans.edit'   => 'Dapat mengedit penugasan laboran',
+        'laboratory-laborans.delete' => 'Dapat menghapus penugasan laboran',
+
         // Faculty management
         'faculties.list'      => 'Dapat melihat daftar fakultas',
         'faculties.create'    => 'Dapat membuat fakultas baru',
@@ -111,6 +117,7 @@ class AuthGroups extends ShieldAuthGroups
             'roles.*',
             'rooms.*',
             'laboratories.*',
+            'laboratory-laborans.*',
             'faculties.*',
             'study-programs.*',
             'dashboard.*',
@@ -125,6 +132,7 @@ class AuthGroups extends ShieldAuthGroups
             'users.manage-roles',
             'rooms.*',
             'laboratories.*',
+            'laboratory-laborans.*',
             'faculties.*',
             'study-programs.*',
             'admin.settings',

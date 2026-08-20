@@ -119,6 +119,19 @@ function isDropdownActive(array $paths): string
                 </a>
               </li>
             <?php endif; ?>
+
+            <!-- Laboratory Laboran Assignment -->
+            <?php if (activeGroupCan('laboratory-laborans.list')): ?>
+              <li class="sidebar__item <?= isMenuActive('admin/laboratory-laborans') ?>">
+                <a class="sidebar__button" href="<?= base_url('admin/laboratory-laborans') ?>" <?= isMenuActive('admin/laboratory-laborans') ? 'aria-current="page"' : '' ?>>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="8" cy="7" r="3" fill="currentColor" opacity=".45" />
+                    <path fill="currentColor" d="M3 18c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5V20H3zM14 5h7v2h-7zm0 5h7v2h-7zm2 5h5v2h-5z" />
+                  </svg>
+                  <span>Master Laboran</span>
+                </a>
+              </li>
+            <?php endif; ?>
           </ul>
         </div>
 
