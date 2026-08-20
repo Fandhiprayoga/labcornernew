@@ -60,6 +60,16 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
             $routes->post('delete/(:num)', 'RoomController::delete/$1', ['filter' => 'permission:rooms.delete']);
         });
 
+        // Laboratory Management
+        $routes->group('laboratories', static function ($routes) {
+            $routes->get('/', 'LaboratoryController::index', ['filter' => 'permission:laboratories.list']);
+            $routes->get('create', 'LaboratoryController::create', ['filter' => 'permission:laboratories.create']);
+            $routes->post('store', 'LaboratoryController::store', ['filter' => 'permission:laboratories.create']);
+            $routes->get('edit/(:num)', 'LaboratoryController::edit/$1', ['filter' => 'permission:laboratories.edit']);
+            $routes->post('update/(:num)', 'LaboratoryController::update/$1', ['filter' => 'permission:laboratories.edit']);
+            $routes->post('delete/(:num)', 'LaboratoryController::delete/$1', ['filter' => 'permission:laboratories.delete']);
+        });
+
         // Faculty Management
         $routes->group('faculties', static function ($routes) {
             $routes->get('/', 'FacultyController::index', ['filter' => 'permission:faculties.list']);

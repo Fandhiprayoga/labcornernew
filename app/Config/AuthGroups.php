@@ -66,6 +66,12 @@ class AuthGroups extends ShieldAuthGroups
         'rooms.edit'          => 'Dapat mengedit ruangan',
         'rooms.delete'        => 'Dapat menghapus ruangan',
 
+        // Laboratory management
+        'laboratories.list'   => 'Dapat melihat daftar laboratorium',
+        'laboratories.create' => 'Dapat membuat laboratorium baru',
+        'laboratories.edit'   => 'Dapat mengedit laboratorium',
+        'laboratories.delete' => 'Dapat menghapus laboratorium',
+
         // Faculty management
         'faculties.list'      => 'Dapat melihat daftar fakultas',
         'faculties.create'    => 'Dapat membuat fakultas baru',
@@ -104,6 +110,7 @@ class AuthGroups extends ShieldAuthGroups
             'users.*',
             'roles.*',
             'rooms.*',
+            'laboratories.*',
             'faculties.*',
             'study-programs.*',
             'dashboard.*',
@@ -117,6 +124,7 @@ class AuthGroups extends ShieldAuthGroups
             'users.list',
             'users.manage-roles',
             'rooms.*',
+            'laboratories.*',
             'faculties.*',
             'study-programs.*',
             'admin.settings',
@@ -131,6 +139,7 @@ class AuthGroups extends ShieldAuthGroups
             'reports.view',
             'reports.export',
             'rooms.list',
+            'laboratories.list',
             'faculties.list',
             'study-programs.list',
         ],
