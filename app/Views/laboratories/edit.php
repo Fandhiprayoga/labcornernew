@@ -2,7 +2,7 @@
   <div class="card" style="width: 100%;">
     <div class="card__header"><span class="card__title">Edit Laboratorium: <?= esc($laboratory['name']) ?></span></div>
     <div class="card__body">
-      <form action="<?= base_url('admin/laboratories/update/' . $laboratory['id']) ?>" method="post" class="flex flex-col gap-4">
+      <form action="<?= base_url('admin/laboratories/update/' . $laboratory['uuid']) ?>" method="post" class="flex flex-col gap-4">
         <?= csrf_field() ?>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="field"><label for="name" class="field__label">Nama Laboratorium <span class="text-danger">*</span></label><input type="text" class="input w-full" id="name" name="name" value="<?= old('name', $laboratory['name']) ?>" required></div>

@@ -6,6 +6,8 @@ use CodeIgniter\Router\RouteCollection;
  * @var RouteCollection $routes
  */
 
+$routes->addPlaceholder('uuid', '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}');
+
 // ---------------------------------------------------------------
 // Auth Routes (Shield)
 // ---------------------------------------------------------------
@@ -65,9 +67,9 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
             $routes->get('/', 'LaboratoryController::index', ['filter' => 'permission:laboratories.list']);
             $routes->get('create', 'LaboratoryController::create', ['filter' => 'permission:laboratories.create']);
             $routes->post('store', 'LaboratoryController::store', ['filter' => 'permission:laboratories.create']);
-            $routes->get('edit/(:num)', 'LaboratoryController::edit/$1', ['filter' => 'permission:laboratories.edit']);
-            $routes->post('update/(:num)', 'LaboratoryController::update/$1', ['filter' => 'permission:laboratories.edit']);
-            $routes->post('delete/(:num)', 'LaboratoryController::delete/$1', ['filter' => 'permission:laboratories.delete']);
+            $routes->get('edit/(:uuid)', 'LaboratoryController::edit/$1', ['filter' => 'permission:laboratories.edit']);
+            $routes->post('update/(:uuid)', 'LaboratoryController::update/$1', ['filter' => 'permission:laboratories.edit']);
+            $routes->post('delete/(:uuid)', 'LaboratoryController::delete/$1', ['filter' => 'permission:laboratories.delete']);
         });
 
         // Laboratory Laboran Assignment

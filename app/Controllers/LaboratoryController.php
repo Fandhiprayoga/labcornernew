@@ -62,25 +62,27 @@ class LaboratoryController extends BaseController
         return redirect()->to('/admin/laboratories')->with('success', 'Laboratorium berhasil ditambahkan.');
     }
 
-    public function edit(int $id)
+    public function edit(string $uuid)
     {
-        $laboratory = $this->laboratoryModel->find($id);
+        $laboratory = $this->laboratoryModel->findByUuid($uuid);
 
         if (! $laboratory) {
             return redirect()->to('/admin/laboratories')->with('error', 'Laboratorium tidak ditemukan.');
         }
 
         $laboratory['study_program_ids'] = array_column(
-            $this->laboratoryStudyProgramModel->where('laboratory_id', $id)->findAll(),
+            $this->laboratoryStudyProgramModel->where('laboratory_id', $laboratory['id'])->findAll(),
             'study_program_id'
         );
 
         return $this->renderForm('Edit Laboratorium', 'Edit Laboratorium', $laboratory);
     }
 
-    public function update(int $id)
+    public function update(string $uuid)
     {
-        if (! $this->laboratoryModel->find($id)) {
+        $laboratory = $this->laboratoryModel->findByUuid($uuid);
+
+        if (! $laboratory) {
             return redirect()->to('/admin/laboratories')->with('error', 'Laboratorium tidak ditemukan.');
         }
 
@@ -90,8 +92,8 @@ class LaboratoryController extends BaseController
 
         $database = db_connect();
         $database->transStart();
-        $this->laboratoryModel->update($id, $this->laboratoryData());
-        $this->syncStudyPrograms($id);
+        $this->laboratoryModel->update($laboratory['id'], $this->laboratoryData());
+        $this->syncStudyPrograms($laboratory['id']);
         $database->transComplete();
 
         if (! $database->transStatus()) {
@@ -101,13 +103,15 @@ class LaboratoryController extends BaseController
         return redirect()->to('/admin/laboratories')->with('success', 'Laboratorium berhasil diperbarui.');
     }
 
-    public function delete(int $id)
+    public function delete(string $uuid)
     {
-        if (! $this->laboratoryModel->find($id)) {
+        $laboratory = $this->laboratoryModel->findByUuid($uuid);
+
+        if (! $laboratory) {
             return redirect()->to('/admin/laboratories')->with('error', 'Laboratorium tidak ditemukan.');
         }
 
-        $this->laboratoryModel->delete($id);
+        $this->laboratoryModel->delete($laboratory['id']);
 
         return redirect()->to('/admin/laboratories')->with('success', 'Laboratorium berhasil dihapus.');
     }
