@@ -11,13 +11,46 @@
         <?php endif; ?>
       </div>
     </div>
+    <div class="card__body" style="border-bottom: 1px solid var(--color-border);">
+      <form method="get" action="<?= base_url('admin/laboratory-laborans') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
+        <div style="flex:1 1 260px;min-width:220px;">
+          <label class="text-xs text-muted-foreground" for="q">Cari</label>
+          <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Nama laboran, email, lab, atau ruangan...">
+        </div>
+        <div style="flex:0 1 240px;min-width:200px;">
+          <label class="text-xs text-muted-foreground" for="laboratory_id">Laboratorium</label>
+          <select class="select" id="laboratory_id" name="laboratory_id">
+            <option value="">Semua Laboratorium</option>
+            <?php foreach ($laboratoryOptions as $option): ?>
+            <option value="<?= $option['id'] ?>" <?= $laboratoryId === (int) $option['id'] ? 'selected' : '' ?>>
+              <?= esc($option['name']) ?><?= $option['room_code'] ? ' (' . esc($option['room_code']) . ')' : '' ?>
+            </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="flex:0 0 110px;">
+          <label class="text-xs text-muted-foreground" for="perPage">Per Halaman</label>
+          <select class="select" id="perPage" name="perPage">
+            <?php foreach ($perPageOptions as $option): ?>
+            <option value="<?= $option ?>" <?= $perPage === $option ? 'selected' : '' ?>><?= $option ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <button type="submit" class="button button--primary button--sm">Filter</button>
+          <?php if ($search !== '' || $laboratoryId > 0): ?>
+          <a href="<?= base_url('admin/laboratory-laborans') ?>" class="button button--outline button--sm">Reset</a>
+          <?php endif; ?>
+        </div>
+      </form>
+    </div>
     <div class="card__body p-0">
       <div class="table-responsive">
         <table class="table">
           <thead><tr><th class="text-center" style="width: 60px;">#</th><th>Laboran</th><th>Laboratorium</th><th>Ruangan</th><th class="text-center">Aksi</th></tr></thead>
           <tbody>
             <?php if (! empty($assignments)): ?>
-              <?php $no = 1; foreach ($assignments as $assignment): ?>
+              <?php $no = (($currentPage - 1) * $perPage) + 1; foreach ($assignments as $assignment): ?>
               <tr>
                 <td class="text-center"><?= $no++ ?></td>
                 <td><strong><?= esc($assignment['username']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($assignment['email'] ?: '-') ?></div></td>
@@ -30,11 +63,19 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="5" class="text-center text-muted-foreground py-8">Belum ada penugasan laboran.</td></tr>
+              <tr><td colspan="5" class="text-center text-muted-foreground py-8"><?= ($search !== '' || $laboratoryId > 0) ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada penugasan laboran.' ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>
       </div>
     </div>
+    <?php if ($totalRows > 0): ?>
+    <div class="card__body" style="border-top: 1px solid var(--color-border); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem;">
+      <div class="text-xs text-muted-foreground">
+        Menampilkan <?= $assignments ? (($currentPage - 1) * $perPage) + 1 : 0 ?>&ndash;<?= (($currentPage - 1) * $perPage) + count($assignments) ?> dari <?= $totalRows ?> data
+      </div>
+      <?= $pager->only(['q', 'laboratory_id', 'perPage'])->links('default', 'app') ?>
+    </div>
+    <?php endif; ?>
   </div>
 </div>

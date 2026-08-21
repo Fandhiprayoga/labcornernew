@@ -16,18 +16,60 @@ class LaboratoryLaboranController extends BaseController
         $this->laboratoryModel = new LaboratoryModel();
     }
 
+    private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
     public function index()
     {
+        $search       = trim((string) $this->request->getGet('q'));
+        $laboratoryId = (int) $this->request->getGet('laboratory_id');
+        $perPage      = (int) $this->request->getGet('perPage');
+
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PER_PAGE_OPTIONS[0];
+        }
+
+        $query = $this->laboratoryLaboranModel
+            ->select('laboratory_laborans.id, users.username, auth_identities.secret AS email, laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name')
+            ->join('users', 'users.id = laboratory_laborans.user_id')
+            ->join('auth_identities', "auth_identities.user_id = users.id AND auth_identities.type = 'email_password'", 'left')
+            ->join('laboratories', 'laboratories.id = laboratory_laborans.laboratory_id')
+            ->join('rooms', 'rooms.id = laboratories.room_id', 'left');
+
+        if ($search !== '') {
+            $query->groupStart()
+                ->like('users.username', $search)
+                ->orLike('auth_identities.secret', $search)
+                ->orLike('laboratories.name', $search)
+                ->orLike('rooms.code', $search)
+                ->orLike('rooms.name', $search)
+                ->groupEnd();
+        }
+
+        if ($laboratoryId > 0) {
+            $query->where('laboratory_laborans.laboratory_id', $laboratoryId);
+        }
+
+        $assignments = $query
+            ->orderBy('users.username', 'ASC')
+            ->orderBy('laboratories.name', 'ASC')
+            ->paginate($perPage);
+
+        $pager = $this->laboratoryLaboranModel->pager;
+
         return $this->renderView('laboratory_laborans/index', [
             'title' => 'Master Laboran',
             'page_title' => 'Master Laboran',
-            'assignments' => $this->laboratoryLaboranModel
-                ->select('laboratory_laborans.id, users.username, auth_identities.secret AS email, laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name')
-                ->join('users', 'users.id = laboratory_laborans.user_id')
-                ->join('auth_identities', "auth_identities.user_id = users.id AND auth_identities.type = 'email_password'", 'left')
-                ->join('laboratories', 'laboratories.id = laboratory_laborans.laboratory_id')
+            'assignments' => $assignments,
+            'pager' => $pager,
+            'search' => $search,
+            'laboratoryId' => $laboratoryId,
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+            'currentPage' => $pager->getCurrentPage(),
+            'totalRows' => $pager->getTotal(),
+            'laboratoryOptions' => $this->laboratoryModel
+                ->select('laboratories.id, laboratories.name, rooms.code AS room_code')
                 ->join('rooms', 'rooms.id = laboratories.room_id', 'left')
-                ->orderBy('users.username', 'ASC')
                 ->orderBy('laboratories.name', 'ASC')
                 ->findAll(),
         ]);
