@@ -132,6 +132,20 @@ function isDropdownActive(array $paths): string
                 </a>
               </li>
             <?php endif; ?>
+
+            <!-- Asset Management -->
+            <?php if (activeGroupCan('assets.list')): ?>
+              <li class="sidebar__item <?= isMenuActive('admin/assets') ?>">
+                <a class="sidebar__button" href="<?= base_url('admin/assets') ?>" <?= isMenuActive('admin/assets') ? 'aria-current="page"' : '' ?>>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="currentColor" d="M4 7h16v12H4z" opacity=".35" />
+                    <path fill="currentColor" d="M7 5h10v3H7zm1 6h8v2H8zm0 4h5v2H8z" />
+                  </svg>
+                  <span>Master Asset</span>
+                </a>
+              </li>
+            <?php endif; ?>
+
           </ul>
         </div>
 

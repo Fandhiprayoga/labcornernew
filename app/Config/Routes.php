@@ -72,6 +72,16 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
             $routes->post('delete/(:uuid)', 'LaboratoryController::delete/$1', ['filter' => 'permission:laboratories.delete']);
         });
 
+        // Asset Management
+        $routes->group('assets', static function ($routes) {
+            $routes->get('/', 'AssetController::index', ['filter' => 'permission:assets.list']);
+            $routes->get('create', 'AssetController::create', ['filter' => 'permission:assets.create']);
+            $routes->post('store', 'AssetController::store', ['filter' => 'permission:assets.create']);
+            $routes->get('edit/(:uuid)', 'AssetController::edit/$1', ['filter' => 'permission:assets.edit']);
+            $routes->post('update/(:uuid)', 'AssetController::update/$1', ['filter' => 'permission:assets.edit']);
+            $routes->post('delete/(:uuid)', 'AssetController::delete/$1', ['filter' => 'permission:assets.delete']);
+        });
+
         // Laboratory Laboran Assignment
         $routes->group('laboratory-laborans', static function ($routes) {
             $routes->get('/', 'LaboratoryLaboranController::index', ['filter' => 'permission:laboratory-laborans.list']);

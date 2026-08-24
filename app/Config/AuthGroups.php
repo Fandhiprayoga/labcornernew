@@ -72,6 +72,12 @@ class AuthGroups extends ShieldAuthGroups
         'laboratories.edit'   => 'Dapat mengedit laboratorium',
         'laboratories.delete' => 'Dapat menghapus laboratorium',
 
+        // Asset management
+        'assets.list'         => 'Dapat melihat daftar asset',
+        'assets.create'       => 'Dapat membuat asset baru',
+        'assets.edit'         => 'Dapat mengedit asset',
+        'assets.delete'       => 'Dapat menghapus asset',
+
         // Laboratory laboran assignment
         'laboratory-laborans.list'   => 'Dapat melihat daftar penugasan laboran',
         'laboratory-laborans.create' => 'Dapat menugaskan laboran ke laboratorium',
@@ -117,6 +123,7 @@ class AuthGroups extends ShieldAuthGroups
             'roles.*',
             'rooms.*',
             'laboratories.*',
+            'assets.*',
             'laboratory-laborans.*',
             'faculties.*',
             'study-programs.*',
@@ -132,6 +139,7 @@ class AuthGroups extends ShieldAuthGroups
             'users.manage-roles',
             'rooms.*',
             'laboratories.*',
+            'assets.*',
             'laboratory-laborans.*',
             'faculties.*',
             'study-programs.*',
@@ -148,6 +156,9 @@ class AuthGroups extends ShieldAuthGroups
             'reports.export',
             'rooms.list',
             'laboratories.list',
+            'assets.list',
+            'assets.create',
+            'assets.edit',
             'faculties.list',
             'study-programs.list',
         ],
