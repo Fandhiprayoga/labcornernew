@@ -63,7 +63,7 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="5" class="text-center text-muted-foreground py-8"><?= ($search !== '' || $laboratoryId > 0) ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada penugasan laboran.' ?></td></tr>
+              <tr><td colspan="5" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $laboratoryId > 0) ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada penugasan laboran.']) ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>

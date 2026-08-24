@@ -53,7 +53,7 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="8" class="text-center text-muted-foreground py-8">Belum ada data ruangan.</td></tr>
+              <tr><td colspan="8" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => 'Belum ada data ruangan.']) ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>

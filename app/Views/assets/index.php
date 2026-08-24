@@ -120,7 +120,7 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="8" class="text-center text-muted-foreground py-8"><?= ($search !== '' || $laboratoryId > 0 || $status !== '' || $borrowable !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada data asset.' ?></td></tr>
+              <tr><td colspan="8" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $laboratoryId > 0 || $status !== '' || $borrowable !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada data asset.']) ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>

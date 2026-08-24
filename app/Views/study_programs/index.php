@@ -32,7 +32,7 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="7" class="text-center text-muted-foreground py-8">Belum ada data program studi.</td></tr>
+              <tr><td colspan="7" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => 'Belum ada data program studi.']) ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Tidak ada data" width="200" height="200">
+  <defs>
+    <linearGradient id="no-results-light" x1=".15" y1=".05" x2=".85" y2=".95"><stop offset="0" stop-color="#c5d7ff"/><stop offset="1" stop-color="#91b5ff"/></linearGradient>
+    <linearGradient id="no-results-dark" x1=".15" y1=".05" x2=".85" y2=".95"><stop offset="0" stop-color="#5b8fee"/><stop offset="1" stop-color="#3569d4"/></linearGradient>
+    <filter id="no-results-shadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="5" dy="9" stdDeviation="5.5" flood-color="#3569d4" flood-opacity=".26"/></filter>
+  </defs>
+  <circle cx="100" cy="94" r="72" fill="#3569d4" opacity=".06"/>
+  <circle cx="100" cy="94" r="55" fill="#3569d4" opacity=".1"/>
+  <g filter="url(#no-results-shadow)">
+    <path d="M69 48h47l18 18v69a9 9 0 0 1-9 9H69a9 9 0 0 1-9-9V57a9 9 0 0 1 9-9z" fill="url(#no-results-light)"/>
+    <path d="M116 48l18 18h-9a9 9 0 0 1-9-9z" fill="url(#no-results-dark)"/>
+    <rect x="72" y="74" width="42" height="5" rx="2.5" fill="#3569d4" opacity=".32"/>
+    <rect x="72" y="86" width="52" height="5" rx="2.5" fill="#3569d4" opacity=".26"/>
+    <rect x="72" y="98" width="34" height="5" rx="2.5" fill="#3569d4" opacity=".2"/>
+    <line x1="142" y1="134" x2="158" y2="150" stroke="url(#no-results-dark)" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="124" cy="116" r="23" fill="#fff" opacity=".4"/>
+    <circle cx="124" cy="116" r="23" fill="none" stroke="url(#no-results-dark)" stroke-width="7"/>
+  </g>
+</svg>

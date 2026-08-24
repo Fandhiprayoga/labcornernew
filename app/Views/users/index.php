@@ -92,7 +92,7 @@
               <?php endforeach; ?>
             <?php else: ?>
               <tr>
-                <td colspan="6" class="text-center text-muted-foreground py-8">Belum ada data user.</td>
+                <td colspan="6" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => 'Belum ada data user.']) ?></td>
               </tr>
             <?php endif; ?>
           </tbody>
