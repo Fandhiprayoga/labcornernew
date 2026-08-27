@@ -8,6 +8,8 @@ class FacultyController extends BaseController
 {
     protected FacultyModel $facultyModel;
 
+    private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
     public function __construct()
     {
         $this->facultyModel = new FacultyModel();
@@ -15,10 +17,46 @@ class FacultyController extends BaseController
 
     public function index()
     {
+        $search = trim((string) $this->request->getGet('q'));
+        $status = (string) $this->request->getGet('status');
+        $perPage = (int) $this->request->getGet('perPage');
+
+        if (! in_array($status, ['active', 'inactive'], true)) {
+            $status = '';
+        }
+
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PER_PAGE_OPTIONS[0];
+        }
+
+        $query = $this->facultyModel->orderBy('code', 'ASC');
+
+        if ($search !== '') {
+            $query->groupStart()
+                ->like('code', $search)
+                ->orLike('name', $search)
+                ->orLike('dean_name', $search)
+                ->groupEnd();
+        }
+
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+
+        $faculties = $query->paginate($perPage);
+        $pager = $this->facultyModel->pager;
+
         return $this->renderView('faculties/index', [
-            'title'      => 'Master Fakultas',
-            'page_title' => 'Master Fakultas',
-            'faculties'  => $this->facultyModel->orderBy('code', 'ASC')->findAll(),
+            'title'          => 'Master Fakultas',
+            'page_title'     => 'Master Fakultas',
+            'faculties'      => $faculties,
+            'pager'          => $pager,
+            'search'         => $search,
+            'status'         => $status,
+            'perPage'        => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+            'currentPage'    => $pager->getCurrentPage(),
+            'totalRows'      => $pager->getTotal(),
         ]);
     }
 
