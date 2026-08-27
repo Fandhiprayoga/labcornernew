@@ -8,6 +8,8 @@ class RoomController extends BaseController
 {
     protected RoomModel $roomModel;
 
+    private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
     public function __construct()
     {
         $this->roomModel = new RoomModel();
@@ -15,10 +17,59 @@ class RoomController extends BaseController
 
     public function index()
     {
+        $search  = trim((string) $this->request->getGet('q'));
+        $type    = (string) $this->request->getGet('type');
+        $status  = (string) $this->request->getGet('status');
+        $perPage = (int) $this->request->getGet('perPage');
+
+        $types = ['laboratorium', 'kelas', 'meeting', 'gudang', 'lainnya'];
+
+        if (! in_array($type, $types, true)) {
+            $type = '';
+        }
+
+        if (! in_array($status, ['active', 'inactive'], true)) {
+            $status = '';
+        }
+
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PER_PAGE_OPTIONS[0];
+        }
+
+        $query = $this->roomModel->orderBy('code', 'ASC');
+
+        if ($search !== '') {
+            $query->groupStart()
+                ->like('code', $search)
+                ->orLike('name', $search)
+                ->orLike('building', $search)
+                ->groupEnd();
+        }
+
+        if ($type !== '') {
+            $query->where('type', $type);
+        }
+
+        if ($status !== '') {
+            $query->where('status', $status);
+        }
+
+        $rooms = $query->paginate($perPage);
+        $pager = $this->roomModel->pager;
+
         return $this->renderView('rooms/index', [
-            'title'      => 'Master Ruangan',
-            'page_title' => 'Master Ruangan',
-            'rooms'      => $this->roomModel->orderBy('code', 'ASC')->findAll(),
+            'title'         => 'Master Ruangan',
+            'page_title'    => 'Master Ruangan',
+            'rooms'         => $rooms,
+            'pager'         => $pager,
+            'search'        => $search,
+            'type'          => $type,
+            'status'        => $status,
+            'perPage'       => $perPage,
+            'perPageOptions'=> self::PER_PAGE_OPTIONS,
+            'currentPage'   => $pager->getCurrentPage(),
+            'totalRows'     => $pager->getTotal(),
+            'types'         => $types,
         ]);
     }
 

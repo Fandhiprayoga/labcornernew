@@ -1,3 +1,15 @@
+<?php
+/** @var array $rooms */
+/** @var array $types */
+/** @var CodeIgniter\Pager\Pager $pager */
+/** @var string $search */
+/** @var string $type */
+/** @var string $status */
+/** @var int $perPage */
+/** @var array $perPageOptions */
+/** @var int $currentPage */
+/** @var int $totalRows */
+?>
 <div class="page__section">
   <div class="card">
     <div class="card__header">
@@ -10,6 +22,45 @@
         </a>
         <?php endif; ?>
       </div>
+    </div>
+    <div class="card__body" style="border-bottom: 1px solid var(--color-border);">
+      <form method="get" action="<?= base_url('admin/rooms') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
+        <div style="flex:1 1 260px;min-width:220px;">
+          <label class="text-xs text-muted-foreground" for="q">Cari</label>
+          <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Kode, nama, atau gedung...">
+        </div>
+        <div style="flex:0 1 190px;min-width:170px;">
+          <label class="text-xs text-muted-foreground" for="type">Jenis</label>
+          <select class="select" id="type" name="type">
+            <option value="">Semua Jenis</option>
+            <?php foreach ($types as $option): ?>
+            <option value="<?= esc($option) ?>" <?= $type === $option ? 'selected' : '' ?>><?= esc(ucfirst($option)) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="flex:0 1 160px;min-width:150px;">
+          <label class="text-xs text-muted-foreground" for="status">Status</label>
+          <select class="select" id="status" name="status">
+            <option value="">Semua Status</option>
+            <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Aktif</option>
+            <option value="inactive" <?= $status === 'inactive' ? 'selected' : '' ?>>Nonaktif</option>
+          </select>
+        </div>
+        <div style="flex:0 0 110px;">
+          <label class="text-xs text-muted-foreground" for="perPage">Per Halaman</label>
+          <select class="select" id="perPage" name="perPage">
+            <?php foreach ($perPageOptions as $option): ?>
+            <option value="<?= $option ?>" <?= $perPage === $option ? 'selected' : '' ?>><?= $option ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <button type="submit" class="button button--primary button--sm">Filter</button>
+          <?php if ($search !== '' || $type !== '' || $status !== ''): ?>
+          <a href="<?= base_url('admin/rooms') ?>" class="button button--outline button--sm">Reset</a>
+          <?php endif; ?>
+        </div>
+      </form>
     </div>
     <div class="card__body p-0">
       <div class="table-responsive">
@@ -28,7 +79,7 @@
           </thead>
           <tbody>
             <?php if (! empty($rooms)): ?>
-              <?php $no = 1; foreach ($rooms as $room): ?>
+              <?php $no = (($currentPage - 1) * $perPage) + 1; foreach ($rooms as $room): ?>
               <tr>
                 <td class="text-center"><?= $no++ ?></td>
                 <td><strong><?= esc($room['code']) ?></strong></td>
@@ -53,11 +104,19 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="8" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => 'Belum ada data ruangan.']) ?></td></tr>
+              <tr><td colspan="8" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $type !== '' || $status !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada data ruangan.']) ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>
       </div>
     </div>
+    <?php if ($totalRows > 0): ?>
+    <div class="card__body" style="border-top: 1px solid var(--color-border); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem;">
+      <div class="text-xs text-muted-foreground">
+        Menampilkan <?= $rooms ? (($currentPage - 1) * $perPage) + 1 : 0 ?>&ndash;<?= (($currentPage - 1) * $perPage) + count($rooms) ?> dari <?= $totalRows ?> data
+      </div>
+      <?= $pager->only(['q', 'type', 'status', 'perPage'])->links('default', 'app') ?>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
