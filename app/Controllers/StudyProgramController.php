@@ -10,6 +10,8 @@ class StudyProgramController extends BaseController
     protected FacultyModel $facultyModel;
     protected StudyProgramModel $studyProgramModel;
 
+    private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
     public function __construct()
     {
         $this->facultyModel = new FacultyModel();
@@ -18,15 +20,70 @@ class StudyProgramController extends BaseController
 
     public function index()
     {
+        $search = trim((string) $this->request->getGet('q'));
+        $facultyId = (int) $this->request->getGet('faculty_id');
+        $degree = (string) $this->request->getGet('degree');
+        $status = (string) $this->request->getGet('status');
+        $perPage = (int) $this->request->getGet('perPage');
+        $degrees = ['D1', 'D2', 'D3', 'D4', 'S1', 'S2', 'S3', 'Profesi'];
+
+        if (! in_array($degree, $degrees, true)) {
+            $degree = '';
+        }
+
+        if (! in_array($status, ['active', 'inactive'], true)) {
+            $status = '';
+        }
+
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PER_PAGE_OPTIONS[0];
+        }
+
+        $query = $this->studyProgramModel
+            ->select('study_programs.*, faculties.code AS faculty_code, faculties.name AS faculty_name')
+            ->join('faculties', 'faculties.id = study_programs.faculty_id')
+            ->orderBy('faculties.code', 'ASC')
+            ->orderBy('study_programs.code', 'ASC');
+
+        if ($search !== '') {
+            $query->groupStart()
+                ->like('study_programs.code', $search)
+                ->orLike('study_programs.name', $search)
+                ->orLike('faculties.code', $search)
+                ->orLike('faculties.name', $search)
+                ->groupEnd();
+        }
+
+        if ($facultyId > 0) {
+            $query->where('study_programs.faculty_id', $facultyId);
+        }
+
+        if ($degree !== '') {
+            $query->where('study_programs.degree', $degree);
+        }
+
+        if ($status !== '') {
+            $query->where('study_programs.status', $status);
+        }
+
+        $studyPrograms = $query->paginate($perPage);
+        $pager = $this->studyProgramModel->pager;
+
         return $this->renderView('study_programs/index', [
-            'title' => 'Manajemen Program Studi',
-            'page_title' => 'Manajemen Program Studi',
-            'studyPrograms' => $this->studyProgramModel
-                ->select('study_programs.*, faculties.code AS faculty_code, faculties.name AS faculty_name')
-                ->join('faculties', 'faculties.id = study_programs.faculty_id')
-                ->orderBy('faculties.code', 'ASC')
-                ->orderBy('study_programs.code', 'ASC')
-                ->findAll(),
+            'title'          => 'Manajemen Program Studi',
+            'page_title'     => 'Manajemen Program Studi',
+            'studyPrograms'  => $studyPrograms,
+            'pager'          => $pager,
+            'search'         => $search,
+            'facultyId'      => $facultyId,
+            'degree'         => $degree,
+            'status'         => $status,
+            'perPage'        => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+            'currentPage'    => $pager->getCurrentPage(),
+            'totalRows'      => $pager->getTotal(),
+            'faculties'      => $this->facultyModel->orderBy('code', 'ASC')->findAll(),
+            'degrees'        => $degrees,
         ]);
     }
 

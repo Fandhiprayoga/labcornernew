@@ -1,3 +1,17 @@
+<?php
+/** @var array $studyPrograms */
+/** @var CodeIgniter\Pager\Pager $pager */
+/** @var array $faculties */
+/** @var array $degrees */
+/** @var string $search */
+/** @var int $facultyId */
+/** @var string $degree */
+/** @var string $status */
+/** @var int $perPage */
+/** @var array $perPageOptions */
+/** @var int $currentPage */
+/** @var int $totalRows */
+?>
 <div class="page__section">
   <div class="card">
     <div class="card__header">
@@ -11,13 +25,61 @@
         <?php endif; ?>
       </div>
     </div>
+    <div class="card__body" style="border-bottom: 1px solid var(--color-border);">
+      <form method="get" action="<?= base_url('admin/study-programs') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
+        <div style="flex:1 1 260px;min-width:220px;">
+          <label class="text-xs text-muted-foreground" for="q">Cari</label>
+          <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Kode, nama program studi, atau fakultas...">
+        </div>
+        <div style="flex:0 1 240px;min-width:200px;">
+          <label class="text-xs text-muted-foreground" for="faculty_id">Fakultas</label>
+          <select class="select" id="faculty_id" name="faculty_id">
+            <option value="">Semua Fakultas</option>
+            <?php foreach ($faculties as $faculty): ?>
+            <option value="<?= $faculty['id'] ?>" <?= $facultyId === (int) $faculty['id'] ? 'selected' : '' ?>><?= esc($faculty['code'] . ' - ' . $faculty['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="flex:0 1 150px;min-width:130px;">
+          <label class="text-xs text-muted-foreground" for="degree">Jenjang</label>
+          <select class="select" id="degree" name="degree">
+            <option value="">Semua Jenjang</option>
+            <?php foreach ($degrees as $option): ?>
+            <option value="<?= esc($option) ?>" <?= $degree === $option ? 'selected' : '' ?>><?= esc($option) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="flex:0 1 160px;min-width:150px;">
+          <label class="text-xs text-muted-foreground" for="status">Status</label>
+          <select class="select" id="status" name="status">
+            <option value="">Semua Status</option>
+            <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Aktif</option>
+            <option value="inactive" <?= $status === 'inactive' ? 'selected' : '' ?>>Nonaktif</option>
+          </select>
+        </div>
+        <div style="flex:0 0 110px;">
+          <label class="text-xs text-muted-foreground" for="perPage">Per Halaman</label>
+          <select class="select" id="perPage" name="perPage">
+            <?php foreach ($perPageOptions as $option): ?>
+            <option value="<?= $option ?>" <?= $perPage === $option ? 'selected' : '' ?>><?= $option ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <button type="submit" class="button button--primary button--sm">Filter</button>
+          <?php if ($search !== '' || $facultyId > 0 || $degree !== '' || $status !== ''): ?>
+          <a href="<?= base_url('admin/study-programs') ?>" class="button button--outline button--sm">Reset</a>
+          <?php endif; ?>
+        </div>
+      </form>
+    </div>
     <div class="card__body p-0">
       <div class="table-responsive">
         <table class="table">
           <thead><tr><th class="text-center" style="width: 60px;">#</th><th>Kode</th><th>Program Studi</th><th>Fakultas</th><th>Jenjang</th><th>Status</th><th class="text-center">Aksi</th></tr></thead>
           <tbody>
             <?php if (! empty($studyPrograms)): ?>
-              <?php $no = 1; foreach ($studyPrograms as $studyProgram): ?>
+              <?php $no = (($currentPage - 1) * $perPage) + 1; foreach ($studyPrograms as $studyProgram): ?>
               <tr>
                 <td class="text-center"><?= $no++ ?></td>
                 <td><strong><?= esc($studyProgram['code']) ?></strong></td>
@@ -32,11 +94,19 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="7" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => 'Belum ada data program studi.']) ?></td></tr>
+              <tr><td colspan="7" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $facultyId > 0 || $degree !== '' || $status !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada data program studi.']) ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>
       </div>
     </div>
+    <?php if ($totalRows > 0): ?>
+    <div class="card__body" style="border-top: 1px solid var(--color-border); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem;">
+      <div class="text-xs text-muted-foreground">
+        Menampilkan <?= $studyPrograms ? (($currentPage - 1) * $perPage) + 1 : 0 ?>&ndash;<?= (($currentPage - 1) * $perPage) + count($studyPrograms) ?> dari <?= $totalRows ?> data
+      </div>
+      <?= $pager->only(['q', 'faculty_id', 'degree', 'status', 'perPage'])->links('default', 'app') ?>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
