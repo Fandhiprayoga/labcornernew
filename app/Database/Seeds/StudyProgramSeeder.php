@@ -31,7 +31,7 @@ class StudyProgramSeeder extends Seeder
             ['code' => 'PS-10', 'name' => 'S1 SAINS DATA', 'degree' => 'S1'],
             ['code' => 'PS-11', 'name' => 'S1 TEKNIK ELEKTRO', 'degree' => 'S1'],
             ['code' => 'PS-12', 'name' => 'S1 BIOMEDIS', 'degree' => 'S1'],
-            ['code' => 'PS-13', 'name' => 'S1 TEKNIK PANGAN', 'degree' => 'S1'],
+            ['code' => 'PS-13', 'name' => 'S1 TEKNOLOGI PANGAN', 'degree' => 'S1'],
             ['code' => 'PS-14', 'name' => 'S1 DESAIN PRODUK', 'degree' => 'S1'],
         ];
 
