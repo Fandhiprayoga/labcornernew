@@ -14,6 +14,8 @@ class LaboratoryController extends BaseController
     protected RoomModel $roomModel;
     protected StudyProgramModel $studyProgramModel;
 
+    private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
     public function __construct()
     {
         $this->laboratoryModel = new LaboratoryModel();
@@ -24,17 +26,72 @@ class LaboratoryController extends BaseController
 
     public function index()
     {
+        $search = trim((string) $this->request->getGet('q'));
+        $roomId = (int) $this->request->getGet('room_id');
+        $studyProgramId = (int) $this->request->getGet('study_program_id');
+        $status = (string) $this->request->getGet('status');
+        $perPage = (int) $this->request->getGet('perPage');
+
+        if (! in_array($status, ['active', 'inactive'], true)) {
+            $status = '';
+        }
+
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PER_PAGE_OPTIONS[0];
+        }
+
+        $query = $this->laboratoryModel
+            ->select("laboratories.*, rooms.code AS room_code, rooms.name AS room_name, GROUP_CONCAT(DISTINCT CONCAT(study_programs.degree, ' ', study_programs.code) ORDER BY study_programs.degree, study_programs.code SEPARATOR ', ') AS study_programs")
+            ->join('rooms', 'rooms.id = laboratories.room_id')
+            ->join('laboratory_study_programs', 'laboratory_study_programs.laboratory_id = laboratories.id', 'left')
+            ->join('study_programs', 'study_programs.id = laboratory_study_programs.study_program_id AND study_programs.deleted_at IS NULL', 'left');
+
+        if ($search !== '') {
+            $query->groupStart()
+                ->like('laboratories.name', $search)
+                ->orLike('laboratories.description', $search)
+                ->orLike('rooms.code', $search)
+                ->orLike('rooms.name', $search)
+                ->orLike('study_programs.code', $search)
+                ->orLike('study_programs.name', $search)
+                ->orLike('study_programs.degree', $search)
+                ->groupEnd();
+        }
+
+        if ($roomId > 0) {
+            $query->where('laboratories.room_id', $roomId);
+        }
+
+        if ($studyProgramId > 0) {
+            $query->join('laboratory_study_programs selected_study_programs', 'selected_study_programs.laboratory_id = laboratories.id')
+                ->where('selected_study_programs.study_program_id', $studyProgramId);
+        }
+
+        if ($status !== '') {
+            $query->where('laboratories.status', $status);
+        }
+
+        $laboratories = $query
+            ->groupBy('laboratories.id')
+            ->orderBy('laboratories.name', 'ASC')
+            ->paginate($perPage);
+        $pager = $this->laboratoryModel->pager;
+
         return $this->renderView('laboratories/index', [
             'title' => 'Master Laboratorium',
             'page_title' => 'Master Laboratorium',
-            'laboratories' => $this->laboratoryModel
-                ->select("laboratories.*, rooms.code AS room_code, rooms.name AS room_name, GROUP_CONCAT(CONCAT(study_programs.degree, ' ', study_programs.code) ORDER BY study_programs.degree, study_programs.code SEPARATOR ', ') AS study_programs")
-                ->join('rooms', 'rooms.id = laboratories.room_id')
-                ->join('laboratory_study_programs', 'laboratory_study_programs.laboratory_id = laboratories.id', 'left')
-                ->join('study_programs', 'study_programs.id = laboratory_study_programs.study_program_id AND study_programs.deleted_at IS NULL', 'left')
-                ->groupBy('laboratories.id')
-                ->orderBy('laboratories.name', 'ASC')
-                ->findAll(),
+            'laboratories' => $laboratories,
+            'pager' => $pager,
+            'search' => $search,
+            'roomId' => $roomId,
+            'studyProgramId' => $studyProgramId,
+            'status' => $status,
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+            'currentPage' => $pager->getCurrentPage(),
+            'totalRows' => $pager->getTotal(),
+            'rooms' => $this->roomModel->where('type', 'laboratorium')->orderBy('code', 'ASC')->findAll(),
+            'studyPrograms' => $this->studyProgramModel->orderBy('degree', 'ASC')->orderBy('code', 'ASC')->findAll(),
         ]);
     }
 

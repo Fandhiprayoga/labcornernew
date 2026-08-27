@@ -1,3 +1,17 @@
+<?php
+/** @var array $laboratories */
+/** @var CodeIgniter\Pager\Pager $pager */
+/** @var array $rooms */
+/** @var array $studyPrograms */
+/** @var string $search */
+/** @var int $roomId */
+/** @var int $studyProgramId */
+/** @var string $status */
+/** @var int $perPage */
+/** @var array $perPageOptions */
+/** @var int $currentPage */
+/** @var int $totalRows */
+?>
 <div class="page__section">
   <div class="card">
     <div class="card__header">
@@ -11,13 +25,61 @@
         <?php endif; ?>
       </div>
     </div>
+    <div class="card__body" style="border-bottom: 1px solid var(--color-border);">
+      <form method="get" action="<?= base_url('admin/laboratories') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
+        <div style="flex:1 1 260px;min-width:220px;">
+          <label class="text-xs text-muted-foreground" for="q">Cari</label>
+          <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Nama laboratorium, ruangan, atau program studi...">
+        </div>
+        <div style="flex:0 1 220px;min-width:190px;">
+          <label class="text-xs text-muted-foreground" for="room_id">Ruangan</label>
+          <select class="select" id="room_id" name="room_id">
+            <option value="">Semua Ruangan</option>
+            <?php foreach ($rooms as $room): ?>
+            <option value="<?= $room['id'] ?>" <?= $roomId === (int) $room['id'] ? 'selected' : '' ?>><?= esc($room['code'] . ' - ' . $room['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="flex:0 1 240px;min-width:200px;">
+          <label class="text-xs text-muted-foreground" for="study_program_id">Program Studi</label>
+          <select class="select" id="study_program_id" name="study_program_id">
+            <option value="">Semua Program Studi</option>
+            <?php foreach ($studyPrograms as $studyProgram): ?>
+            <option value="<?= $studyProgram['id'] ?>" <?= $studyProgramId === (int) $studyProgram['id'] ? 'selected' : '' ?>><?= esc($studyProgram['degree'] . ' ' . $studyProgram['code'] . ' - ' . $studyProgram['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="flex:0 1 160px;min-width:150px;">
+          <label class="text-xs text-muted-foreground" for="status">Status</label>
+          <select class="select" id="status" name="status">
+            <option value="">Semua Status</option>
+            <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Aktif</option>
+            <option value="inactive" <?= $status === 'inactive' ? 'selected' : '' ?>>Nonaktif</option>
+          </select>
+        </div>
+        <div style="flex:0 0 110px;">
+          <label class="text-xs text-muted-foreground" for="perPage">Per Halaman</label>
+          <select class="select" id="perPage" name="perPage">
+            <?php foreach ($perPageOptions as $option): ?>
+            <option value="<?= $option ?>" <?= $perPage === $option ? 'selected' : '' ?>><?= $option ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div style="display:flex;gap:.5rem;">
+          <button type="submit" class="button button--primary button--sm">Filter</button>
+          <?php if ($search !== '' || $roomId > 0 || $studyProgramId > 0 || $status !== ''): ?>
+          <a href="<?= base_url('admin/laboratories') ?>" class="button button--outline button--sm">Reset</a>
+          <?php endif; ?>
+        </div>
+      </form>
+    </div>
     <div class="card__body p-0">
       <div class="table-responsive">
         <table class="table">
           <thead><tr><th class="text-center" style="width: 60px;">#</th><th>Laboratorium</th><th>Ruangan</th><th>Program Studi</th><th>Status</th><th class="text-center">Aksi</th></tr></thead>
           <tbody>
             <?php if (! empty($laboratories)): ?>
-              <?php $no = 1; foreach ($laboratories as $laboratory): ?>
+              <?php $no = (($currentPage - 1) * $perPage) + 1; foreach ($laboratories as $laboratory): ?>
               <tr>
                 <td class="text-center"><?= $no++ ?></td>
                 <td><?= esc($laboratory['name']) ?><?php if (! empty($laboratory['description'])): ?><div class="text-xs text-muted-foreground"><?= esc($laboratory['description']) ?></div><?php endif; ?></td>
@@ -31,11 +93,19 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="6" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => 'Belum ada data laboratorium.']) ?></td></tr>
+              <tr><td colspan="6" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $roomId > 0 || $studyProgramId > 0 || $status !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada data laboratorium.']) ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>
       </div>
     </div>
+    <?php if ($totalRows > 0): ?>
+    <div class="card__body" style="border-top: 1px solid var(--color-border); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem;">
+      <div class="text-xs text-muted-foreground">
+        Menampilkan <?= $laboratories ? (($currentPage - 1) * $perPage) + 1 : 0 ?>&ndash;<?= (($currentPage - 1) * $perPage) + count($laboratories) ?> dari <?= $totalRows ?> data
+      </div>
+      <?= $pager->only(['q', 'room_id', 'study_program_id', 'status', 'perPage'])->links('default', 'app') ?>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
