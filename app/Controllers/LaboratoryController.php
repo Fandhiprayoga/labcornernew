@@ -41,7 +41,7 @@ class LaboratoryController extends BaseController
         }
 
         $query = $this->laboratoryModel
-            ->select("laboratories.*, rooms.code AS room_code, rooms.name AS room_name, GROUP_CONCAT(DISTINCT CONCAT(study_programs.degree, ' ', study_programs.code) ORDER BY study_programs.degree, study_programs.code SEPARATOR ', ') AS study_programs")
+              ->select("laboratories.*, rooms.code AS room_code, rooms.name AS room_name, GROUP_CONCAT(DISTINCT study_programs.name ORDER BY study_programs.name SEPARATOR ', ') AS study_programs")
             ->join('rooms', 'rooms.id = laboratories.room_id')
             ->join('laboratory_study_programs', 'laboratory_study_programs.laboratory_id = laboratories.id', 'left')
             ->join('study_programs', 'study_programs.id = laboratory_study_programs.study_program_id AND study_programs.deleted_at IS NULL', 'left');
