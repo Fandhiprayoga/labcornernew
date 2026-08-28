@@ -63,9 +63,22 @@ php spark migrate --all
 
 ### 6. Jalankan Seeder
 
+Jalankan seeder sesuai urutan dependensi berikut:
+
 ```bash
 php spark db:seed UserSeeder
+php spark db:seed LaboranUserSeeder
+php spark db:seed RoomSeeder
+php spark db:seed FacultySeeder
+php spark db:seed StudyProgramSeeder
+php spark db:seed LaboratorySeeder
+php spark db:seed LaboratoryLaboranSeeder
+php spark db:seed AssetSeeder
 ```
+
+`LaboratorySeeder`, `LaboratoryLaboranSeeder`, dan `AssetSeeder` juga memanggil
+seeder dependensinya secara otomatis, sehingga seeder tersebut aman dijalankan
+ulang jika diperlukan.
 
 ### 7. Jalankan Server
 
