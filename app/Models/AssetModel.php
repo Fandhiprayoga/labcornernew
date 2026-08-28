@@ -20,6 +20,7 @@ class AssetModel extends Model
         'uuid',
         'asset_code',
         'name',
+        'photo',
         'laboratory_id',
         'category',
         'brand',

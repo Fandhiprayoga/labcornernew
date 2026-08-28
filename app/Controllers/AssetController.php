@@ -152,7 +152,12 @@ class AssetController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
-        $this->assetModel->update($asset['id'], $this->assetData());
+        $assetData = $this->assetData($asset['photo'] ?? null);
+        $this->assetModel->update($asset['id'], $assetData);
+
+        if (($asset['photo'] ?? null) !== ($assetData['photo'] ?? null)) {
+            $this->deletePhoto($asset['photo']);
+        }
 
         return redirect()->to('/admin/assets')->with('success', 'Asset berhasil diperbarui.');
     }
@@ -189,7 +194,7 @@ class AssetController extends BaseController
     {
         $uniqueCode = $id === null ? 'is_unique[assets.asset_code]' : "is_unique[assets.asset_code,id,{$id}]";
 
-        if (! $this->validate([
+        $rules = [
             'asset_code' => "required|alpha_numeric_punct|min_length[2]|max_length[50]|{$uniqueCode}",
             'name' => 'required|min_length[3]|max_length[150]',
             'laboratory_id' => 'required|integer|is_not_unique[laboratories.id]',
@@ -202,7 +207,14 @@ class AssetController extends BaseController
             'can_be_borrowed' => 'required|in_list[0,1]',
             'status' => 'required|in_list[' . implode(',', array_keys(AssetModel::statuses())) . ']',
             'description' => 'permit_empty|max_length[500]',
-        ])) {
+        ];
+
+        $photo = $this->request->getFile('photo');
+        if ($photo && $photo->getError() !== UPLOAD_ERR_NO_FILE) {
+            $rules['photo'] = 'uploaded[photo]|max_size[photo,2048]|is_image[photo]|mime_in[photo,image/jpg,image/jpeg,image/png,image/webp]';
+        }
+
+        if (! $this->validate($rules)) {
             return false;
         }
 
@@ -231,13 +243,15 @@ class AssetController extends BaseController
         return true;
     }
 
-    private function assetData(): array
+    private function assetData(?string $currentPhoto = null): array
     {
         $purchasePrice = $this->request->getPost('purchase_price');
+        $photo = $this->storePhoto($currentPhoto);
 
         return [
             'asset_code' => strtoupper(trim((string) $this->request->getPost('asset_code'))),
             'name' => trim((string) $this->request->getPost('name')),
+            'photo' => $photo,
             'laboratory_id' => (int) $this->request->getPost('laboratory_id'),
             'category' => trim((string) $this->request->getPost('category')),
             'brand' => trim((string) $this->request->getPost('brand')),
@@ -249,6 +263,35 @@ class AssetController extends BaseController
             'status' => $this->request->getPost('status'),
             'description' => trim((string) $this->request->getPost('description')),
         ];
+    }
+
+    private function storePhoto(?string $currentPhoto = null): ?string
+    {
+        $photo = $this->request->getFile('photo');
+
+        if (! $photo || $photo->getError() === UPLOAD_ERR_NO_FILE) {
+            return $currentPhoto;
+        }
+
+        $uploadPath = FCPATH . 'uploads/assets';
+        if (! is_dir($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
+
+        $fileName = bin2hex(random_bytes(16)) . '.' . $photo->getExtension();
+        $photo->move($uploadPath, $fileName);
+
+        return 'uploads/assets/' . $fileName;
+    }
+
+    private function deletePhoto(?string $photo): void
+    {
+        if ($photo && str_starts_with($photo, 'uploads/assets/')) {
+            $filePath = FCPATH . $photo;
+            if (is_file($filePath)) {
+                unlink($filePath);
+            }
+        }
     }
 
     private function laboratoryOptions(): array

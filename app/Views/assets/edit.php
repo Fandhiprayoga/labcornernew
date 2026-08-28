@@ -7,11 +7,12 @@
   <div class="card" style="width: 100%;">
     <div class="card__header"><span class="card__title">Edit Asset: <?= esc($asset['name']) ?></span></div>
     <div class="card__body">
-      <form action="<?= base_url('admin/assets/update/' . $asset['uuid']) ?>" method="post" class="flex flex-col gap-4">
+      <form action="<?= base_url('admin/assets/update/' . $asset['uuid']) ?>" method="post" enctype="multipart/form-data" class="flex flex-col gap-4">
         <?= csrf_field() ?>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="field"><label for="asset_code" class="field__label">Kode Asset <span class="text-danger">*</span></label><input type="text" class="input w-full" id="asset_code" name="asset_code" value="<?= old('asset_code', $asset['asset_code']) ?>" required></div>
           <div class="field"><label for="name" class="field__label">Nama Asset <span class="text-danger">*</span></label><input type="text" class="input w-full" id="name" name="name" value="<?= old('name', $asset['name']) ?>" required></div>
+          <div class="field"><label for="photo" class="field__label">Foto Asset</label><input type="file" class="input w-full" id="photo" name="photo" accept="image/jpeg,image/png,image/webp"><div class="text-xs text-muted-foreground">Kosongkan jika tetap memakai foto saat ini. Maksimal 2 MB.</div></div>
           <div class="field"><label for="laboratory_id" class="field__label">Laboratorium <span class="text-danger">*</span></label><select class="input w-full" id="laboratory_id" name="laboratory_id" required><option value="">Pilih Laboratorium</option><?php foreach ($laboratories as $laboratory): ?><option value="<?= esc($laboratory['id']) ?>" <?= old('laboratory_id', $asset['laboratory_id']) == $laboratory['id'] ? 'selected' : '' ?>><?= esc($laboratory['name'] . ' (' . ($laboratory['room_code'] ?: '-') . ' - ' . ($laboratory['room_name'] ?: '-') . ')') ?></option><?php endforeach; ?></select></div>
           <div class="field"><label for="category" class="field__label">Kategori</label><input type="text" class="input w-full" id="category" name="category" value="<?= old('category', $asset['category']) ?>"></div>
           <div class="field"><label for="brand" class="field__label">Merek</label><input type="text" class="input w-full" id="brand" name="brand" value="<?= old('brand', $asset['brand']) ?>"></div>

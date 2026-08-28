@@ -82,6 +82,7 @@
           <thead>
             <tr>
               <th class="text-center" style="width: 60px;">#</th>
+              <th class="text-center" style="width: 72px;">Foto</th>
               <th>Kode</th>
               <th>Nama Asset</th>
               <th>Laboratorium</th>
@@ -97,6 +98,7 @@
               <?php $status = $asset['status'] ?? 'ready'; ?>
               <tr>
                 <td class="text-center"><?= $no++ ?></td>
+                <td class="text-center"><img src="<?= base_url($asset['photo'] ?: 'assets/images/default-asset.svg') ?>" alt="Foto <?= esc($asset['name']) ?>" width="48" height="48" style="object-fit:cover;border-radius:8px;"></td>
                 <td><strong><?= esc($asset['asset_code']) ?></strong></td>
                 <td>
                   <?= esc($asset['name']) ?>
@@ -120,7 +122,7 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="8" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $laboratoryId > 0 || $status !== '' || $borrowable !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada data asset.']) ?></td></tr>
+              <tr><td colspan="9" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $laboratoryId > 0 || $status !== '' || $borrowable !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada data asset.']) ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>
