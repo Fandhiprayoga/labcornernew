@@ -369,6 +369,39 @@ class AssetController extends BaseController
     }
 
     /**
+     * Menerima tanggal umum dari file Excel (mis. d/m/Y, d-m-Y) dan menormalkannya ke Y-m-d.
+     */
+    private function normalizeCsvDate(string $value): string
+    {
+        if ($value === '' || preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
+            return $value;
+        }
+
+        if (preg_match('/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $value, $matches) === 1) {
+            [, $year, $month, $day] = array_map('intval', $matches);
+
+            return checkdate($month, $day, $year) ? sprintf('%04d-%02d-%02d', $year, $month, $day) : $value;
+        }
+
+        if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $value, $matches) === 1) {
+            [, $first, $second, $year] = array_map('intval', $matches);
+
+            // Diasumsikan format d/m/Y (umum di Indonesia); bila tidak valid, coba m/d/Y.
+            $day = $first;
+            $month = $second;
+
+            if (! checkdate($month, $day, $year) && checkdate($first, $second, $year)) {
+                $month = $first;
+                $day = $second;
+            }
+
+            return checkdate($month, $day, $year) ? sprintf('%04d-%02d-%02d', $year, $month, $day) : $value;
+        }
+
+        return $value;
+    }
+
+    /**
      * @return array{0: array<string, mixed>|null, 1: list<string>}
      */
     private function prepareBulkRow(array $data, ?int $forcedLaboratoryId, array $codesInFile): array
@@ -378,7 +411,7 @@ class AssetController extends BaseController
         $canBeBorrowed = trim((string) ($data['can_be_borrowed'] ?? ''));
         $status = trim((string) ($data['status'] ?? '')) ?: AssetModel::STATUS_READY;
         $purchasePrice = trim((string) ($data['purchase_price'] ?? ''));
-        $acquisitionDate = trim((string) ($data['acquisition_date'] ?? ''));
+        $acquisitionDate = $this->normalizeCsvDate(trim((string) ($data['acquisition_date'] ?? '')));
 
         $validationData = [
             'asset_code' => $assetCode,
