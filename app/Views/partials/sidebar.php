@@ -224,6 +224,19 @@ function isDropdownActive(array $paths): string
               <span>Profil Saya</span>
             </a>
           </li>
+          <li class="sidebar__item <?= isMenuActive('notifications') ?>">
+            <a class="sidebar__button" href="<?= base_url('notifications') ?>" <?= isMenuActive('notifications') ? 'aria-current="page"' : '' ?>>
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M3.833 8.406c.208-3.696 3.164-6.652 6.86-6.86a26 26 0 0 1 2.614 0c3.696.208 6.652 3.164 6.86 6.86c.045.806.045 1.622 0 2.428a10 10 0 0 0 1.535 5.474l.238.376c.945 1.49.223 3.482-1.462 3.996a30.7 30.7 0 0 1-17.956 0c-1.685-.514-2.407-2.506-1.462-3.996l.238-.376a10 10 0 0 0 1.535-5.474a25 25 0 0 1 0-2.428" opacity=".5" />
+                <path fill="currentColor" d="M7.828 20.24a4.185 4.185 0 0 0 8.344 0c-2.767.32-5.577.32-8.344 0" />
+              </svg>
+              <span>Notifikasi</span>
+              <?php $unread = notification()->unreadCount($currentUser->id); ?>
+              <?php if ($unread > 0): ?>
+                <span class="badge badge--danger ms-auto"><?= $unread ?></span>
+              <?php endif; ?>
+            </a>
+          </li>
         </ul>
       </div>
     </nav>

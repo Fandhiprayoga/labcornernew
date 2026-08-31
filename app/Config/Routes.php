@@ -36,6 +36,12 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
     $routes->get('profile', 'ProfileController::index');
     $routes->post('profile/update', 'ProfileController::update');
 
+    // Notifications
+    $routes->get('notifications', 'NotificationController::index');
+    $routes->get('notifications/read/(:num)', 'NotificationController::read/$1');
+    $routes->post('notifications/mark-all-read', 'NotificationController::markAllRead');
+    $routes->post('notifications/delete/(:num)', 'NotificationController::delete/$1');
+
     // ---------------------------------------------------------------
     // Admin Routes (require admin.access permission)
     // ---------------------------------------------------------------

@@ -107,3 +107,19 @@ function activeGroupIs(string ...$groups): bool
 
     return in_array($active, $groups);
 }
+
+// ---------------------------------------------------------------
+// Notification Helper Function
+// ---------------------------------------------------------------
+
+/**
+ * Ambil instance library Notification, agar bisa dipakai
+ * untuk menyimpan/membaca notifikasi dari modul manapun.
+ *
+ * Contoh: notification()->send($userId, 'Judul', 'Pesan');
+ */
+function notification(): \App\Libraries\Notification
+{
+    return service('notification');
+}
+

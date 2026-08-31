@@ -3,6 +3,8 @@ $currentUser  = auth()->user();
 $userGroups   = $currentUser->getGroups();
 $active       = activeGroup();
 $authGroups   = config('AuthGroups');
+$navNotifications = notification()->getForUser($currentUser->id, 5);
+$navUnreadCount    = notification()->unreadCount($currentUser->id);
 $badgeColors = [
     'superadmin' => 'danger',
     'kepala_lab' => 'warning',
@@ -96,6 +98,50 @@ $badgeColors = [
           <path fill="currentColor" d="m21.067 11.857l-.642-.388zm-8.924-8.924l-.388-.642zM21.25 12A9.25 9.25 0 0 1 12 21.25v1.5c5.937 0 10.75-4.813 10.75-10.75zM12 21.25A9.25 9.25 0 0 1 2.75 12h-1.5c0 5.937 4.813 10.75 10.75 10.75zM2.75 12A9.25 9.25 0 0 1 12 2.75v-1.5C6.063 1.25 1.25 6.063 1.25 12zm12.75 2.25A5.75 5.75 0 0 1 9.75 8.5h-1.5a7.25 7.25 0 0 0 7.25 7.25zm4.925-2.781A5.75 5.75 0 0 1 15.5 14.25v1.5a7.25 7.25 0 0 0 6.21-3.505zM9.75 8.5a5.75 5.75 0 0 1 2.781-4.925l-.776-1.284A7.25 7.25 0 0 0 8.25 8.5zM12 2.75a.38.38 0 0 1-.268-.118a.3.3 0 0 1-.082-.155c-.004-.031-.002-.121.105-.186l.776 1.284c.503-.304.665-.861.606-1.299c-.062-.455-.42-1.026-1.137-1.026zm9.71 9.495c-.066.107-.156.109-.187.105a.3.3 0 0 1-.155-.082a.38.38 0 0 1-.118-.268h1.5c0-.717-.571-1.075-1.026-1.137c-.438-.059-.995.103-1.299.606z" />
         </svg>
       </button>
+
+      <!-- Notification Bell -->
+      <div class="menu">
+        <button
+          type="button"
+          class="button button--ghost button--neutral button--icon-only"
+          data-stisla-menu-trigger="topbarNotifications"
+          aria-haspopup="menu"
+          aria-expanded="false"
+          aria-controls="topbarNotifications"
+          aria-label="Notifikasi"
+          style="position: relative;"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M3.833 8.406c.208-3.696 3.164-6.652 6.86-6.86a26 26 0 0 1 2.614 0c3.696.208 6.652 3.164 6.86 6.86c.045.806.045 1.622 0 2.428a10 10 0 0 0 1.535 5.474l.238.376c.945 1.49.223 3.482-1.462 3.996a30.7 30.7 0 0 1-17.956 0c-1.685-.514-2.407-2.506-1.462-3.996l.238-.376a10 10 0 0 0 1.535-5.474a25 25 0 0 1 0-2.428" opacity=".5" />
+            <path fill="currentColor" d="M7.828 20.24a4.185 4.185 0 0 0 8.344 0c-2.767.32-5.577.32-8.344 0" />
+          </svg>
+          <?php if ($navUnreadCount > 0): ?>
+            <span class="badge badge--danger" style="position: absolute; top: 2px; right: 2px; font-size: .6rem; padding: 0 4px;"><?= $navUnreadCount > 9 ? '9+' : $navUnreadCount ?></span>
+          <?php endif; ?>
+        </button>
+        <div class="menu__popup w-64" id="topbarNotifications" data-stisla-menu role="menu" data-state="closed">
+          <div class="menu__group" role="group">
+            <h3 class="menu__group-label">Notifikasi</h3>
+            <?php if (empty($navNotifications)): ?>
+              <span class="menu__item disabled">Belum ada notifikasi.</span>
+            <?php else: ?>
+              <?php foreach ($navNotifications as $notif): ?>
+                <a href="<?= base_url('notifications/read/' . $notif['id']) ?>" class="menu__item flex-col items-start" role="menuitem" style="white-space: normal;">
+                  <span class="flex items-center gap-2">
+                    <?php if (! $notif['is_read']): ?><span class="badge badge--danger" style="width:6px;height:6px;padding:0;border-radius:50%;"></span><?php endif; ?>
+                    <span class="font-medium"><?= esc($notif['title']) ?></span>
+                  </span>
+                  <?php if (! empty($notif['message'])): ?>
+                    <span class="text-muted-foreground text-xs"><?= esc($notif['message']) ?></span>
+                  <?php endif; ?>
+                </a>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </div>
+          <hr class="menu__separator" role="separator" />
+          <a href="<?= base_url('notifications') ?>" class="menu__item justify-center" role="menuitem">Lihat Semua Notifikasi</a>
+        </div>
+      </div>
 
       <!-- User Menu -->
       <div class="menu">

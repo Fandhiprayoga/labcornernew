@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Libraries\Notification;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -19,6 +20,18 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
+    /**
+     * Library notifikasi untuk menyimpan & membaca notifikasi semua modul.
+     */
+    public static function notification($getShared = true): Notification
+    {
+        if ($getShared) {
+            return static::getSharedInstance('notification');
+        }
+
+        return new Notification();
+    }
+
     /*
      * public static function example($getShared = true)
      * {
