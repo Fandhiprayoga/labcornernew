@@ -10,6 +10,8 @@
           </span>
           <h5 class="text-lg font-semibold"><?= esc($currentUser->username) ?></h5>
           <p class="text-muted-foreground"><?= esc($currentUser->email) ?></p>
+          <p class="text-muted-foreground text-sm"><?= $currentStudyProgram ? esc($currentStudyProgram['degree'] . ' ' . $currentStudyProgram['code'] . ' - ' . $currentStudyProgram['name']) : '-' ?></p>
+          <p class="text-muted-foreground text-sm"><?= $currentUser->phone ? esc($currentUser->phone) : '-' ?></p>
           <div class="flex justify-center gap-1 mt-2">
             <?php foreach ($userGroups as $group): ?>
               <?php
@@ -52,6 +54,26 @@
                 <input type="email" class="input" id="email" value="<?= esc($currentUser->email) ?>" disabled>
               </div>
               <small class="text-muted-foreground text-xs">Email tidak dapat diubah.</small>
+            </div>
+
+            <div class="field">
+              <label for="phone" class="field__label">Nomor Telepon</label>
+              <div class="input-group">
+                <input type="text" class="input" id="phone" name="phone"
+                       value="<?= old('phone', $currentUser->phone) ?>" maxlength="20" placeholder="08xxxxxxxxxx">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="study_program_id" class="field__label">Program Studi</label>
+              <div class="input-group">
+                <select class="input w-full" id="study_program_id" name="study_program_id">
+                  <option value="">Pilih Program Studi</option>
+                  <?php foreach ($studyPrograms as $studyProgram): ?>
+                  <option value="<?= esc($studyProgram['id']) ?>" <?= old('study_program_id', $currentUser->study_program_id) == $studyProgram['id'] ? 'selected' : '' ?>><?= esc($studyProgram['degree'] . ' ' . $studyProgram['code'] . ' - ' . $studyProgram['name']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
             </div>
 
             <div class="field">
