@@ -76,12 +76,13 @@
     <div class="card__body p-0">
       <div class="table-responsive">
         <table class="table">
-          <thead><tr><th class="text-center" style="width: 60px;">#</th><th>Laboratorium</th><th>Ruangan</th><th>Program Studi</th><th>Status</th><th class="text-center">Aksi</th></tr></thead>
+          <thead><tr><th class="text-center" style="width: 60px;">#</th><th class="text-center" style="width: 72px;">Foto</th><th>Laboratorium</th><th>Ruangan</th><th>Program Studi</th><th>Status</th><th class="text-center">Aksi</th></tr></thead>
           <tbody>
             <?php if (! empty($laboratories)): ?>
               <?php $no = (($currentPage - 1) * $perPage) + 1; foreach ($laboratories as $laboratory): ?>
               <tr>
                 <td class="text-center"><?= $no++ ?></td>
+                <td class="text-center"><img src="<?= base_url($laboratory['photo'] ?: 'assets/images/default-laboratory.svg') ?>" alt="Foto <?= esc($laboratory['name']) ?>" width="48" height="48" style="object-fit:cover;border-radius:8px;"></td>
                 <td><?= esc($laboratory['name']) ?><?php if (! empty($laboratory['description'])): ?><div class="text-xs text-muted-foreground"><?= esc($laboratory['description']) ?></div><?php endif; ?></td>
                 <td><strong><?= esc($laboratory['room_code']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($laboratory['room_name']) ?></div></td>
                 <td><?php if (! empty($laboratory['study_programs'])): ?><div class="flex flex-wrap gap-1"><?php foreach (explode(', ', $laboratory['study_programs']) as $studyProgram): ?><span class="badge badge--soft badge--secondary"><?= esc($studyProgram) ?></span><?php endforeach; ?></div><?php else: ?>-<?php endif; ?></td>
@@ -93,7 +94,7 @@
               </tr>
               <?php endforeach; ?>
             <?php else: ?>
-              <tr><td colspan="6" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $roomId > 0 || $studyProgramId > 0 || $status !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada data laboratorium.']) ?></td></tr>
+              <tr><td colspan="7" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $roomId > 0 || $studyProgramId > 0 || $status !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada data laboratorium.']) ?></td></tr>
             <?php endif; ?>
           </tbody>
         </table>

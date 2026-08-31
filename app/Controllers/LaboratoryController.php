@@ -147,14 +147,20 @@ class LaboratoryController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
 
+        $laboratoryData = $this->laboratoryData($laboratory['photo'] ?? null);
+
         $database = db_connect();
         $database->transStart();
-        $this->laboratoryModel->update($laboratory['id'], $this->laboratoryData());
+        $this->laboratoryModel->update($laboratory['id'], $laboratoryData);
         $this->syncStudyPrograms($laboratory['id']);
         $database->transComplete();
 
         if (! $database->transStatus()) {
             return redirect()->back()->withInput()->with('error', 'Laboratorium gagal diperbarui.');
+        }
+
+        if (($laboratory['photo'] ?? null) !== ($laboratoryData['photo'] ?? null)) {
+            $this->deletePhoto($laboratory['photo'] ?? null);
         }
 
         return redirect()->to('/admin/laboratories')->with('success', 'Laboratorium berhasil diperbarui.');
@@ -169,6 +175,7 @@ class LaboratoryController extends BaseController
         }
 
         $this->laboratoryModel->delete($laboratory['id']);
+        $this->deletePhoto($laboratory['photo'] ?? null);
 
         return redirect()->to('/admin/laboratories')->with('success', 'Laboratorium berhasil dihapus.');
     }
@@ -192,6 +199,13 @@ class LaboratoryController extends BaseController
             'study_program_ids' => 'required',
             'status' => 'required|in_list[active,inactive]',
             'description' => 'permit_empty|max_length[500]',
+        ])) {
+            return false;
+        }
+
+        $photo = $this->request->getFile('photo');
+        if ($photo && $photo->getError() !== UPLOAD_ERR_NO_FILE && ! $this->validate([
+            'photo' => 'uploaded[photo]|max_size[photo,2048]|is_image[photo]|mime_in[photo,image/jpg,image/jpeg,image/png,image/webp]',
         ])) {
             return false;
         }
@@ -222,14 +236,44 @@ class LaboratoryController extends BaseController
         return true;
     }
 
-    private function laboratoryData(): array
+    private function laboratoryData(?string $currentPhoto = null): array
     {
         return [
             'room_id' => (int) $this->request->getPost('room_id'),
             'name' => trim((string) $this->request->getPost('name')),
+            'photo' => $this->storePhoto($currentPhoto),
             'status' => $this->request->getPost('status'),
             'description' => trim((string) $this->request->getPost('description')),
         ];
+    }
+
+    private function storePhoto(?string $currentPhoto = null): ?string
+    {
+        $photo = $this->request->getFile('photo');
+
+        if (! $photo || $photo->getError() === UPLOAD_ERR_NO_FILE) {
+            return $currentPhoto;
+        }
+
+        $uploadPath = FCPATH . 'uploads/laboratories';
+        if (! is_dir($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
+
+        $fileName = bin2hex(random_bytes(16)) . '.' . $photo->getExtension();
+        $photo->move($uploadPath, $fileName);
+
+        return 'uploads/laboratories/' . $fileName;
+    }
+
+    private function deletePhoto(?string $photo): void
+    {
+        if ($photo && str_starts_with($photo, 'uploads/laboratories/')) {
+            $filePath = FCPATH . $photo;
+            if (is_file($filePath)) {
+                unlink($filePath);
+            }
+        }
     }
 
     private function studyProgramIds(): array

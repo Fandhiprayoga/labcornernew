@@ -2,11 +2,12 @@
   <div class="card" style="width: 100%;">
     <div class="card__header"><span class="card__title">Edit Laboratorium: <?= esc($laboratory['name']) ?></span></div>
     <div class="card__body">
-      <form action="<?= base_url('admin/laboratories/update/' . $laboratory['uuid']) ?>" method="post" class="flex flex-col gap-4">
+      <form action="<?= base_url('admin/laboratories/update/' . $laboratory['uuid']) ?>" method="post" enctype="multipart/form-data" class="flex flex-col gap-4">
         <?= csrf_field() ?>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="field"><label for="name" class="field__label">Nama Laboratorium <span class="text-danger">*</span></label><input type="text" class="input w-full" id="name" name="name" value="<?= old('name', $laboratory['name']) ?>" required></div>
           <div class="field"><label for="room_id" class="field__label">Ruangan <span class="text-danger">*</span></label><select class="input w-full" id="room_id" name="room_id" required><option value="">Pilih Ruangan Laboratorium</option><?php foreach ($rooms as $room): ?><option value="<?= esc($room['id']) ?>" <?= old('room_id', $laboratory['room_id']) == $room['id'] ? 'selected' : '' ?>><?= esc($room['code'] . ' - ' . $room['name']) ?></option><?php endforeach; ?></select></div>
+          <div class="field"><label for="photo" class="field__label">Foto Laboratorium</label><img src="<?= base_url($laboratory['photo'] ?: 'assets/images/default-laboratory.svg') ?>" alt="Foto <?= esc($laboratory['name']) ?>" width="96" height="72" style="display:block;object-fit:cover;border-radius:8px;margin-bottom:.5rem;"><input type="file" class="input w-full" id="photo" name="photo" accept="image/jpeg,image/png,image/webp"><div class="text-xs text-muted-foreground">Kosongkan jika tetap memakai foto saat ini. Maksimal 2 MB.</div></div>
           <div class="field"><label for="status" class="field__label">Status <span class="text-danger">*</span></label><select class="input w-full" id="status" name="status" required><option value="active" <?= old('status', $laboratory['status']) === 'active' ? 'selected' : '' ?>>Aktif</option><option value="inactive" <?= old('status', $laboratory['status']) === 'inactive' ? 'selected' : '' ?>>Nonaktif</option></select></div>
         </div>
         <?php $selectedStudyProgramIds = (array) old('study_program_ids', $laboratory['study_program_ids']); ?>

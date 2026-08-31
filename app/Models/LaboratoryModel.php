@@ -9,7 +9,7 @@ class LaboratoryModel extends Model
     protected $table          = 'laboratories';
     protected $primaryKey     = 'id';
     protected $returnType     = 'array';
-    protected $allowedFields  = ['uuid', 'room_id', 'name', 'status', 'description'];
+    protected $allowedFields  = ['uuid', 'room_id', 'name', 'photo', 'status', 'description'];
     protected $useTimestamps  = true;
     protected $useSoftDeletes = true;
 
