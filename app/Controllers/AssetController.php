@@ -23,67 +23,18 @@ class AssetController extends BaseController
 
     public function index()
     {
-        $search        = trim((string) $this->request->getGet('q'));
-        $laboratoryId  = (int) $this->request->getGet('laboratory_id');
-        $status        = (string) $this->request->getGet('status');
-        $borrowable    = (string) $this->request->getGet('can_be_borrowed');
+        $filters = $this->assetFilters();
+        $search = $filters['search'];
+        $laboratoryId = $filters['laboratoryId'];
+        $status = $filters['status'];
+        $borrowable = $filters['borrowable'];
         $perPage       = (int) $this->request->getGet('perPage');
-
-        if (! array_key_exists($status, AssetModel::statuses())) {
-            $status = '';
-        }
-
-        if (! in_array($borrowable, ['0', '1'], true)) {
-            $borrowable = '';
-        }
 
         if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
             $perPage = self::PER_PAGE_OPTIONS[0];
         }
 
-        $query = $this->assetModel
-            ->select('assets.*, laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name')
-            ->join('laboratories', 'laboratories.id = assets.laboratory_id')
-            ->join('rooms', 'rooms.id = laboratories.room_id', 'left')
-            ->orderBy('assets.asset_code', 'ASC');
-
-        if ($search !== '') {
-            $query->groupStart()
-                ->like('assets.asset_code', $search)
-                ->orLike('assets.name', $search)
-                ->orLike('assets.category', $search)
-                ->orLike('assets.brand', $search)
-                ->orLike('assets.model', $search)
-                ->orLike('assets.serial_number', $search)
-                ->orLike('laboratories.name', $search)
-                ->orLike('rooms.code', $search)
-                ->orLike('rooms.name', $search)
-                ->groupEnd();
-        }
-
-        if ($laboratoryId > 0) {
-            $query->where('assets.laboratory_id', $laboratoryId);
-        }
-
-        if ($status !== '') {
-            $query->where('assets.status', $status);
-        }
-
-        if ($borrowable !== '') {
-            $query->where('assets.can_be_borrowed', (int) $borrowable);
-        }
-
-        if (activeGroupIs('laboran')) {
-            $laboratoryIds = $this->assignedLaboratoryIds();
-
-            if (empty($laboratoryIds)) {
-                $query->where('assets.laboratory_id', 0);
-            } else {
-                $query->whereIn('assets.laboratory_id', $laboratoryIds);
-            }
-        }
-
-        $assets = $query->paginate($perPage);
+        $assets = $this->assetQuery($filters)->paginate($perPage);
         $pager = $this->assetModel->pager;
 
         return $this->renderView('assets/index', [
@@ -103,6 +54,43 @@ class AssetController extends BaseController
             'statuses' => AssetModel::statuses(),
             'statusBadges' => AssetModel::statusBadges(),
         ]);
+    }
+
+    public function exportCsv()
+    {
+        $assets = $this->assetQuery($this->assetFilters())->findAll();
+        $statuses = AssetModel::statuses();
+
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, "\xEF\xBB\xBF");
+        fputcsv($stream, ['Kode Asset', 'Nama Asset', 'Laboratorium', 'Kode Ruangan', 'Nama Ruangan', 'Kategori', 'Merek', 'Model/Tipe', 'Nomor Seri', 'Tanggal Perolehan', 'Harga Perolehan', 'Boleh Dipinjam', 'Status', 'Keterangan']);
+
+        foreach ($assets as $asset) {
+            fputcsv($stream, [
+                $asset['asset_code'],
+                $asset['name'],
+                $asset['laboratory_name'],
+                $asset['room_code'],
+                $asset['room_name'],
+                $asset['category'],
+                $asset['brand'],
+                $asset['model'],
+                $asset['serial_number'],
+                $asset['acquisition_date'],
+                $asset['purchase_price'],
+                (int) $asset['can_be_borrowed'] === 1 ? 'Ya' : 'Tidak',
+                $statuses[$asset['status']] ?? $asset['status'],
+                $asset['description'],
+            ]);
+        }
+
+        rewind($stream);
+        $csv = stream_get_contents($stream);
+        fclose($stream);
+
+        return $this->response
+            ->download('master-asset-' . date('Y-m-d') . '.csv', $csv)
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8');
     }
 
     public function create()
@@ -188,6 +176,66 @@ class AssetController extends BaseController
             'laboratories' => $this->laboratoryOptions(),
             'statuses' => AssetModel::statuses(),
         ]);
+    }
+
+    private function assetFilters(): array
+    {
+        $status = (string) $this->request->getGet('status');
+        $borrowable = (string) $this->request->getGet('can_be_borrowed');
+
+        return [
+            'search' => trim((string) $this->request->getGet('q')),
+            'laboratoryId' => (int) $this->request->getGet('laboratory_id'),
+            'status' => array_key_exists($status, AssetModel::statuses()) ? $status : '',
+            'borrowable' => in_array($borrowable, ['0', '1'], true) ? $borrowable : '',
+        ];
+    }
+
+    private function assetQuery(array $filters)
+    {
+        $query = $this->assetModel
+            ->select('assets.*, laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name')
+            ->join('laboratories', 'laboratories.id = assets.laboratory_id')
+            ->join('rooms', 'rooms.id = laboratories.room_id', 'left')
+            ->orderBy('assets.asset_code', 'ASC');
+
+        if ($filters['search'] !== '') {
+            $query->groupStart()
+                ->like('assets.asset_code', $filters['search'])
+                ->orLike('assets.name', $filters['search'])
+                ->orLike('assets.category', $filters['search'])
+                ->orLike('assets.brand', $filters['search'])
+                ->orLike('assets.model', $filters['search'])
+                ->orLike('assets.serial_number', $filters['search'])
+                ->orLike('laboratories.name', $filters['search'])
+                ->orLike('rooms.code', $filters['search'])
+                ->orLike('rooms.name', $filters['search'])
+                ->groupEnd();
+        }
+
+        if ($filters['laboratoryId'] > 0) {
+            $query->where('assets.laboratory_id', $filters['laboratoryId']);
+        }
+
+        if ($filters['status'] !== '') {
+            $query->where('assets.status', $filters['status']);
+        }
+
+        if ($filters['borrowable'] !== '') {
+            $query->where('assets.can_be_borrowed', (int) $filters['borrowable']);
+        }
+
+        if (activeGroupIs('laboran')) {
+            $laboratoryIds = $this->assignedLaboratoryIds();
+
+            if (empty($laboratoryIds)) {
+                $query->where('assets.laboratory_id', 0);
+            } else {
+                $query->whereIn('assets.laboratory_id', $laboratoryIds);
+            }
+        }
+
+        return $query;
     }
 
     private function isValidSubmission(?int $id = null): bool

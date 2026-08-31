@@ -81,6 +81,7 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
         // Asset Management
         $routes->group('assets', static function ($routes) {
             $routes->get('/', 'AssetController::index', ['filter' => 'permission:assets.list']);
+            $routes->get('export/csv', 'AssetController::exportCsv', ['filter' => 'permission:assets.list']);
             $routes->get('create', 'AssetController::create', ['filter' => 'permission:assets.create']);
             $routes->post('store', 'AssetController::store', ['filter' => 'permission:assets.create']);
             $routes->get('edit/(:uuid)', 'AssetController::edit/$1', ['filter' => 'permission:assets.edit']);

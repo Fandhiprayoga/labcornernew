@@ -18,6 +18,10 @@
     <div class="card__header">
       <span class="card__title">Master Asset</span>
       <div class="card__action">
+        <a href="<?= base_url('admin/assets/export/csv?' . http_build_query(['q' => $search, 'laboratory_id' => $laboratoryId ?: '', 'status' => $status, 'can_be_borrowed' => $borrowable])) ?>" class="button button--info button--sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v12m0 0 4-4m-4 4-4-4m-5 7v2a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2" /></svg>
+          Export CSV
+        </a>
         <?php if (activeGroupCan('assets.create')): ?>
         <a href="<?= base_url('admin/assets/create') ?>" class="button button--primary button--sm">
           <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg>
