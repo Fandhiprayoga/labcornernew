@@ -22,6 +22,12 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v12m0 0 4-4m-4 4-4-4m-5 7v2a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2" /></svg>
           Export CSV
         </a>
+        <?php if (activeGroupCan('assets.bulk-create')): ?>
+        <a href="<?= base_url('admin/assets/bulk-create') ?>" class="button button--outline button--sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 15V3m0 0 4 4m-4-4-4 4m-5 4v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6" /></svg>
+          Bulk Insert
+        </a>
+        <?php endif; ?>
         <?php if (activeGroupCan('assets.create')): ?>
         <a href="<?= base_url('admin/assets/create') ?>" class="button button--primary button--sm">
           <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg>

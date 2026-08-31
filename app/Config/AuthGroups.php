@@ -75,6 +75,7 @@ class AuthGroups extends ShieldAuthGroups
         // Asset management
         'assets.list'         => 'Dapat melihat daftar asset',
         'assets.create'       => 'Dapat membuat asset baru',
+        'assets.bulk-create'  => 'Dapat melakukan bulk insert asset',
         'assets.edit'         => 'Dapat mengedit asset',
         'assets.delete'       => 'Dapat menghapus asset',
 
@@ -158,6 +159,7 @@ class AuthGroups extends ShieldAuthGroups
             'laboratories.list',
             'assets.list',
             'assets.create',
+            'assets.bulk-create',
             'assets.edit',
             'faculties.list',
             'study-programs.list',

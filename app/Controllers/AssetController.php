@@ -13,6 +13,8 @@ class AssetController extends BaseController
     protected LaboratoryModel $laboratoryModel;
 
     private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+    private const MAX_BULK_ROWS = 500;
+    private const BULK_IMPORT_SESSION_TTL = 1800;
 
     public function __construct()
     {
@@ -107,6 +109,335 @@ class AssetController extends BaseController
         $this->assetModel->insert($this->assetData());
 
         return redirect()->to('/admin/assets')->with('success', 'Asset berhasil ditambahkan.');
+    }
+
+    public function bulkCreate()
+    {
+        return $this->renderView('assets/bulk_create', [
+            'title' => 'Bulk Insert Asset',
+            'page_title' => 'Bulk Insert Asset',
+            'laboratories' => $this->laboratoryOptions(),
+            'statuses' => AssetModel::statuses(),
+        ]);
+    }
+
+    public function bulkTemplate()
+    {
+        $laboratoryOptions = $this->laboratoryOptions();
+        $sampleLaboratory = $laboratoryOptions[0] ?? null;
+
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, "\xEF\xBB\xBF");
+        fputcsv($stream, ['asset_code', 'name', 'laboratory_id', 'category', 'brand', 'model', 'serial_number', 'acquisition_date', 'purchase_price', 'can_be_borrowed', 'status', 'description']);
+        fputcsv($stream, ['AST-CONTOH-001', 'Contoh Nama Asset', $sampleLaboratory['id'] ?? '', 'Peralatan Praktikum', 'Merek', 'Model', 'SN-001', '2024-01-01', '1000000', '1', 'ready', 'Keterangan opsional']);
+        fputcsv($stream, []);
+        fputcsv($stream, ['# Referensi laboratory_id yang dapat Anda gunakan:']);
+
+        foreach ($laboratoryOptions as $laboratory) {
+            fputcsv($stream, ['#', $laboratory['id'], $laboratory['name']]);
+        }
+
+        rewind($stream);
+        $csv = stream_get_contents($stream);
+        fclose($stream);
+
+        return $this->response
+            ->download('template-bulk-asset.csv', $csv)
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8');
+    }
+
+    public function bulkStore()
+    {
+        $file = $this->request->getFile('file');
+
+        if (! $file || ! $file->isValid() || $file->getError() !== UPLOAD_ERR_OK) {
+            return redirect()->back()->with('error', 'File CSV wajib diunggah.');
+        }
+
+        if (strtolower($file->getClientExtension()) !== 'csv' || $file->getSize() > 2 * 1024 * 1024) {
+            return redirect()->back()->with('error', 'File harus berformat CSV dengan ukuran maksimal 2 MB.');
+        }
+
+        $handle = fopen($file->getTempName(), 'r');
+
+        if ($handle === false) {
+            return redirect()->back()->with('error', 'File tidak dapat dibaca.');
+        }
+
+        $firstLine = fgets($handle);
+
+        if ($firstLine === false) {
+            fclose($handle);
+
+            return redirect()->back()->with('error', 'File CSV kosong.');
+        }
+
+        $delimiter = $this->detectCsvDelimiter($firstLine);
+        rewind($handle);
+
+        $header = fgetcsv($handle, 0, $delimiter);
+
+        if ($header === false) {
+            fclose($handle);
+
+            return redirect()->back()->with('error', 'File CSV kosong.');
+        }
+
+        $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+        $header = array_map(static fn ($column) => strtolower(trim((string) $column)), $header);
+
+        $requiredColumns = ['asset_code', 'name', 'laboratory_id', 'can_be_borrowed', 'status'];
+        $missingColumns = array_diff($requiredColumns, $header);
+
+        if (! empty($missingColumns)) {
+            fclose($handle);
+
+            return redirect()->back()->with('error', 'Kolom wajib tidak ditemukan: ' . implode(', ', $missingColumns));
+        }
+
+        $forcedLaboratoryId = $this->forcedLaboratoryIdForLaboran();
+        $rawRows = [];
+        $rowNumber = 1;
+
+        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+            $rowNumber++;
+
+            if (count(array_filter($row, static fn ($value) => trim((string) $value) !== '')) === 0) {
+                continue;
+            }
+
+            // Baris komentar referensi laboratory_id pada template diawali '#', bukan data asset.
+            if (str_starts_with(trim((string) $row[0]), '#')) {
+                continue;
+            }
+
+            if (count($rawRows) >= self::MAX_BULK_ROWS) {
+                fclose($handle);
+
+                return redirect()->back()->with('error', 'Maksimal ' . self::MAX_BULK_ROWS . ' baris data per import.');
+            }
+
+            $row = array_pad($row, count($header), '');
+            $rawRows[$rowNumber] = array_combine($header, $row);
+        }
+
+        fclose($handle);
+
+        if (empty($rawRows)) {
+            return redirect()->back()->with('error', 'File CSV tidak berisi baris data.');
+        }
+
+        $previewRows = [];
+        $validRawRows = [];
+        $codesInFile = [];
+
+        foreach ($rawRows as $rowNumber => $data) {
+            [$assetData, $rowErrors] = $this->prepareBulkRow($data, $forcedLaboratoryId, $codesInFile);
+
+            $previewRows[] = [
+                'row_number' => $rowNumber,
+                'raw' => $data,
+                'errors' => $rowErrors,
+                'valid' => empty($rowErrors),
+            ];
+
+            if (empty($rowErrors)) {
+                $codesInFile[] = $assetData['asset_code'];
+                $validRawRows[$rowNumber] = $data;
+            }
+        }
+
+        session()->set('bulk_asset_import', [
+            'raw_rows' => $validRawRows,
+            'created_at' => time(),
+        ]);
+
+        return $this->renderView('assets/bulk_preview', [
+            'title' => 'Pratinjau Bulk Insert Asset',
+            'page_title' => 'Pratinjau Bulk Insert Asset',
+            'previewRows' => $previewRows,
+            'validCount' => count($validRawRows),
+            'invalidCount' => count($previewRows) - count($validRawRows),
+        ]);
+    }
+
+    public function bulkConfirm()
+    {
+        $import = session('bulk_asset_import');
+
+        if (empty($import['raw_rows'])) {
+            return redirect()->to('/admin/assets/bulk-create')->with('error', 'Tidak ada data pratinjau yang tersimpan. Silakan unggah ulang file CSV.');
+        }
+
+        if (time() - (int) ($import['created_at'] ?? 0) > self::BULK_IMPORT_SESSION_TTL) {
+            session()->remove('bulk_asset_import');
+
+            return redirect()->to('/admin/assets/bulk-create')->with('error', 'Sesi pratinjau sudah kedaluwarsa. Silakan unggah ulang file CSV.');
+        }
+
+        // Validasi ulang saat konfirmasi untuk mengantisipasi perubahan data sejak pratinjau dibuat.
+        $forcedLaboratoryId = $this->forcedLaboratoryIdForLaboran();
+        $rowsToInsert = [];
+        $errors = [];
+        $codesInFile = [];
+
+        foreach ($import['raw_rows'] as $rowNumber => $data) {
+            [$assetData, $rowErrors] = $this->prepareBulkRow($data, $forcedLaboratoryId, $codesInFile);
+
+            if (! empty($rowErrors)) {
+                $errors[] = "Baris {$rowNumber}: " . implode(' ', $rowErrors);
+
+                continue;
+            }
+
+            $codesInFile[] = $assetData['asset_code'];
+            $rowsToInsert[$rowNumber] = $assetData;
+        }
+
+        session()->remove('bulk_asset_import');
+
+        if (empty($rowsToInsert)) {
+            return redirect()->to('/admin/assets/bulk-create')->with('error', 'Tidak ada baris valid tersisa untuk diimpor. Silakan unggah ulang file CSV.')->with('errors', $errors);
+        }
+
+        $db = $this->assetModel->db;
+        $db->transStart();
+
+        $inserted = 0;
+        foreach ($rowsToInsert as $rowNumber => $assetData) {
+            try {
+                $this->assetModel->insert($assetData);
+                $inserted++;
+            } catch (\Throwable $e) {
+                $errors[] = "Baris {$rowNumber}: gagal disimpan.";
+            }
+        }
+
+        $db->transComplete();
+
+        if (! $db->transStatus()) {
+            return redirect()->to('/admin/assets/bulk-create')->with('error', 'Import dibatalkan karena terjadi kegagalan saat menyimpan data.')->with('errors', $errors);
+        }
+
+        $message = "{$inserted} asset berhasil diimpor.";
+
+        if (! empty($errors)) {
+            return redirect()->to('/admin/assets')->with('success', $message)->with('errors', $errors);
+        }
+
+        return redirect()->to('/admin/assets')->with('success', $message);
+    }
+
+    public function bulkCancel()
+    {
+        session()->remove('bulk_asset_import');
+
+        return redirect()->to('/admin/assets/bulk-create')->with('success', 'Pratinjau import dibatalkan.');
+    }
+
+    private function forcedLaboratoryIdForLaboran(): ?int
+    {
+        if (! activeGroupIs('laboran')) {
+            return null;
+        }
+
+        $assignedLaboratoryIds = $this->assignedLaboratoryIds();
+
+        // Laboran dengan satu penugasan tidak perlu mengisi laboratory_id secara manual, dan tidak bisa mengubahnya lewat file.
+        return count($assignedLaboratoryIds) === 1 ? $assignedLaboratoryIds[0] : null;
+    }
+
+    /**
+     * Excel di beberapa lokasi (mis. Indonesia) menyimpan CSV dengan pemisah titik koma, bukan koma.
+     */
+    private function detectCsvDelimiter(string $line): string
+    {
+        $candidates = [',', ';', "\t"];
+        $bestDelimiter = ',';
+        $bestCount = 0;
+
+        foreach ($candidates as $delimiter) {
+            $count = substr_count($line, $delimiter);
+
+            if ($count > $bestCount) {
+                $bestCount = $count;
+                $bestDelimiter = $delimiter;
+            }
+        }
+
+        return $bestDelimiter;
+    }
+
+    /**
+     * @return array{0: array<string, mixed>|null, 1: list<string>}
+     */
+    private function prepareBulkRow(array $data, ?int $forcedLaboratoryId, array $codesInFile): array
+    {
+        $assetCode = strtoupper(trim((string) ($data['asset_code'] ?? '')));
+        $laboratoryId = $forcedLaboratoryId ?? (int) ($data['laboratory_id'] ?? 0);
+        $canBeBorrowed = trim((string) ($data['can_be_borrowed'] ?? ''));
+        $status = trim((string) ($data['status'] ?? '')) ?: AssetModel::STATUS_READY;
+        $purchasePrice = trim((string) ($data['purchase_price'] ?? ''));
+        $acquisitionDate = trim((string) ($data['acquisition_date'] ?? ''));
+
+        $validationData = [
+            'asset_code' => $assetCode,
+            'name' => trim((string) ($data['name'] ?? '')),
+            'laboratory_id' => $laboratoryId,
+            'can_be_borrowed' => $canBeBorrowed,
+            'status' => $status,
+            'purchase_price' => $purchasePrice,
+            'acquisition_date' => $acquisitionDate,
+        ];
+
+        $rules = [
+            'asset_code' => 'required|alpha_numeric_punct|min_length[2]|max_length[50]|is_unique[assets.asset_code]',
+            'name' => 'required|min_length[3]|max_length[150]',
+            'laboratory_id' => 'required|integer|is_not_unique[laboratories.id]',
+            'can_be_borrowed' => 'required|in_list[0,1]',
+            'status' => 'required|in_list[' . implode(',', array_keys(AssetModel::statuses())) . ']',
+            'purchase_price' => 'permit_empty|decimal|greater_than_equal_to[0]',
+            'acquisition_date' => 'permit_empty|valid_date[Y-m-d]',
+        ];
+
+        if (! $this->validateData($validationData, $rules)) {
+            return [null, array_values($this->validator->getErrors())];
+        }
+
+        $errors = [];
+
+        if (in_array($assetCode, $codesInFile, true)) {
+            $errors[] = 'Kode asset duplikat di dalam file.';
+        }
+
+        if (! $this->canAccessLaboratory($laboratoryId)) {
+            $errors[] = 'Anda hanya dapat mengimpor asset ke laboratorium yang ditugaskan kepada Anda.';
+        } elseif (! $this->laboratoryModel->where('status', 'active')->find($laboratoryId)) {
+            $errors[] = 'Laboratorium tidak aktif atau tidak ditemukan.';
+        }
+
+        if ($canBeBorrowed === '0' && $status === AssetModel::STATUS_BORROWED) {
+            $errors[] = 'Asset yang tidak boleh dipinjam tidak dapat berstatus sedang dipinjam.';
+        }
+
+        if (! empty($errors)) {
+            return [null, $errors];
+        }
+
+        return [[
+            'asset_code' => $assetCode,
+            'name' => $validationData['name'],
+            'laboratory_id' => $laboratoryId,
+            'category' => trim((string) ($data['category'] ?? '')),
+            'brand' => trim((string) ($data['brand'] ?? '')),
+            'model' => trim((string) ($data['model'] ?? '')),
+            'serial_number' => trim((string) ($data['serial_number'] ?? '')),
+            'acquisition_date' => $acquisitionDate ?: null,
+            'purchase_price' => $purchasePrice === '' ? null : $purchasePrice,
+            'can_be_borrowed' => (int) $canBeBorrowed,
+            'status' => $status,
+            'description' => trim((string) ($data['description'] ?? '')),
+        ], []];
     }
 
     public function edit(string $uuid)
