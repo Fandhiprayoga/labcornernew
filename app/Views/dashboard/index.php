@@ -125,6 +125,40 @@ $groupLabel = activeGroupTitle();
                   <?php endforeach; ?>
                 </td>
               </tr>
+              <tr>
+                <th class="text-muted-foreground font-medium">Program Studi</th>
+                <td>
+                  <?php if ($currentStudyProgram): ?>
+                    <?= esc($currentStudyProgram['name']) ?>
+                  <?php else: ?>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="badge badge--soft badge--warning">Belum diisi</span>
+                      <a href="<?= site_url('profile') ?>" class="button button--primary button--icon-only button--sm" title="Isi Program Studi" aria-label="Isi Program Studi">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.5 4.5a2.121 2.121 0 0 1 3 3L7 21l-4 1l1-4Z" />
+                        </svg>
+                      </a>
+                    </div>
+                  <?php endif; ?>
+                </td>
+              </tr>
+              <tr>
+                <th class="text-muted-foreground font-medium">Nomor Telepon</th>
+                <td>
+                  <?php if (! empty($currentUser->phone)): ?>
+                    <?= esc($currentUser->phone) ?>
+                  <?php else: ?>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="badge badge--soft badge--warning">Belum diisi</span>
+                      <a href="<?= site_url('profile') ?>" class="button button--primary button--icon-only button--sm" title="Isi Nomor Telepon" aria-label="Isi Nomor Telepon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.5 4.5a2.121 2.121 0 0 1 3 3L7 21l-4 1l1-4Z" />
+                        </svg>
+                      </a>
+                    </div>
+                  <?php endif; ?>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
