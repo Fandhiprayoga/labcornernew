@@ -97,6 +97,13 @@ class AuthGroups extends ShieldAuthGroups
         'study-programs.edit'   => 'Dapat mengedit program studi',
         'study-programs.delete' => 'Dapat menghapus program studi',
 
+        // Laboratory loan proposals
+        'loans.access'  => 'Dapat mengakses modul proposal peminjaman',
+        'loans.list'    => 'Dapat melihat proposal peminjaman',
+        'loans.create'  => 'Dapat membuat proposal peminjaman',
+        'loans.edit'    => 'Dapat mengedit proposal peminjaman',
+        'loans.delete'  => 'Dapat membatalkan proposal peminjaman',
+
         // Role management
         'roles.list'          => 'Dapat melihat daftar role',
         'roles.create'        => 'Dapat membuat role baru',
@@ -128,8 +135,10 @@ class AuthGroups extends ShieldAuthGroups
             'laboratory-laborans.*',
             'faculties.*',
             'study-programs.*',
+            'loans.*',
             'dashboard.*',
             'reports.*',
+            'loans.*',
         ],
         'kepala_lab' => [
             'admin.access',
@@ -163,6 +172,10 @@ class AuthGroups extends ShieldAuthGroups
             'assets.edit',
             'faculties.list',
             'study-programs.list',
+            'loans.access',
+            'loans.list',
+            'loans.edit',
+            'loans.delete',
         ],
         'asisten_lab' => [
             'dashboard.access',
@@ -171,6 +184,11 @@ class AuthGroups extends ShieldAuthGroups
         ],
         'user' => [
             'dashboard.access',
+            'loans.access',
+            'loans.list',
+            'loans.create',
+            'loans.edit',
+            'loans.delete',
         ],
     ];
 }

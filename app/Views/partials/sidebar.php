@@ -64,6 +64,27 @@ function isDropdownActive(array $paths): string
         </ul>
       </div>
 
+      <!-- Peminjaman Menu -->
+      <?php if (activeGroupCan('loans.access')): ?>
+        <div class="sidebar__group">
+          <span class="sidebar__group-title">Peminjaman</span>
+          <ul class="sidebar__list">
+            <!-- Lab Loan Management -->
+            <?php if (activeGroupCan('loans.list')): ?>
+              <li class="sidebar__item <?= isMenuActive('peminjaman/lab-loans') ?>">
+                <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans') ?>" <?= isMenuActive('peminjaman/lab-loans') ? 'aria-current="page"' : '' ?>>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="currentColor" d="M4 4h16v16H4z" opacity=".35" />
+                    <path fill="currentColor" d="M7 7h10v2H7zm0 4h10v2H7zm0 4h6v2H7z" />
+                  </svg>
+                  <span>Laboratorium</span>
+                </a>
+              </li>
+            <?php endif; ?>
+
+          </ul>
+        </div>
+      <?php endif; ?>
       <!-- Admin Menu -->
       <?php if (activeGroupCan('admin.access')): ?>
         <div class="sidebar__group">

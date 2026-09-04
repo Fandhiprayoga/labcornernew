@@ -46,6 +46,16 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
     $routes->post('notifications/mark-all-read', 'NotificationController::markAllRead');
     $routes->post('notifications/delete/(:num)', 'NotificationController::delete/$1');
 
+    // Laboratory loan proposals
+    $routes->group('peminjaman/lab-loans', ['filter' => 'permission:loans.access'], static function ($routes) {
+        $routes->get('/', 'LaboratoryLoanProposalController::index', ['filter' => 'permission:loans.list']);
+        $routes->get('create', 'LaboratoryLoanProposalController::create', ['filter' => 'permission:loans.create']);
+        $routes->post('store', 'LaboratoryLoanProposalController::store', ['filter' => 'permission:loans.create']);
+        $routes->get('edit/(:uuid)', 'LaboratoryLoanProposalController::edit/$1', ['filter' => 'permission:loans.edit']);
+        $routes->post('update/(:uuid)', 'LaboratoryLoanProposalController::update/$1', ['filter' => 'permission:loans.edit']);
+        $routes->post('delete/(:uuid)', 'LaboratoryLoanProposalController::delete/$1', ['filter' => 'permission:loans.delete']);
+    });
+
     // ---------------------------------------------------------------
     // Admin Routes (require admin.access permission)
     // ---------------------------------------------------------------
