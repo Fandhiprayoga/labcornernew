@@ -82,6 +82,7 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
         $routes->group('assets', static function ($routes) {
             $routes->get('/', 'AssetController::index', ['filter' => 'permission:assets.list']);
             $routes->get('export/csv', 'AssetController::exportCsv', ['filter' => 'permission:assets.list']);
+            $routes->get('print-qr-labels', 'AssetController::printQrLabels', ['filter' => 'permission:assets.list']);
             $routes->get('create', 'AssetController::create', ['filter' => 'permission:assets.create']);
             $routes->post('store', 'AssetController::store', ['filter' => 'permission:assets.create']);
             $routes->get('bulk-create', 'AssetController::bulkCreate', ['filter' => 'permission:assets.bulk-create']);

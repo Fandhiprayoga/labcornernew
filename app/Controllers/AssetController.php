@@ -5,6 +5,8 @@ namespace App\Controllers;
 use App\Models\AssetModel;
 use App\Models\LaboratoryLaboranModel;
 use App\Models\LaboratoryModel;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\SvgWriter;
 
 class AssetController extends BaseController
 {
@@ -93,6 +95,42 @@ class AssetController extends BaseController
         return $this->response
             ->download('master-asset-' . date('Y-m-d') . '.csv', $csv)
             ->setHeader('Content-Type', 'text/csv; charset=UTF-8');
+    }
+
+    public function printQrLabels()
+    {
+        $requestedUuids = $this->request->getGet('asset_uuids');
+        $requestedUuids = is_array($requestedUuids) ? $requestedUuids : [];
+        $uuids = array_values(array_unique(array_filter(
+            array_map('strval', $requestedUuids),
+            static fn (string $uuid): bool => preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $uuid) === 1
+        )));
+
+        if (empty($uuids)) {
+            return redirect()->to('/admin/assets')->with('error', 'Pilih setidaknya satu asset untuk dicetak labelnya.');
+        }
+
+        $assets = $this->assetQuery([
+            'search' => '',
+            'laboratoryId' => 0,
+            'status' => '',
+            'borrowable' => '',
+        ])->whereIn('assets.uuid', array_slice($uuids, 0, 100))->findAll();
+
+        if (empty($assets)) {
+            return redirect()->to('/admin/assets')->with('error', 'Asset yang dipilih tidak ditemukan atau tidak dapat diakses.');
+        }
+
+        $writer = new SvgWriter();
+        foreach ($assets as &$asset) {
+            $asset['qr_code'] = $writer->write(new QrCode(data: $asset['asset_code'], size: 360, margin: 12))->getDataUri();
+        }
+        unset($asset);
+
+        return $this->renderView('assets/print_qr_labels', [
+            'title' => 'Cetak Label QR Asset',
+            'assets' => $assets,
+        ], 'layouts/print');
     }
 
     public function create()

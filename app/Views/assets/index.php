@@ -18,6 +18,10 @@
     <div class="card__header">
       <span class="card__title">Master Asset</span>
       <div class="card__action">
+        <button type="submit" form="bulk-qr-form" class="button button--outline button--sm" id="print-qr-button" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4h5v5H4zm11 0h5v5h-5zM4 15h5v5H4zm11 5v-5h2v2h3v3zm0-9v-1h2v2h-2zm4 2v-3h1v3zM11 4h1v1h-1zm0 4h1v1h-1zm0 7h1v1h-1zm0 4h1v1h-1z" /></svg>
+          Cetak QR (<span id="selected-asset-count">0</span>)
+        </button>
         <a href="<?= base_url('admin/assets/export/csv?' . http_build_query(['q' => $search, 'laboratory_id' => $laboratoryId ?: '', 'status' => $status, 'can_be_borrowed' => $borrowable])) ?>" class="button button--info button--sm">
           <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v12m0 0 4-4m-4 4-4-4m-5 7v2a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-2" /></svg>
           Export CSV
@@ -87,11 +91,12 @@
       </form>
     </div>
     <div class="card__body p-0">
+      <form method="get" action="<?= base_url('admin/assets/print-qr-labels') ?>" id="bulk-qr-form" target="_blank">
       <div class="table-responsive">
         <table class="table">
           <thead>
             <tr>
-              <th class="text-center" style="width: 60px;">#</th>
+              <th class="text-center" style="width: 60px;"><input type="checkbox" id="select-all-assets" aria-label="Pilih semua asset pada halaman ini"></th>
               <th class="text-center" style="width: 72px;">Foto</th>
               <th>Kode</th>
               <th>Nama Asset</th>
@@ -107,7 +112,7 @@
               <?php $no = (($currentPage - 1) * $perPage) + 1; foreach ($assets as $asset): ?>
               <?php $status = $asset['status'] ?? 'ready'; ?>
               <tr>
-                <td class="text-center"><?= $no++ ?></td>
+                <td class="text-center"><input type="checkbox" name="asset_uuids[]" value="<?= esc($asset['uuid']) ?>" class="asset-selection" aria-label="Pilih <?= esc($asset['asset_code']) ?>"><?= $no++ ?></td>
                 <td class="text-center"><img src="<?= base_url($asset['photo'] ?: 'assets/images/default-asset.svg') ?>" alt="Foto <?= esc($asset['name']) ?>" width="48" height="48" style="object-fit:cover;border-radius:8px;"></td>
                 <td><strong><?= esc($asset['asset_code']) ?></strong></td>
                 <td>
@@ -137,6 +142,7 @@
           </tbody>
         </table>
       </div>
+      </form>
     </div>
     <?php if ($totalRows > 0): ?>
     <div class="card__body" style="border-top: 1px solid var(--color-border); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem;">
@@ -148,3 +154,30 @@
     <?php endif; ?>
   </div>
 </div>
+<script>
+  (function () {
+    var selectAll = document.getElementById('select-all-assets');
+    var selections = Array.prototype.slice.call(document.querySelectorAll('.asset-selection'));
+    var button = document.getElementById('print-qr-button');
+    var count = document.getElementById('selected-asset-count');
+
+    function updateSelection() {
+      var selected = selections.filter(function (selection) { return selection.checked; }).length;
+      button.disabled = selected === 0;
+      count.textContent = selected;
+      if (selectAll) {
+        selectAll.checked = selected > 0 && selected === selections.length;
+        selectAll.indeterminate = selected > 0 && selected < selections.length;
+      }
+    }
+
+    if (selectAll) {
+      selectAll.addEventListener('change', function () {
+        selections.forEach(function (selection) { selection.checked = selectAll.checked; });
+        updateSelection();
+      });
+    }
+
+    selections.forEach(function (selection) { selection.addEventListener('change', updateSelection); });
+  }());
+</script>
