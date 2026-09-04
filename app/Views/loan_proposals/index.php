@@ -1,6 +1,10 @@
 <?php
 /** @var array $proposals */
 /** @var CodeIgniter\Pager\Pager $pager */
+/** @var string $search */
+/** @var int $perPage */
+/** @var int[] $perPageOptions */
+/** @var int $totalRows */
 ?>
 <div class="page__section">
   <div class="card">
@@ -42,15 +46,15 @@
           <tbody>
           <?php if (! empty($proposals)): ?>
             <?php foreach ($proposals as $proposal): ?>
-            <?php $statusLabels = ['submitted' => 'Diajukan', 'approved' => 'Disetujui', 'rejected' => 'Ditolak']; $statusColors = ['submitted' => 'warning', 'approved' => 'success', 'rejected' => 'danger']; ?>
+            <?php $statusLabels = ['draft' => 'Draft', 'submitted' => 'Diajukan', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai']; $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary']; ?>
             <tr>
               <td><strong><?= esc($proposal['full_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($proposal['identity_number']) ?> &middot; <?= esc($proposal['email']) ?></div></td>
               <td><strong><?= esc($proposal['event_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc(date('d M Y H:i', strtotime($proposal['event_start']))) ?> - <?= esc(date('d M Y H:i', strtotime($proposal['event_end']))) ?></div></td>
               <td><?= esc(date('d M Y', strtotime($proposal['proposal_date']))) ?></td>
               <td><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? ucfirst($proposal['status'])) ?></span></td>
               <td class="text-center"><div class="flex justify-center gap-1">
-                <?php if ($proposal['status'] === 'submitted' && activeGroupCan('loans.edit')): ?><a href="<?= base_url('peminjaman/lab-loans/edit/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.475 5.408 2.117 2.117m-.756-3.482-5.727 5.727a2.1 2.1 0 0 0-.58 1.082L11 13l2.148-.53c.408-.1.787-.3 1.083-.579l5.727-5.727a1.85 1.85 0 1 0-2.617-2.617" /></svg></a><?php endif; ?>
-                <?php if ($proposal['status'] === 'submitted' && activeGroupCan('loans.delete')): ?><form action="<?= base_url('peminjaman/lab-loans/delete/' . $proposal['uuid']) ?>" method="post" onsubmit="return confirm('Batalkan proposal ini?')"><?= csrf_field() ?><button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Batalkan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?>
+                <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.edit')): ?><a href="<?= base_url('peminjaman/lab-loans/edit/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.475 5.408 2.117 2.117m-.756-3.482-5.727 5.727a2.1 2.1 0 0 0-.58 1.082L11 13l2.148-.53c.408-.1.787-.3 1.083-.579l5.727-5.727a1.85 1.85 0 1 0-2.617-2.617" /></svg></a><?php endif; ?>
+                <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.delete')): ?><form action="<?= base_url('peminjaman/lab-loans/delete/' . $proposal['uuid']) ?>" method="post" onsubmit="return confirm('Batalkan proposal ini?')"><?= csrf_field() ?><button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Batalkan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?>
               </div></td>
             </tr>
             <?php endforeach; ?>

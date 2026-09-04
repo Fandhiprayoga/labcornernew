@@ -21,7 +21,7 @@ class CreateLaboratoryLoanProposalsTable extends Migration
             'event_start'     => ['type' => 'DATETIME'],
             'event_end'       => ['type' => 'DATETIME'],
             'acknowledgement' => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 0],
-            'status'          => ['type' => 'VARCHAR', 'constraint' => 20, 'default' => 'submitted'],
+            'status'          => ['type' => 'VARCHAR', 'constraint' => 20, 'default' => 'draft'],
             'created_at'      => ['type' => 'DATETIME', 'null' => true],
             'updated_at'      => ['type' => 'DATETIME', 'null' => true],
             'deleted_at'      => ['type' => 'DATETIME', 'null' => true],

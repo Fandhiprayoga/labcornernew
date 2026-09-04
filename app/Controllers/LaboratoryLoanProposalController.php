@@ -67,7 +67,7 @@ class LaboratoryLoanProposalController extends BaseController
     public function edit(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
-        if (! $proposal || $proposal['status'] !== 'submitted') {
+        if (! $proposal || $proposal['status'] !== 'draft') {
             return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
         }
         return $this->renderView('loan_proposals/form', [
@@ -79,7 +79,7 @@ class LaboratoryLoanProposalController extends BaseController
     public function update(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
-        if (! $proposal || $proposal['status'] !== 'submitted') {
+        if (! $proposal || $proposal['status'] !== 'draft') {
             return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
         }
         if (! $this->validateSubmission()) {
@@ -92,7 +92,7 @@ class LaboratoryLoanProposalController extends BaseController
     public function delete(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
-        if (! $proposal || $proposal['status'] !== 'submitted') {
+        if (! $proposal || $proposal['status'] !== 'draft') {
             return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
         }
         $this->proposalModel->delete($proposal['id']); 
