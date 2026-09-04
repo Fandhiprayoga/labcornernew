@@ -161,6 +161,17 @@ class Auth extends ShieldAuth
 
     /**
      * --------------------------------------------------------------------
+     * Email Domain Restriction
+     * --------------------------------------------------------------------
+     * Membatasi domain email yang boleh melakukan registrasi.
+     * Nilai dapat diubah dari halaman /admin/settings (tab Registrasi).
+     */
+    public string $restrictEmailDomain = '1';
+
+    public string $allowedEmailDomains = 'telkomuniversity.ac.id,student.telkomuniversity.ac.id';
+
+    /**
+     * --------------------------------------------------------------------
      * Record Last Active Date
      * --------------------------------------------------------------------
      * If true, will always update the `last_active` datetime for the

@@ -11,7 +11,11 @@ $routes->addPlaceholder('uuid', '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0
 // ---------------------------------------------------------------
 // Auth Routes (Shield)
 // ---------------------------------------------------------------
-service('auth')->routes($routes);
+service('auth')->routes($routes, ['except' => ['register']]);
+
+// Register memakai controller sendiri agar domain email bisa dibatasi
+$routes->get('register', '\App\Controllers\Auth\RegisterController::registerView', ['as' => 'register']);
+$routes->post('register', '\App\Controllers\Auth\RegisterController::registerAction');
 
 // ---------------------------------------------------------------
 // Public Routes
@@ -138,6 +142,7 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
             $routes->post('update/branding', 'SettingController::updateBranding');
             $routes->post('update/appearance', 'SettingController::updateAppearance');
             $routes->post('update/auth', 'SettingController::updateAuth');
+            $routes->post('update/registration', 'SettingController::updateRegistration');
             $routes->post('update/mail', 'SettingController::updateMail');
             $routes->post('test-email', 'SettingController::testEmail');
             $routes->post('reset', 'SettingController::resetDefaults');

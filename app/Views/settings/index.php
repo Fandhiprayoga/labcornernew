@@ -50,6 +50,17 @@ $s = function (string $key) use ($settings) {
                 </li>
                 <li class="sidebar__item">
                   <button type="button" class="sidebar__button" aria-controls="settingsTabs"
+                          data-stisla-tabs-value="registration" <?= $activeTab === 'registration' ? 'aria-current="page"' : '' ?>>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                      <g fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="10" cy="7" r="4" />
+                        <path stroke-linecap="round" d="M15 21H6.235c-1.417 0-2.125 0-2.599-.362a2 2 0 0 1-.38-.386C2.9 19.773 2.907 19.05 2.92 17.6c.012-1.3.117-2.202.694-2.943a2 2 0 0 1 .38-.386C4.99 13.6 6.4 13.6 9.235 13.6h1.53M17 16v6m3-3h-6" />
+                      </g>
+                    </svg><span>Registrasi</span>
+                  </button>
+                </li>
+                <li class="sidebar__item">
+                  <button type="button" class="sidebar__button" aria-controls="settingsTabs"
                           data-stisla-tabs-value="mail" <?= $activeTab === 'mail' ? 'aria-current="page"' : '' ?>>
                     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
                       <g fill="none" stroke="currentColor" stroke-width="1.5">
@@ -342,6 +353,56 @@ $s = function (string $key) use ($settings) {
                     onsubmit="return confirm('Reset pengaturan Autentikasi ke default?')">
                 <?= csrf_field() ?>
                 <input type="hidden" name="tab" value="auth">
+                <button type="submit" class="button button--outline button--danger button--sm">Reset ke Default</button>
+              </form>
+            </section>
+          </div>
+        </div>
+
+        <!-- ======================== TAB: REGISTRASI ======================== -->
+        <div class="tabs__panel" data-value="registration" data-state="<?= $activeTab === 'registration' ? 'active' : 'inactive' ?>">
+          <div class="flex flex-col gap-6">
+            <section class="flex flex-col gap-3">
+              <div class="flex flex-col gap-1">
+                <h2 class="page__section-title">Validasi Email Registrasi</h2>
+                <p class="page__section-description">Batasi pendaftaran akun hanya untuk domain email tertentu.</p>
+              </div>
+              <form action="<?= base_url('admin/settings/update/registration') ?>" method="post">
+                <?= csrf_field() ?>
+                <div class="card">
+                  <div class="card__body">
+                    <div class="flex flex-col gap-4">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <label class="field__label mb-0" for="restrict_email_domain">Batasi Domain Email</label>
+                          <small class="text-muted-foreground text-xs">Hanya email dengan domain terdaftar yang bisa mendaftar.</small>
+                        </div>
+                        <input class="switch" type="checkbox" role="switch" id="restrict_email_domain"
+                               name="restrict_email_domain" value="1"
+                               <?= ($settings['Auth.restrictEmailDomain'] ?? '0') === '1' ? 'checked' : '' ?>>
+                      </div>
+
+                      <div class="field">
+                        <label for="allowed_email_domains" class="field__label">Domain yang Diizinkan</label>
+                        <textarea class="input" id="allowed_email_domains" name="allowed_email_domains" rows="3"
+                                  placeholder="telkomuniversity.ac.id, student.telkomuniversity.ac.id"><?= old('allowed_email_domains', $s('Auth.allowedEmailDomains')) ?></textarea>
+                        <small class="text-muted-foreground text-xs">Pisahkan dengan koma. Contoh: telkomuniversity.ac.id, student.telkomuniversity.ac.id</small>
+                      </div>
+                    </div>
+
+                    <div class="flex justify-end mt-4">
+                      <button type="submit" class="button button--primary">Simpan</button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </section>
+
+            <section>
+              <form action="<?= base_url('admin/settings/reset') ?>" method="post"
+                    onsubmit="return confirm('Reset pengaturan Registrasi ke default?')">
+                <?= csrf_field() ?>
+                <input type="hidden" name="tab" value="registration">
                 <button type="submit" class="button button--outline button--danger button--sm">Reset ke Default</button>
               </form>
             </section>

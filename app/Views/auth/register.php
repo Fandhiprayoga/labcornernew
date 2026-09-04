@@ -74,6 +74,10 @@ Buat akun baru untuk mulai menggunakan aplikasi melalui proses yang jelas dan te
         </span>
         <input type="email" class="input" id="email" name="email" value="<?= old('email') ?>" placeholder="email@example.com" autocomplete="email" required>
       </div>
+      <?php $allowedDomains = \App\Validation\AuthRules::allowedDomains(); ?>
+      <?php if (setting('Auth.restrictEmailDomain') && $allowedDomains !== []): ?>
+        <small class="text-muted-foreground text-xs">Gunakan email dengan domain: <?= esc(implode(', ', $allowedDomains)) ?></small>
+      <?php endif ?>
     </div>
 
     <div class="field">

@@ -19,6 +19,8 @@ class SettingController extends BaseController
         'App.maintenanceMsg'  => 'Sistem sedang dalam pemeliharaan. Silakan coba beberapa saat lagi.',
         'App.defaultRole'     => 'user',
         'Auth.allowRegistration' => true,
+        'Auth.restrictEmailDomain' => '1',
+        'Auth.allowedEmailDomains' => 'telkomuniversity.ac.id,student.telkomuniversity.ac.id',
         'Mail.protocol'       => 'smtp',
         'Mail.hostname'       => '',
         'Mail.port'           => '587',
@@ -105,6 +107,47 @@ class SettingController extends BaseController
         setting('App.maintenanceMsg', $this->request->getPost('maintenance_msg') ?? '');
 
         return redirect()->to('/admin/settings?tab=auth')->with('success', 'Pengaturan autentikasi berhasil diperbarui.');
+    }
+
+    /**
+     * Update pengaturan registrasi (pembatasan domain email)
+     */
+    public function updateRegistration()
+    {
+        $rules = [
+            'restrict_email_domain' => 'permit_empty',
+            'allowed_email_domains' => 'permit_empty|max_length[500]',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $restrict = $this->request->getPost('restrict_email_domain') ? '1' : '0';
+        $raw      = (string) ($this->request->getPost('allowed_email_domains') ?? '');
+
+        $domains = preg_split('/[\s,;]+/', strtolower($raw), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $domains = array_values(array_unique(array_map(
+            static fn (string $domain): string => ltrim(trim($domain), '@'),
+            $domains
+        )));
+
+        foreach ($domains as $domain) {
+            if (! preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/', $domain)) {
+                return redirect()->back()->withInput()
+                    ->with('errors', ['allowed_email_domains' => 'Format domain tidak valid: ' . esc($domain)]);
+            }
+        }
+
+        if ($restrict === '1' && $domains === []) {
+            return redirect()->back()->withInput()
+                ->with('errors', ['allowed_email_domains' => 'Isi minimal satu domain saat pembatasan diaktifkan.']);
+        }
+
+        setting('Auth.restrictEmailDomain', $restrict);
+        setting('Auth.allowedEmailDomains', implode(',', $domains));
+
+        return redirect()->to('/admin/settings?tab=registration')->with('success', 'Pengaturan registrasi berhasil diperbarui.');
     }
 
     /**
@@ -310,6 +353,7 @@ class SettingController extends BaseController
         $keysToReset = match ($tab) {
             'general' => ['App.siteName', 'App.siteNameShort', 'App.siteDescription', 'App.siteFooter', 'App.siteVersion', 'App.siteLogo', 'App.siteFavicon'],
             'auth'    => ['App.defaultRole', 'Auth.allowRegistration', 'App.maintenanceMode', 'App.maintenanceMsg'],
+            'registration' => ['Auth.restrictEmailDomain', 'Auth.allowedEmailDomains'],
             'mail'       => ['Mail.protocol', 'Mail.hostname', 'Mail.port', 'Mail.username', 'Mail.password', 'Mail.encryption', 'Mail.fromEmail', 'Mail.fromName', 'Email.protocol', 'Email.SMTPHost', 'Email.SMTPPort', 'Email.SMTPUser', 'Email.SMTPPass', 'Email.SMTPCrypto', 'Email.fromEmail', 'Email.fromName'],
             'appearance' => ['App.authAsideStart', 'App.authAsideEnd'],
             default      => array_keys($this->defaults),
