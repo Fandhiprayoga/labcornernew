@@ -2,16 +2,21 @@
 
 namespace App\Controllers;
 
+use App\Models\LaboratoryLoanProposalItemModel;
 use App\Models\LaboratoryLoanProposalModel;
+use App\Models\LaboratoryModel;
 
 class LaboratoryLoanProposalController extends BaseController
 {
     private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
+    private const CATALOG_PER_PAGE_OPTIONS = [8, 12, 24, 48];
     protected LaboratoryLoanProposalModel $proposalModel;
+    protected LaboratoryLoanProposalItemModel $itemModel;
 
     public function __construct()
     {
         $this->proposalModel = new LaboratoryLoanProposalModel();
+        $this->itemModel     = new LaboratoryLoanProposalItemModel();
     }
 
     public function index()
@@ -61,7 +66,7 @@ class LaboratoryLoanProposalController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
         $this->proposalModel->insert($this->proposalData());
-        return redirect()->to('/peminjaman/lab-loans')->with('success', 'Proposal peminjaman berhasil diajukan.');
+        return redirect()->to('/peminjaman/lab-loans')->with('success', 'Proposal peminjaman berhasil disimpan.');
     }
 
     public function edit(string $uuid)
@@ -97,6 +102,123 @@ class LaboratoryLoanProposalController extends BaseController
         }
         $this->proposalModel->delete($proposal['id']); 
         return redirect()->to('/peminjaman/lab-loans')->with('success', 'Proposal peminjaman berhasil dibatalkan.');
+    }
+
+    /**
+     * Halaman detail peminjaman: katalog ruangan laboratorium + cart pilihan.
+     */
+    public function items(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal) {
+            return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan.');
+        }
+
+        helper('lab_availability');
+
+        $search  = trim((string) $this->request->getGet('q'));
+        $perPage = (int) $this->request->getGet('perPage');
+        $perPage = in_array($perPage, self::CATALOG_PER_PAGE_OPTIONS, true) ? $perPage : 12;
+
+        // Katalog hanya menampilkan laboratorium yang bebas bentrok pada rentang kegiatan proposal.
+        $availableIds = lab_available_ids($proposal['event_start'], $proposal['event_end'], (int) $proposal['id']);
+
+        $laboratoryModel = new LaboratoryModel();
+        $query           = $laboratoryModel
+            ->select('laboratories.id, laboratories.uuid, laboratories.name, laboratories.photo, laboratories.description, rooms.code AS room_code, rooms.name AS room_name, rooms.building, rooms.floor, rooms.capacity')
+            ->join('rooms', 'rooms.id = laboratories.room_id')
+            ->where('laboratories.status', 'active')
+            ->whereIn('laboratories.id', $availableIds ?: [0]);
+
+        if ($search !== '') {
+            $query->groupStart()
+                ->like('laboratories.name', $search)
+                ->orLike('rooms.code', $search)
+                ->orLike('rooms.name', $search)
+                ->orLike('rooms.building', $search)
+                ->groupEnd();
+        }
+
+        $laboratories = $query->orderBy('laboratories.name', 'ASC')->paginate($perPage);
+
+        return $this->renderView('loan_proposals/items', [
+            'title' => 'Detail Peminjaman', 'page_title' => 'Detail Peminjaman',
+            'proposal' => $proposal, 'laboratories' => $laboratories,
+            'cart' => $this->itemModel->getCart((int) $proposal['id']),
+            'search' => $search,
+            'pager' => $laboratoryModel->pager, 'perPage' => $perPage,
+            'perPageOptions' => self::CATALOG_PER_PAGE_OPTIONS,
+            'totalRows' => $laboratoryModel->pager->getTotal(),
+            'currentPage' => $laboratoryModel->pager->getCurrentPage(),
+            'editable' => $proposal['status'] === 'draft' && activeGroupCan('loans.edit'),
+        ]);
+    }
+
+    public function addItem(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') {
+            return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        }
+
+        $redirect     = redirect()->to('/peminjaman/lab-loans/items/' . $proposal['uuid']);
+        $laboratoryId = (int) $this->request->getPost('laboratory_id');
+        $laboratory   = (new LaboratoryModel())->where('status', 'active')->find($laboratoryId);
+
+        if (! $laboratory) {
+            return $redirect->with('error', 'Laboratorium tidak ditemukan atau sedang nonaktif.');
+        }
+
+        $exists = $this->itemModel->where('proposal_id', $proposal['id'])->where('laboratory_id', $laboratoryId)->first();
+        if ($exists) {
+            return $redirect->with('error', 'Laboratorium tersebut sudah ada di dalam cart.');
+        }
+
+        helper('lab_availability');
+        $db = db_connect();
+        $db->transBegin();
+
+        // Dicek ulang dengan locking read agar tidak double booking bila ada user lain memilih ruangan yang sama bersamaan.
+        if (! lab_is_available($laboratoryId, $proposal['event_start'], $proposal['event_end'], (int) $proposal['id'], true)) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Laboratorium tersebut baru saja dibooking pada rentang waktu kegiatan Anda. Silakan pilih ruangan lain.');
+        }
+
+        $this->itemModel->insert([
+            'proposal_id'   => $proposal['id'],
+            'laboratory_id' => $laboratoryId,
+            'notes'         => trim((string) $this->request->getPost('notes')) ?: null,
+        ]);
+
+        if ($db->transStatus() === false) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Gagal menambahkan laboratorium ke cart. Silakan coba lagi.');
+        }
+
+        $db->transCommit();
+
+        return $redirect->with('success', 'Laboratorium ditambahkan ke cart peminjaman.');
+    }
+
+    public function removeItem(string $uuid, string $itemUuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') {
+            return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        }
+
+        $redirect = redirect()->to('/peminjaman/lab-loans/items/' . $proposal['uuid']);
+        $item     = $this->itemModel->where('uuid', $itemUuid)->where('proposal_id', $proposal['id'])->first();
+
+        if (! $item) {
+            return $redirect->with('error', 'Item tidak ditemukan.');
+        }
+
+        $this->itemModel->delete($item['id']);
+
+        return $redirect->with('success', 'Laboratorium dihapus dari cart peminjaman.');
     }
 
     private function validateSubmission(): bool
