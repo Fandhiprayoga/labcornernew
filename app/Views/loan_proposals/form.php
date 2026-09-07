@@ -37,7 +37,7 @@ $datetime = static function (string $field) use ($value): string {
             </div>
             <div class="field">
               <label for="proposal_date" class="field__label">Tanggal Proposal <span class="text-danger">*</span></label>
-              <input type="date" class="input w-full" id="proposal_date" name="proposal_date" value="<?= esc($value('proposal_date', date('Y-m-d'))) ?>" required>
+              <input type="date" class="input w-full" id="proposal_date" name="proposal_date" value="<?= esc($value('proposal_date', date('Y-m-d'))) ?>" required readonly>
             </div>
           </div>
         </fieldset>
