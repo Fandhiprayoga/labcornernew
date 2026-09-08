@@ -7,17 +7,18 @@
     <style>
         div.logo {
             height: 200px;
-            width: 155px;
+            width: 200px;
             display: inline-block;
-            opacity: 0.08;
-            position: absolute;
-            top: 2rem;
-            left: 50%;
-            margin-left: -73px;
+            margin-bottom: 1rem;
+        }
+        .logo svg {
+            display: block;
+            height: 100%;
+            width: 100%;
         }
         body {
             height: 100%;
-            background: #fafafa;
+            background: #f7f9fc;
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
             color: #777;
             font-weight: 300;
@@ -31,14 +32,10 @@
             color: #222;
         }
         .wrap {
-            max-width: 1024px;
+            max-width: 30rem;
             margin: 5rem auto;
             padding: 2rem;
-            background: #fff;
             text-align: center;
-            border: 1px solid #efefef;
-            border-radius: 0.5rem;
-            position: relative;
         }
         pre {
             white-space: normal;
@@ -70,7 +67,33 @@
 </head>
 <body>
     <div class="wrap">
-        <h1>404</h1>
+        <div class="logo" aria-hidden="true">
+            <svg viewBox="0 0 200 200" role="img" aria-label="Page not found" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="error-404-light" x1=".15" y1=".05" x2=".85" y2=".95">
+                        <stop offset="0" stop-color="#b9d1f2" />
+                        <stop offset="1" stop-color="#8db9ed" />
+                    </linearGradient>
+                    <linearGradient id="error-404-dark" x1=".15" y1=".05" x2=".85" y2=".95">
+                        <stop offset="0" stop-color="#8db9ed" />
+                        <stop offset="1" stop-color="#2274e2" />
+                    </linearGradient>
+                    <filter id="error-404-shadow" x="-40%" y="-40%" width="180%" height="180%">
+                        <feDropShadow dx="5" dy="9" stdDeviation="5.5" flood-color="#2274e2" flood-opacity=".26" />
+                    </filter>
+                </defs>
+                <circle cx="100" cy="94" r="72" fill="#2274e2" fill-opacity=".06" />
+                <circle cx="100" cy="94" r="55" fill="#2274e2" fill-opacity=".1" />
+                <g filter="url(#error-404-shadow)">
+                    <rect x="46" y="58" width="108" height="84" rx="16" fill="url(#error-404-light)" />
+                    <path d="M46 74a16 16 0 0 1 16-16h76a16 16 0 0 1 16 16v6H46z" fill="url(#error-404-dark)" />
+                    <circle cx="60" cy="69" r="3" fill="#fff" fill-opacity=".5" />
+                    <circle cx="71" cy="69" r="3" fill="#fff" fill-opacity=".5" />
+                    <circle cx="82" cy="69" r="3" fill="#fff" fill-opacity=".5" />
+                    <text x="100" y="123" text-anchor="middle" font-size="36" font-weight="800" fill="#2274e2" fill-opacity=".75">404</text>
+                </g>
+            </svg>
+        </div>
 
         <p>
             <?php if (ENVIRONMENT !== 'production') : ?>
