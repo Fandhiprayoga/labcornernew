@@ -1,6 +1,7 @@
 <?php
 $currentUser = auth()->user();
 $currentUrl  = uri_string();
+$currentStatus = (string) service('request')->getGet('status');
 
 function isMenuActive(string $path): string
 {
@@ -69,18 +70,59 @@ function isDropdownActive(array $paths): string
         <div class="sidebar__group">
           <span class="sidebar__group-title">Peminjaman</span>
           <ul class="sidebar__list">
-            <!-- Lab Loan Management -->
+            <!-- Laboratory Loan Management -->
             <?php if (activeGroupCan('loans.list')): ?>
-              <li class="sidebar__item <?= isMenuActive('peminjaman/lab-loans') ?>">
-                <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans') ?>" <?= isMenuActive('peminjaman/lab-loans') ? 'aria-current="page"' : '' ?>>
+              <li class="sidebar__item" data-state="<?= isDropdownActive(['peminjaman/lab-loans']) ? 'open' : 'closed' ?>">
+                <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans') ?>">
                   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
                     <path fill="currentColor" d="M4 4h16v16H4z" opacity=".35" />
                     <path fill="currentColor" d="M7 7h10v2H7zm0 4h10v2H7zm0 4h6v2H7z" />
                   </svg>
                   <span>Laboratorium</span>
                 </a>
+                <button type="button" class="sidebar__item-action" data-stisla-sidebar-submenu-toggle
+                  aria-expanded="<?= isDropdownActive(['peminjaman/lab-loans']) ? 'true' : 'false' ?>"
+                  aria-controls="nav-lab-loans" aria-label="Toggle Peminjaman Laboratorium submenu">
+                  <span class="sidebar__caret"></span>
+                </button>
+                <div class="sidebar__submenu" id="nav-lab-loans">
+                  <ul class="sidebar__list">
+                    <li class="sidebar__item <?= isMenuActive('peminjaman/lab-loans') && $currentStatus !== 'submitted' ? 'active' : '' ?>">
+                      <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans') ?>"><span>Proposal</span></a>
+                    </li>
+                    <li class="sidebar__item <?= isMenuActive('peminjaman/lab-loans') && $currentStatus === 'submitted' ? 'active' : '' ?>">
+                      <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans?status=submitted') ?>"><span>Persetujuan</span></a>
+                    </li>
+                  </ul>
+                </div>
               </li>
             <?php endif; ?>
+
+            <!-- Asset Loan Management -->
+            <li class="sidebar__item" data-state="<?= isDropdownActive(['peminjaman/asset-loans']) ? 'open' : 'closed' ?>">
+              <a class="sidebar__button" href="<?= base_url('peminjaman/asset-loans') ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="currentColor" d="M4 7h16v12H4z" opacity=".35" />
+                  <path fill="currentColor" d="M7 5h10v3H7zm1 6h8v2H8zm0 4h5v2H8z" />
+                </svg>
+                <span>Asset</span>
+              </a>
+              <button type="button" class="sidebar__item-action" data-stisla-sidebar-submenu-toggle
+                aria-expanded="<?= isDropdownActive(['peminjaman/asset-loans']) ? 'true' : 'false' ?>"
+                aria-controls="nav-asset-loans" aria-label="Toggle Peminjaman Asset submenu">
+                <span class="sidebar__caret"></span>
+              </button>
+              <div class="sidebar__submenu" id="nav-asset-loans">
+                <ul class="sidebar__list">
+                  <li class="sidebar__item <?= isMenuActive('peminjaman/asset-loans') && $currentStatus !== 'submitted' ? 'active' : '' ?>">
+                    <a class="sidebar__button" href="<?= base_url('peminjaman/asset-loans') ?>"><span>Proposal</span></a>
+                  </li>
+                  <li class="sidebar__item <?= isMenuActive('peminjaman/asset-loans') && $currentStatus === 'submitted' ? 'active' : '' ?>">
+                    <a class="sidebar__button" href="<?= base_url('peminjaman/asset-loans?status=submitted') ?>"><span>Persetujuan</span></a>
+                  </li>
+                </ul>
+              </div>
+            </li>
 
           </ul>
         </div>
