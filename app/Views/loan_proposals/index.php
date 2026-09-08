@@ -5,6 +5,9 @@
 /** @var int $perPage */
 /** @var int[] $perPageOptions */
 /** @var int $totalRows */
+/** @var string $status */
+/** @var string[] $statusOptions */
+$statusLabels = ['draft' => 'Draft', 'submitted' => 'Diajukan', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
 ?>
 <div class="page__section">
   <div class="card">
@@ -25,6 +28,13 @@
           <label class="text-xs text-muted-foreground" for="q">Cari proposal</label>
           <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Nomor identitas, nama, atau event...">
         </div>
+        <div style="flex:0 0 160px;">
+          <label class="text-xs text-muted-foreground" for="status">Status</label>
+          <select class="select" id="status" name="status">
+            <option value="">Semua Status</option>
+            <?php foreach ($statusOptions as $option): ?><option value="<?= esc($option) ?>" <?= $status === $option ? 'selected' : '' ?>><?= esc($statusLabels[$option] ?? ucfirst($option)) ?></option><?php endforeach; ?>
+          </select>
+        </div>
         <div style="flex:0 0 120px;">
           <label class="text-xs text-muted-foreground" for="perPage">Per halaman</label>
           <select class="select" id="perPage" name="perPage">
@@ -33,7 +43,7 @@
         </div>
         <div style="display:flex;gap:.5rem;">
           <button type="submit" class="button button--primary button--sm">Filter</button>
-          <?php if ($search !== ''): ?>
+          <?php if ($search !== '' || $status !== ''): ?>
           <a href="<?= base_url('peminjaman/lab-loans') ?>" class="button button--outline button--sm">Reset</a>
           <?php endif; ?>
         </div>
@@ -53,19 +63,21 @@
               <td><?= esc(date('d M Y', strtotime($proposal['proposal_date']))) ?></td>
               <td><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? ucfirst($proposal['status'])) ?></span></td>
               <td class="text-center"><div class="flex justify-center gap-1">
+                <?php if ($proposal['status'] !== 'draft'): ?><a href="<?= base_url('peminjaman/lab-loans/detail/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 0 0 0-15Zm0 3.25v.5m0 2.5v4.5" /></svg></a><?php endif; ?>
                 <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.edit')): ?><a href="<?= base_url('peminjaman/lab-loans/edit/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.475 5.408 2.117 2.117m-.756-3.482-5.727 5.727a2.1 2.1 0 0 0-.58 1.082L11 13l2.148-.53c.408-.1.787-.3 1.083-.579l5.727-5.727a1.85 1.85 0 1 0-2.617-2.617" /></svg></a><?php endif; ?>
-                <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.edit')): ?><a href="<?= base_url('peminjaman/lab-loans/items/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Tambah Item Ruangan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg></a><?php else: ?><a href="<?= base_url('peminjaman/lab-loans/items/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Peminjaman"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.5 12S5.5 5.5 12 5.5 21.5 12 21.5 12 18.5 18.5 12 18.5 2.5 12 2.5 12" /><circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5" /></svg></a><?php endif; ?>
+                <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.edit')): ?><a href="<?= base_url('peminjaman/lab-loans/items/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Tambah Item Ruangan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg></a><?php endif; ?>
                 <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.delete')): ?><form action="<?= base_url('peminjaman/lab-loans/delete/' . $proposal['uuid']) ?>" method="post" onsubmit="return confirm('Batalkan proposal ini?')"><?= csrf_field() ?><button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Batalkan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?>
+                  
               </div></td>
             </tr>
             <?php endforeach; ?>
           <?php else: ?>
-            <tr><td colspan="5" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => $search !== '' ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada proposal peminjaman.']) ?></td></tr>
+            <tr><td colspan="5" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => ($search !== '' || $status !== '') ? 'Data tidak ditemukan untuk filter tersebut.' : 'Belum ada proposal peminjaman.']) ?></td></tr>
           <?php endif; ?>
           </tbody>
         </table>
       </div>
     </div>
-    <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> proposal</span><?= $pager->only(['q', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
+    <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> proposal</span><?= $pager->only(['q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
   </div>
 </div>

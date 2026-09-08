@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\LaboratoryLoanProposalItemModel;
+use App\Models\LaboratoryLoanProposalStatusHistoryModel;
 use App\Models\LaboratoryLoanProposalModel;
 use App\Models\LaboratoryModel;
 
@@ -12,16 +13,22 @@ class LaboratoryLoanProposalController extends BaseController
     private const CATALOG_PER_PAGE_OPTIONS = [8, 12, 24, 48];
     protected LaboratoryLoanProposalModel $proposalModel;
     protected LaboratoryLoanProposalItemModel $itemModel;
+    protected LaboratoryLoanProposalStatusHistoryModel $statusHistoryModel;
 
     public function __construct()
     {
         $this->proposalModel = new LaboratoryLoanProposalModel();
         $this->itemModel     = new LaboratoryLoanProposalItemModel();
+        $this->statusHistoryModel = new LaboratoryLoanProposalStatusHistoryModel();
     }
+
+    private const STATUS_OPTIONS = ['draft', 'submitted', 'rejected', 'approved', 'completed'];
 
     public function index()
     {
         $search = trim((string) $this->request->getGet('q'));
+        $status = trim((string) $this->request->getGet('status'));
+        $status = in_array($status, self::STATUS_OPTIONS, true) ? $status : '';
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : 10;
         $canReview = activeGroupIs('superadmin', 'kepala_lab', 'laboran');
@@ -33,11 +40,15 @@ class LaboratoryLoanProposalController extends BaseController
         if ($search !== '') {
             $query->groupStart()->like('identity_number', $search)->orLike('full_name', $search)->orLike('event_name', $search)->orLike('status', $search)->groupEnd();
         }
+        if ($status !== '') {
+            $query->where('laboratory_loan_proposals.status', $status);
+        }
 
         $proposals = $query->orderBy('proposal_date', 'DESC')->paginate($perPage);
         return $this->renderView('loan_proposals/index', [
             'title' => 'Peminjaman Laboratorium', 'page_title' => 'Peminjaman Laboratorium',
             'proposals' => $proposals, 'pager' => $this->proposalModel->pager, 'search' => $search,
+            'status' => $status, 'statusOptions' => self::STATUS_OPTIONS,
             'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE_OPTIONS,
             'currentPage' => $this->proposalModel->pager->getCurrentPage(), 'totalRows' => $this->proposalModel->pager->getTotal(),
             'canReview' => $canReview,
@@ -66,6 +77,7 @@ class LaboratoryLoanProposalController extends BaseController
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
         $this->proposalModel->insert($this->proposalData());
+        $this->statusHistoryModel->record((int) $this->proposalModel->getInsertID(), null, 'draft', 'Proposal dibuat.');
         return redirect()->to('/peminjaman/lab-loans')->with('success', 'Proposal peminjaman berhasil disimpan.');
     }
 
@@ -104,14 +116,49 @@ class LaboratoryLoanProposalController extends BaseController
         return redirect()->to('/peminjaman/lab-loans')->with('success', 'Proposal peminjaman berhasil dibatalkan.');
     }
 
+    public function submit(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') {
+            return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        }
+
+        if ($this->itemModel->where('proposal_id', $proposal['id'])->countAllResults() < 1) {
+            return redirect()->to('/peminjaman/lab-loans/items/' . $proposal['uuid'])->with('error', 'Tambahkan minimal satu ruangan sebelum mengajukan proposal.');
+        }
+
+        $this->proposalModel->update($proposal['id'], ['status' => 'submitted']);
+    $this->statusHistoryModel->record((int) $proposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
+
+        return redirect()->to('/peminjaman/lab-loans/items/' . $proposal['uuid'])->with('success', 'Proposal peminjaman berhasil diajukan.');
+    }
+
+    public function confirm(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') {
+            return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        }
+
+        $cart = $this->itemModel->getCart((int) $proposal['id']);
+        if (empty($cart)) {
+            return redirect()->to('/peminjaman/lab-loans/items/' . $proposal['uuid'])->with('error', 'Tambahkan minimal satu ruangan sebelum melanjutkan.');
+        }
+
+        return $this->renderView('loan_proposals/confirm', [
+            'title' => 'Konfirmasi Proposal Peminjaman', 'page_title' => 'Konfirmasi Proposal Peminjaman',
+            'proposal' => $proposal, 'cart' => $cart,
+        ]);
+    }
+
     /**
      * Halaman detail peminjaman: katalog ruangan laboratorium + cart pilihan.
      */
     public function items(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
-        if (! $proposal) {
-            return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan.');
+        if (! $proposal || $proposal['status'] !== 'draft') {
+            return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
         }
 
         helper('lab_availability');
@@ -142,7 +189,7 @@ class LaboratoryLoanProposalController extends BaseController
         $laboratories = $query->orderBy('laboratories.name', 'ASC')->paginate($perPage);
 
         return $this->renderView('loan_proposals/items', [
-            'title' => 'Detail Peminjaman', 'page_title' => 'Detail Peminjaman',
+            'title' => 'Item Peminjaman', 'page_title' => 'Item Peminjaman',
             'proposal' => $proposal, 'laboratories' => $laboratories,
             'cart' => $this->itemModel->getCart((int) $proposal['id']),
             'search' => $search,
@@ -151,6 +198,21 @@ class LaboratoryLoanProposalController extends BaseController
             'totalRows' => $laboratoryModel->pager->getTotal(),
             'currentPage' => $laboratoryModel->pager->getCurrentPage(),
             'editable' => $proposal['status'] === 'draft' && activeGroupCan('loans.edit'),
+        ]);
+    }
+
+    public function detail(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] === 'draft') {
+            return redirect()->to('/peminjaman/lab-loans')->with('error', 'Detail hanya tersedia untuk proposal yang sudah diajukan.');
+        }
+
+        return $this->renderView('loan_proposals/detail', [
+            'title' => 'Detail Proposal Peminjaman', 'page_title' => 'Detail Proposal Peminjaman',
+            'proposal' => $proposal,
+            'items' => $this->itemModel->getCart((int) $proposal['id']),
+            'history' => $this->statusHistoryModel->getForProposal((int) $proposal['id']),
         ]);
     }
 
