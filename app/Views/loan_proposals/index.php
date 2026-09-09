@@ -78,6 +78,6 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
         </table>
       </div>
     </div>
-    <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> proposal</span><?= $pager->only(['q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
+    <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> proposal</span><?= $pager->only(['q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
   </div>
 </div>
