@@ -7,7 +7,7 @@
 /** @var int $totalRows */
 /** @var string $status */
 /** @var string[] $statusOptions */
-$statusLabels = ['draft' => 'Draft', 'submitted' => 'Diajukan', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
+$statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
 ?>
 <div class="page__section">
   <div class="card">
@@ -56,7 +56,7 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Diajukan', 'rejected' => 'D
           <tbody>
           <?php if (! empty($proposals)): ?>
             <?php foreach ($proposals as $proposal): ?>
-            <?php $statusLabels = ['draft' => 'Draft', 'submitted' => 'Diajukan', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai']; $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary']; ?>
+            <?php $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai']; $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'laboran_approved' => 'info', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary']; ?>
             <tr>
               <td><strong><?= esc($proposal['full_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($proposal['identity_number']) ?> &middot; <?= esc($proposal['email']) ?></div></td>
               <td><strong><?= esc($proposal['event_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc(date('d M Y H:i', strtotime($proposal['event_start']))) ?> - <?= esc(date('d M Y H:i', strtotime($proposal['event_end']))) ?></div></td>

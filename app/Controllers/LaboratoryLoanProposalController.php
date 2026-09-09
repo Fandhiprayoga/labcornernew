@@ -22,7 +22,7 @@ class LaboratoryLoanProposalController extends BaseController
         $this->statusHistoryModel = new LaboratoryLoanProposalStatusHistoryModel();
     }
 
-    private const STATUS_OPTIONS = ['draft', 'submitted', 'rejected', 'approved', 'completed'];
+    private const STATUS_OPTIONS = ['draft', 'submitted', 'laboran_approved', 'rejected', 'approved', 'completed'];
 
     public function index()
     {
@@ -53,6 +53,73 @@ class LaboratoryLoanProposalController extends BaseController
             'currentPage' => $this->proposalModel->pager->getCurrentPage(), 'totalRows' => $this->proposalModel->pager->getTotal(),
             'canReview' => $canReview,
         ]);
+    }
+
+    public function approvalIndex()
+    {
+        $search = trim((string) $this->request->getGet('q'));
+        $status = trim((string) $this->request->getGet('status'));
+        $statusOptions = ['submitted', 'laboran_approved'];
+        $status = in_array($status, $statusOptions, true) ? $status : '';
+        $perPage = (int) $this->request->getGet('perPage');
+        $perPage = in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : 10;
+        $isLaboran = activeGroupIs('laboran');
+        $isKepalaLab = activeGroupIs('kepala_lab');
+
+        $query = $this->proposalModel
+            ->select('laboratory_loan_proposals.*, laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name')
+            ->join('laboratory_loan_proposal_items', 'laboratory_loan_proposal_items.proposal_id = laboratory_loan_proposals.id')
+            ->join('laboratories', 'laboratories.id = laboratory_loan_proposal_items.laboratory_id')
+            ->join('rooms', 'rooms.id = laboratories.room_id', 'left');
+
+        if ($isLaboran) {
+            $query->where('laboratory_loan_proposals.status', 'submitted')
+                ->whereIn('laboratory_loan_proposal_items.laboratory_id', $this->assignedLaboratoryIds());
+        } elseif ($isKepalaLab) {
+            $query->where('laboratory_loan_proposals.status', 'laboran_approved');
+        } else {
+            $query->whereIn('laboratory_loan_proposals.status', ['submitted', 'laboran_approved']);
+        }
+
+        if ($search !== '') {
+            $query->groupStart()
+                ->like('laboratory_loan_proposals.identity_number', $search)
+                ->orLike('laboratory_loan_proposals.full_name', $search)
+                ->orLike('laboratory_loan_proposals.event_name', $search)
+                ->orLike('laboratories.name', $search)
+                ->orLike('rooms.code', $search)
+                ->orLike('rooms.name', $search)
+                ->groupEnd();
+        }
+
+        if ($status !== '') {
+            $query->where('laboratory_loan_proposals.status', $status);
+        }
+
+        $proposals = $query->orderBy('proposal_date', 'DESC')->paginate($perPage);
+
+        return $this->renderView('loan_proposals/approval', [
+            'title' => 'Persetujuan Peminjaman Laboratorium',
+            'page_title' => 'Persetujuan Peminjaman Laboratorium',
+            'proposals' => $proposals,
+            'pager' => $this->proposalModel->pager,
+            'search' => $search,
+            'status' => $status,
+            'statusOptions' => $statusOptions,
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
+            'stage' => $isLaboran ? 'laboran' : ($isKepalaLab ? 'kepala_lab' : 'all'),
+        ]);
+    }
+
+    public function approve(string $uuid)
+    {
+        return $this->processApproval($uuid, true);
+    }
+
+    public function reject(string $uuid)
+    {
+        return $this->processApproval($uuid, false);
     }
 
     public function create()
@@ -313,6 +380,91 @@ class LaboratoryLoanProposalController extends BaseController
         }
 
         return true;
+    }
+
+    private function processApproval(string $uuid, bool $approve)
+    {
+        $proposal = $this->proposalModel->findByUuid($uuid);
+        $redirect = redirect()->to('/peminjaman/lab-loans-approval');
+
+        if (! $proposal) {
+            return $redirect->with('error', 'Proposal peminjaman tidak ditemukan.');
+        }
+
+        $db = db_connect();
+        $db->transBegin();
+        $lockedProposal = $db->query(
+            'SELECT id, status FROM laboratory_loan_proposals WHERE id = ? FOR UPDATE',
+            [$proposal['id']]
+        )->getRowArray();
+
+        if (! $lockedProposal) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Proposal peminjaman tidak ditemukan.');
+        }
+
+        $currentStatus = $lockedProposal['status'];
+        $canApprove = false;
+        if (activeGroupIs('laboran')) {
+            $canApprove = $currentStatus === 'submitted' && $this->isAssignedLaboran((int) $proposal['id']);
+        } elseif (activeGroupIs('kepala_lab')) {
+            $canApprove = $currentStatus === 'laboran_approved';
+        } elseif (activeGroupIs('superadmin')) {
+            $canApprove = in_array($currentStatus, ['submitted', 'laboran_approved'], true);
+        }
+
+        if (! $canApprove) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Anda tidak dapat memproses proposal pada tahap ini.');
+        }
+
+        $note = trim((string) $this->request->getPost('note'));
+
+        if (! $approve && $note === '') {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Alasan penolakan wajib diisi.');
+        }
+
+        $nextStatus = $approve
+            ? ($currentStatus === 'submitted' ? 'laboran_approved' : 'approved')
+            : 'rejected';
+        $note = $note !== '' ? $note : 'Proposal disetujui.';
+
+        $this->proposalModel->update((int) $proposal['id'], ['status' => $nextStatus]);
+        $this->statusHistoryModel->record((int) $proposal['id'], $currentStatus, $nextStatus, $note);
+
+        if ($db->transStatus() === false) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Gagal menyimpan keputusan approval.');
+        }
+
+        $db->transCommit();
+
+        return $redirect->with('success', $approve ? 'Approval berhasil disimpan.' : 'Proposal berhasil ditolak.');
+    }
+
+    private function assignedLaboratoryIds(): array
+    {
+        $ids = db_connect()->table('laboratory_laborans')
+            ->select('laboratory_id')
+            ->where('user_id', auth()->id())
+            ->get()
+            ->getResultArray();
+
+        return $ids ? array_map(static fn (array $row): int => (int) $row['laboratory_id'], $ids) : [0];
+    }
+
+    private function isAssignedLaboran(int $proposalId): bool
+    {
+        return db_connect()->table('laboratory_loan_proposal_items items')
+            ->join('laboratory_laborans assignments', 'assignments.laboratory_id = items.laboratory_id')
+            ->where('items.proposal_id', $proposalId)
+            ->where('assignments.user_id', auth()->id())
+            ->countAllResults() > 0;
     }
 
     private function profileCompletionRedirect()

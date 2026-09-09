@@ -2,8 +2,8 @@
 /** @var array $proposal */
 /** @var array $items */
 /** @var array $history */
-$statusLabels = ['draft' => 'Draft', 'submitted' => 'Diajukan', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
-$statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary'];
+$statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
+$statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'laboran_approved' => 'info', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary'];
 $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value));
 ?>
 <style>

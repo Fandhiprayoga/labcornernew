@@ -62,6 +62,10 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
         $routes->post('items/(:uuid)/remove/(:uuid)', 'LaboratoryLoanProposalController::removeItem/$1/$2', ['filter' => 'permission:loans.edit']);
     });
 
+    $routes->get('peminjaman/lab-loans-approval', 'LaboratoryLoanProposalController::approvalIndex', ['filter' => 'permission:loans.approve']);
+    $routes->post('peminjaman/lab-loans-approval/(:uuid)/approve', 'LaboratoryLoanProposalController::approve/$1', ['filter' => 'permission:loans.approve']);
+    $routes->post('peminjaman/lab-loans-approval/(:uuid)/reject', 'LaboratoryLoanProposalController::reject/$1', ['filter' => 'permission:loans.approve']);
+
     // ---------------------------------------------------------------
     // Admin Routes (require admin.access permission)
     // ---------------------------------------------------------------

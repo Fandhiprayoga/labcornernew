@@ -20,7 +20,7 @@ if (! function_exists('lab_availability_blocking_statuses')) {
      */
     function lab_availability_blocking_statuses(): array
     {
-        return ['submitted', 'approved'];
+        return ['submitted', 'laboran_approved', 'approved'];
     }
 }
 

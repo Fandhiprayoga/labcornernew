@@ -3,6 +3,7 @@ $currentUser = auth()->user();
 $currentUrl  = uri_string();
 $currentStatus = (string) service('request')->getGet('status');
 $canApproveSubmittedProposals = activeGroupIs('superadmin', 'kepala_lab', 'laboran');
+$isLaboratoryApprovalPage = str_contains($currentUrl, 'peminjaman/lab-loans-approval') || in_array($currentStatus, ['submitted', 'laboran_approved'], true);
 
 function isMenuActive(string $path): string
 {
@@ -88,11 +89,11 @@ function isDropdownActive(array $paths): string
                 </button>
                 <div class="sidebar__submenu" id="nav-lab-loans">
                   <ul class="sidebar__list">
-                    <li class="sidebar__item <?= isMenuActive('peminjaman/lab-loans') && $currentStatus !== 'submitted' ? 'active' : '' ?>">
+                    <li class="sidebar__item <?= isMenuActive('peminjaman/lab-loans') && ! $isLaboratoryApprovalPage ? 'active' : '' ?>">
                       <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans') ?>"><span>Proposal</span></a>
                     </li>
                     <?php if ($canApproveSubmittedProposals): ?>
-                    <li class="sidebar__item <?= isMenuActive('peminjaman/lab-loans') && $currentStatus === 'submitted' ? 'active' : '' ?>">
+                    <li class="sidebar__item <?= $isLaboratoryApprovalPage ? 'active' : '' ?>">
                       <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans-approval') ?>"><span>Persetujuan</span></a>
                     </li>
                     <?php endif; ?>

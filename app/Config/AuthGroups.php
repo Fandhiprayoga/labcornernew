@@ -100,6 +100,7 @@ class AuthGroups extends ShieldAuthGroups
         // Laboratory loan proposals
         'loans.access'  => 'Dapat mengakses modul proposal peminjaman',
         'loans.list'    => 'Dapat melihat proposal peminjaman',
+        'loans.approve' => 'Dapat menyetujui proposal peminjaman',
         'loans.create'  => 'Dapat membuat proposal peminjaman',
         'loans.edit'    => 'Dapat mengedit proposal peminjaman',
         'loans.delete'  => 'Dapat membatalkan proposal peminjaman',
@@ -138,6 +139,7 @@ class AuthGroups extends ShieldAuthGroups
             'loans.*',
             'dashboard.*',
             'reports.*',
+            'loans.approve',
             'loans.*',
         ],
         'kepala_lab' => [
@@ -156,6 +158,9 @@ class AuthGroups extends ShieldAuthGroups
             'admin.settings',
             'dashboard.*',
             'reports.*',
+            'loans.access',
+            'loans.list',
+            'loans.approve',
         ],
         'laboran' => [
             'admin.access',
@@ -176,6 +181,7 @@ class AuthGroups extends ShieldAuthGroups
             'loans.list',
             'loans.edit',
             'loans.delete',
+            'loans.approve',
         ],
         'asisten_lab' => [
             'dashboard.access',
