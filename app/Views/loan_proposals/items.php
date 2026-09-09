@@ -11,6 +11,7 @@
 /** @var int $currentPage */
 
 $cartLabIds = array_map(static fn (array $item): int => (int) $item['laboratory_id'], $cart);
+$hasSelectedLaboratory = ! empty($cart);
 $statusLabels = ['draft' => 'Draft', 'submitted' => 'Diajukan', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
 $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary'];
 $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value));
@@ -75,7 +76,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
               <?php endif; ?>
             </div>
           </form>
-          <p class="text-xs text-muted-foreground" style="margin:.75rem 0 0;">Katalog hanya menampilkan laboratorium yang tersedia pada rentang kegiatan <?= esc($fmt($proposal['event_start'])) ?> &ndash; <?= esc($fmt($proposal['event_end'])) ?>.</p>
+          <p class="text-xs text-muted-foreground" style="margin:.75rem 0 0;">Katalog hanya menampilkan laboratorium yang tersedia pada rentang kegiatan <?= esc($fmt($proposal['event_start'])) ?> &ndash; <?= esc($fmt($proposal['event_end'])) ?>. Satu proposal hanya dapat memilih satu laboratorium.</p>
         </div>
         <div class="card__body">
           <?php if (empty($laboratories)): ?>
@@ -112,6 +113,8 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
                 <div style="margin-top:auto;">
                   <?php if ($inCart): ?>
                     <button type="button" class="button button--outline button--sm w-full" disabled>Sudah di cart</button>
+                  <?php elseif ($hasSelectedLaboratory): ?>
+                    <button type="button" class="button button--outline button--sm w-full" disabled>Satu lab sudah dipilih</button>
                   <?php elseif (! $editable): ?>
                     <button type="button" class="button button--outline button--sm w-full" disabled>Tidak dapat diubah</button>
                   <?php else: ?>

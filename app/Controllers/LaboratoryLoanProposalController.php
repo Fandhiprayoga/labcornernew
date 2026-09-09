@@ -240,6 +240,18 @@ class LaboratoryLoanProposalController extends BaseController
         $db = db_connect();
         $db->transBegin();
 
+        // Lock the proposal so concurrent requests cannot add a second laboratory.
+        $db->query(
+            'SELECT id FROM laboratory_loan_proposals WHERE id = ? FOR UPDATE',
+            [$proposal['id']]
+        )->getRowArray();
+
+        if ($this->itemModel->where('proposal_id', $proposal['id'])->countAllResults() >= 1) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Satu proposal hanya dapat memiliki satu laboratorium.');
+        }
+
         // Dicek ulang dengan locking read agar tidak double booking bila ada user lain memilih ruangan yang sama bersamaan.
         if (! lab_is_available($laboratoryId, $proposal['event_start'], $proposal['event_end'], (int) $proposal['id'], true)) {
             $db->transRollback();
