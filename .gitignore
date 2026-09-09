@@ -126,3 +126,4 @@ _modules/*
 /phpunit*.xml
 meridian/*
 public/uploads/*
+/templates/*

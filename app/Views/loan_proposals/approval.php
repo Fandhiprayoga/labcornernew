@@ -73,33 +73,15 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
                   <a href="<?= base_url('peminjaman/lab-loans/detail/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal">
                     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 0 0 0-15Zm0 3.25v.5m0 2.5v4.5" /></svg>
                   </a>
-                  <form action="<?= base_url('peminjaman/lab-loans-approval/' . $proposal['uuid'] . '/approve') ?>" method="post" onsubmit="return confirm('Setujui proposal ini?')">
-                    <?= csrf_field() ?>
-                    <button type="submit" class="button button--ghost button--success button--icon-only button--sm" title="Setujui" aria-label="Setujui">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="m5 12 4 4L19 6" /></svg>
-                    </button>
-                  </form>
+                  <button type="button" class="button button--ghost button--success button--icon-only button--sm" title="Setujui" aria-label="Setujui"
+                    onclick="openApprovalDialog('approveConfirm', '<?= esc(base_url('peminjaman/lab-loans-approval/' . $proposal['uuid'] . '/approve'), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="m5 12 4 4L19 6" /></svg>
+                  </button>
                   <button type="button" class="button button--ghost button--danger button--icon-only button--sm" title="Tolak" aria-label="Tolak"
-                    onclick="document.getElementById('reject-form-<?= esc($proposal['uuid'], 'attr') ?>').classList.remove('hidden')">
+                    onclick="openApprovalDialog('rejectConfirm', '<?= esc(base_url('peminjaman/lab-loans-approval/' . $proposal['uuid'] . '/reject'), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')">
                     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.75" d="m7 7 10 10M17 7 7 17" /></svg>
                   </button>
                 </div>
-              </td>
-            </tr>
-            <tr id="reject-form-<?= esc($proposal['uuid'], 'attr') ?>" class="hidden">
-              <td colspan="5">
-                <form action="<?= base_url('peminjaman/lab-loans-approval/' . $proposal['uuid'] . '/reject') ?>" method="post" onsubmit="return confirm('Tolak proposal ini?')" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
-                  <?= csrf_field() ?>
-                  <div style="flex:1 1 320px;min-width:220px;">
-                    <label class="text-xs text-muted-foreground" for="note-<?= esc($proposal['uuid'], 'attr') ?>">Alasan penolakan</label>
-                    <textarea class="input" id="note-<?= esc($proposal['uuid'], 'attr') ?>" name="note" rows="2" required placeholder="Tuliskan alasan penolakan proposal ini..."></textarea>
-                  </div>
-                  <div style="display:flex;gap:.5rem;">
-                    <button type="submit" class="button button--danger button--sm">Tolak Proposal</button>
-                    <button type="button" class="button button--outline button--sm"
-                      onclick="document.getElementById('reject-form-<?= esc($proposal['uuid'], 'attr') ?>').classList.add('hidden')">Batal</button>
-                  </div>
-                </form>
               </td>
             </tr>
             <?php endforeach; ?>
@@ -113,3 +95,94 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
     <?php if ($pager->getTotal() > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $pager->getTotal() ?> proposal</span><?= $pager->only(['q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
   </div>
 </div>
+
+<!-- Dialog: Approve -->
+<div class="dialog dialog--sm" id="approveConfirm" data-stisla-dialog data-state="closed" role="alertdialog" aria-modal="true" aria-labelledby="approveConfirmLabel" aria-describedby="approveConfirmDesc" aria-hidden="true" tabindex="-1">
+  <div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+  <div class="dialog__panel">
+    <div class="dialog__content">
+      <button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">
+        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+      <div class="dialog__body text-center pt-6">
+        <span class="icon-box icon-box--success icon-box--circle icon-box--lg mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="m5 12 4 4L19 6" /></svg>
+        </span>
+        <h3 class="dialog__title mb-1" id="approveConfirmLabel">Setujui proposal ini?</h3>
+        <p class="text-muted-foreground" id="approveConfirmDesc">Proposal <strong data-slot="approve-event"></strong> akan lanjut ke tahap persetujuan berikutnya.</p>
+      </div>
+      <form id="approveForm" method="post">
+        <?= csrf_field() ?>
+        <div class="dialog__footer justify-center">
+          <button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button>
+          <button type="submit" class="button button--success">Ya, Setujui</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog: Reject -->
+<div class="dialog dialog--sm" id="rejectConfirm" data-stisla-dialog data-state="closed" role="dialog" aria-modal="true" aria-labelledby="rejectConfirmLabel" aria-hidden="true" tabindex="-1">
+  <div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+  <div class="dialog__panel">
+    <div class="dialog__content">
+      <div class="dialog__header">
+        <h3 class="dialog__title" id="rejectConfirmLabel">Tolak Proposal</h3>
+        <button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <form id="rejectForm" method="post">
+        <?= csrf_field() ?>
+        <div class="dialog__body">
+          <p class="text-muted-foreground text-sm mb-4">Anda akan menolak proposal <strong data-slot="reject-event"></strong>. Alasan ini akan terlihat oleh pemohon dan tahap approval sebelumnya.</p>
+          <div class="field">
+            <label class="field__label" for="reject_note">Alasan Penolakan <span class="text-danger">*</span></label>
+            <textarea class="input" id="reject_note" name="note" rows="3" required placeholder="Tuliskan alasan penolakan proposal ini..."></textarea>
+          </div>
+        </div>
+        <div class="dialog__footer">
+          <button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button>
+          <button type="submit" class="button button--danger">Tolak Proposal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openApprovalDialog(dialogId, actionUrl, eventName) {
+    var dialog = document.getElementById(dialogId);
+    if (!dialog) return;
+    var form = dialog.querySelector('form');
+    form.action = actionUrl;
+    var slot = dialog.querySelector('[data-slot="' + (dialogId === 'approveConfirm' ? 'approve-event' : 'reject-event') + '"]');
+    if (slot) slot.textContent = eventName;
+    if (dialogId === 'rejectConfirm') {
+      var note = form.querySelector('#reject_note');
+      note.value = '';
+    }
+    dialog.dataset.state = 'open';
+    dialog.setAttribute('aria-hidden', 'false');
+    window.requestAnimationFrame(function () {
+      var focusTarget = dialog.querySelector('#reject_note') || dialog.querySelector('[data-stisla-dialog-dismiss]');
+      if (focusTarget) focusTarget.focus();
+    });
+  }
+
+  document.addEventListener('click', function (event) {
+    if (!event.target.closest('[data-stisla-dialog-dismiss]')) return;
+    var dialog = event.target.closest('[data-stisla-dialog]');
+    if (!dialog) return;
+    dialog.dataset.state = 'closed';
+    dialog.setAttribute('aria-hidden', 'true');
+  });
+
+  document.querySelectorAll('#approveForm, #rejectForm').forEach(function (form) {
+    form.addEventListener('submit', function () {
+      var submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+    });
+  });
+</script>
