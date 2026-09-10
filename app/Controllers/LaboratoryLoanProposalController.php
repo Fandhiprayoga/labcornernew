@@ -426,6 +426,22 @@ class LaboratoryLoanProposalController extends BaseController
         ]);
     }
 
+    public function detailApprovalHistory(string $uuid)
+    {
+        $proposal = $this->proposalModel->findByUuid($uuid);
+        if (! $proposal || ! $this->canViewApprovalHistory((int) $proposal['id'])) {
+            return redirect()->to('/peminjaman/lab-loans-approval?tab=history')->with('error', 'Riwayat approval proposal tidak tersedia untuk Anda.');
+        }
+
+        return $this->renderView('loan_proposals/detail', [
+            'title' => 'Detail Riwayat Approval', 'page_title' => 'Detail Riwayat Approval',
+            'proposal' => $proposal,
+            'items' => $this->itemModel->getCart((int) $proposal['id']),
+            'history' => $this->statusHistoryModel->getForProposal((int) $proposal['id']),
+            'approvalHistoryMode' => true,
+        ]);
+    }
+
     public function addItem(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
@@ -635,6 +651,19 @@ class LaboratoryLoanProposalController extends BaseController
         }
 
         return activeGroupIs('kepala_lab') && $proposal['status'] === 'laboran_approved';
+    }
+
+    private function canViewApprovalHistory(int $proposalId): bool
+    {
+        if (activeGroupIs('superadmin')) {
+            return true;
+        }
+
+        return db_connect()->table('laboratory_loan_proposal_status_histories')
+            ->where('proposal_id', $proposalId)
+            ->where('changed_by', auth()->id())
+            ->whereIn('to_status', ['laboran_approved', 'approved', 'rejected'])
+            ->countAllResults() > 0;
     }
 
     private function profileCompletionRedirect()

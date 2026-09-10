@@ -84,7 +84,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
               <td><span class="badge badge--soft badge--<?= $entry['to_status'] === 'rejected' ? 'danger' : 'success' ?>"><?= esc($statusLabels[$entry['to_status']] ?? $entry['to_status']) ?></span></td>
               <td><?= esc($entry['changed_by_name'] ?: '-') ?></td>
               <td><?= esc($entry['note'] ?: '-') ?></td>
-              <td class="text-center"><a href="<?= base_url('peminjaman/lab-loans/detail/' . $entry['proposal_uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal">&#9432;</a></td>
+              <td class="text-center"><a href="<?= base_url('peminjaman/lab-loans/detail-approval-history/' . $entry['proposal_uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal">&#9432;</a></td>
             </tr>
             <?php endforeach; ?>
           <?php else: ?>

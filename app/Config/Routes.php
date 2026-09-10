@@ -58,8 +58,9 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
         $routes->get('confirm/(:uuid)', 'LaboratoryLoanProposalController::confirm/$1', ['filter' => 'permission:loans.edit']);
         $routes->post('submit/(:uuid)', 'LaboratoryLoanProposalController::submit/$1', ['filter' => 'permission:loans.edit']);
         $routes->get('items/(:uuid)', 'LaboratoryLoanProposalController::items/$1', ['filter' => 'permission:loans.list']);
-            $routes->get('detail/(:uuid)', 'LaboratoryLoanProposalController::detail/$1', ['filter' => 'permission:loans.list']);
+        $routes->get('detail/(:uuid)', 'LaboratoryLoanProposalController::detail/$1', ['filter' => 'permission:loans.list']);
         $routes->get('detail-approval/(:uuid)', 'LaboratoryLoanProposalController::detailApproval/$1', ['filter' => 'permission:loans.approve']);
+        $routes->get('detail-approval-history/(:uuid)', 'LaboratoryLoanProposalController::detailApprovalHistory/$1', ['filter' => 'permission:loans.approve']);
         $routes->post('items/(:uuid)/add', 'LaboratoryLoanProposalController::addItem/$1', ['filter' => 'permission:loans.edit']);
         $routes->post('items/(:uuid)/remove/(:uuid)', 'LaboratoryLoanProposalController::removeItem/$1/$2', ['filter' => 'permission:loans.edit']);
     });

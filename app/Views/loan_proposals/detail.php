@@ -3,6 +3,7 @@
 /** @var array $items */
 /** @var array $history */
 $approvalMode = $approvalMode ?? false;
+$approvalHistoryMode = $approvalHistoryMode ?? false;
 $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
 $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'laboran_approved' => 'info', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary'];
 $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value));
@@ -27,8 +28,8 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
   <?php if ($approvalMode): ?><div class="proposal-approval__layout"><?php endif; ?>
   <div class="card">
     <div class="card__header">
-      <div><span class="card__title"><?= esc($proposal['event_name']) ?></span><div class="text-xs text-muted-foreground"><?= $approvalMode ? 'Detail Approval Proposal' : 'Detail Proposal Peminjaman' ?></div></div>
-      <div class="card__action"><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? ucfirst($proposal['status'])) ?></span><a href="<?= base_url($approvalMode ? 'peminjaman/lab-loans-approval' : 'peminjaman/lab-loans') ?>" class="button button--outline button--neutral button--sm">Kembali</a></div>
+      <div><span class="card__title"><?= esc($proposal['event_name']) ?></span><div class="text-xs text-muted-foreground"><?= $approvalMode ? 'Detail Approval Proposal' : ($approvalHistoryMode ? 'Detail Riwayat Approval' : 'Detail Proposal Peminjaman') ?></div></div>
+      <div class="card__action"><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? ucfirst($proposal['status'])) ?></span><a href="<?= base_url($approvalMode || $approvalHistoryMode ? 'peminjaman/lab-loans-approval' . ($approvalHistoryMode ? '?tab=history' : '') : 'peminjaman/lab-loans') ?>" class="button button--outline button--neutral button--sm">Kembali</a></div>
     </div>
     <div class="card__body">
       <div class="proposal-detail__tabs" role="tablist" aria-label="Detail proposal">
