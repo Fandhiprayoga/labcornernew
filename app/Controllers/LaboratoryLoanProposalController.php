@@ -410,6 +410,22 @@ class LaboratoryLoanProposalController extends BaseController
         ]);
     }
 
+    public function detailApproval(string $uuid)
+    {
+        $proposal = $this->proposalModel->findByUuid($uuid);
+        if (! $proposal || ! $this->canReviewProposal($proposal)) {
+            return redirect()->to('/peminjaman/lab-loans-approval')->with('error', 'Proposal tidak tersedia untuk approval Anda.');
+        }
+
+        return $this->renderView('loan_proposals/detail', [
+            'title' => 'Detail Approval Proposal', 'page_title' => 'Detail Approval Proposal',
+            'proposal' => $proposal,
+            'items' => $this->itemModel->getCart((int) $proposal['id']),
+            'history' => $this->statusHistoryModel->getForProposal((int) $proposal['id']),
+            'approvalMode' => true,
+        ]);
+    }
+
     public function addItem(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
@@ -606,6 +622,19 @@ class LaboratoryLoanProposalController extends BaseController
             ->where('items.proposal_id', $proposalId)
             ->where('assignments.user_id', auth()->id())
             ->countAllResults() > 0;
+    }
+
+    private function canReviewProposal(array $proposal): bool
+    {
+        if (activeGroupIs('superadmin')) {
+            return in_array($proposal['status'], ['submitted', 'laboran_approved'], true);
+        }
+
+        if (activeGroupIs('laboran')) {
+            return $proposal['status'] === 'submitted' && $this->isAssignedLaboran((int) $proposal['id']);
+        }
+
+        return activeGroupIs('kepala_lab') && $proposal['status'] === 'laboran_approved';
     }
 
     private function profileCompletionRedirect()

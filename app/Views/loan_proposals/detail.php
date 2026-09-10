@@ -2,6 +2,7 @@
 /** @var array $proposal */
 /** @var array $items */
 /** @var array $history */
+$approvalMode = $approvalMode ?? false;
 $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
 $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'laboran_approved' => 'info', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary'];
 $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value));
@@ -14,13 +15,20 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
   .proposal-detail__panel[hidden] { display:none; }
   .proposal-detail__summary { display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:1rem; }
   .proposal-detail__lab-photo { width:4rem; height:3rem; object-fit:cover; border-radius:.5rem; display:block; }
+  .proposal-approval__layout { display:grid; grid-template-columns:minmax(0,2fr) minmax(18rem,1fr); gap:1rem; align-items:start; }
+  .proposal-approval__decision .card__body { display:flex; flex-direction:column; gap:1rem; }
+  .proposal-approval__illustration { width:8rem; height:8rem; object-fit:contain; align-self:center; }
+  .proposal-approval__decision .proposal-approval__actions { display:flex; gap:.5rem; }
+  .proposal-approval__decision .proposal-approval__actions .button { flex:1; }
   @media (min-width:40rem) { .proposal-detail__summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width:55rem) { .proposal-approval__layout { grid-template-columns:1fr; } }
 </style>
 <div class="page__section flex flex-col gap-4">
+  <?php if ($approvalMode): ?><div class="proposal-approval__layout"><?php endif; ?>
   <div class="card">
     <div class="card__header">
-      <div><span class="card__title"><?= esc($proposal['event_name']) ?></span><div class="text-xs text-muted-foreground">Detail Proposal Peminjaman</div></div>
-      <div class="card__action"><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? ucfirst($proposal['status'])) ?></span><a href="<?= base_url('peminjaman/lab-loans') ?>" class="button button--outline button--neutral button--sm">Kembali</a></div>
+      <div><span class="card__title"><?= esc($proposal['event_name']) ?></span><div class="text-xs text-muted-foreground"><?= $approvalMode ? 'Detail Approval Proposal' : 'Detail Proposal Peminjaman' ?></div></div>
+      <div class="card__action"><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? ucfirst($proposal['status'])) ?></span><a href="<?= base_url($approvalMode ? 'peminjaman/lab-loans-approval' : 'peminjaman/lab-loans') ?>" class="button button--outline button--neutral button--sm">Kembali</a></div>
     </div>
     <div class="card__body">
       <div class="proposal-detail__tabs" role="tablist" aria-label="Detail proposal">
@@ -52,7 +60,23 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
       </section>
     </div>
   </div>
+  <?php if ($approvalMode): ?>
+  <div class="card proposal-approval__decision">
+    <div class="card__body">
+      <img class="proposal-approval__illustration" src="<?= esc(base_url('assets/img/approval-success.svg'), 'attr') ?>" alt="Ilustrasi persetujuan proposal">
+      <div><strong>Keputusan Approval</strong><div class="text-sm text-muted-foreground">Tinjau detail proposal sebelum mengambil keputusan.</div></div>
+      <div class="proposal-approval__actions">
+        <button type="button" class="button button--danger" onclick="openApprovalDialog('rejectConfirm', '<?= esc(base_url('peminjaman/lab-loans-approval/' . $proposal['uuid'] . '/reject'), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')">Tolak</button>
+        <button type="button" class="button button--success" onclick="openApprovalDialog('approveConfirm', '<?= esc(base_url('peminjaman/lab-loans-approval/' . $proposal['uuid'] . '/approve'), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')">Setujui</button>
+      </div>
+    </div>
+  </div>
+  </div>
+  <?php endif; ?>
 </div>
+<?php if ($approvalMode): ?>
+<?= view('loan_proposals/_approval_dialogs') ?>
+<?php endif; ?>
 <script>
   (() => {
     const tabs = document.querySelectorAll('[data-tab]');

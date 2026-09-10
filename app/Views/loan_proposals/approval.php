@@ -107,7 +107,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
               <td><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? $proposal['status']) ?></span></td>
               <td class="text-center">
                 <div class="flex justify-center gap-1">
-                  <a href="<?= base_url('peminjaman/lab-loans/detail/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal">
+                  <a href="<?= base_url('peminjaman/lab-loans/detail-approval/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal">
                     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 0 0 0-15Zm0 3.25v.5m0 2.5v4.5" /></svg>
                   </a>
                   <button type="button" class="button button--ghost button--success button--icon-only button--sm" title="Setujui" aria-label="Setujui"
