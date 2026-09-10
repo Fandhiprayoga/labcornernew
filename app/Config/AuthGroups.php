@@ -101,6 +101,7 @@ class AuthGroups extends ShieldAuthGroups
         'loans.access'  => 'Dapat mengakses modul proposal peminjaman',
         'loans.list'    => 'Dapat melihat proposal peminjaman',
         'loans.approve' => 'Dapat menyetujui proposal peminjaman',
+        'loans.complete' => 'Dapat menandai peminjaman selesai',
         'loans.create'  => 'Dapat membuat proposal peminjaman',
         'loans.edit'    => 'Dapat mengedit proposal peminjaman',
         'loans.delete'  => 'Dapat membatalkan proposal peminjaman',
@@ -182,6 +183,7 @@ class AuthGroups extends ShieldAuthGroups
             'loans.edit',
             'loans.delete',
             'loans.approve',
+            'loans.complete',
         ],
         'asisten_lab' => [
             'dashboard.access',

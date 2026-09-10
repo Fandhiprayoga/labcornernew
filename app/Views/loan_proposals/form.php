@@ -7,6 +7,7 @@ $datetime = static function (string $field) use ($value): string {
     $raw = $value($field);
     return $raw ? date('Y-m-d\TH:i', strtotime($raw)) : '';
 };
+$minDateTime = date('Y-m-d\TH:i');
 ?>
 <div class="page__section">
   <div class="card">
@@ -53,11 +54,11 @@ $datetime = static function (string $field) use ($value): string {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="field">
                 <label for="event_start" class="field__label">Waktu Mulai <span class="text-danger">*</span></label>
-                <input type="datetime-local" class="input w-full" id="event_start" name="event_start" value="<?= esc($datetime('event_start')) ?>" required>
+                <input type="datetime-local" class="input w-full" id="event_start" name="event_start" value="<?= esc($datetime('event_start')) ?>" min="<?= esc($minDateTime) ?>" required>
               </div>
               <div class="field">
                 <label for="event_end" class="field__label">Waktu Selesai <span class="text-danger">*</span></label>
-                <input type="datetime-local" class="input w-full" id="event_end" name="event_end" value="<?= esc($datetime('event_end')) ?>" required>
+                <input type="datetime-local" class="input w-full" id="event_end" name="event_end" value="<?= esc($datetime('event_end')) ?>" min="<?= esc($minDateTime) ?>" required>
               </div>
             </div>
           </div>

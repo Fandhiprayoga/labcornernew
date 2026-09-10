@@ -67,6 +67,7 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
                 <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.edit')): ?><a href="<?= base_url('peminjaman/lab-loans/edit/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.475 5.408 2.117 2.117m-.756-3.482-5.727 5.727a2.1 2.1 0 0 0-.58 1.082L11 13l2.148-.53c.408-.1.787-.3 1.083-.579l5.727-5.727a1.85 1.85 0 1 0-2.617-2.617" /></svg></a><?php endif; ?>
                 <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.edit')): ?><a href="<?= base_url('peminjaman/lab-loans/items/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Tambah Item Ruangan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg></a><?php endif; ?>
                 <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.delete')): ?><form action="<?= base_url('peminjaman/lab-loans/delete/' . $proposal['uuid']) ?>" method="post" onsubmit="return confirm('Batalkan proposal ini?')"><?= csrf_field() ?><button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Batalkan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?>
+                <?php if ($proposal['status'] === 'approved' && activeGroupCan('loans.complete')): ?><button type="button" class="button button--ghost button--success button--icon-only button--sm" title="Tandai Selesai" aria-label="Tandai Selesai" onclick="openCompleteDialog('<?= esc(base_url('peminjaman/lab-loans/complete/' . $proposal['uuid']), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="m5 12 4 4L19 6" /></svg></button><?php endif; ?>
                   
               </div></td>
             </tr>
@@ -81,3 +82,57 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
     <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> proposal</span><?= $pager->only(['q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
   </div>
 </div>
+
+<div class="dialog dialog--sm" id="completeConfirm" data-stisla-dialog data-state="closed" role="alertdialog" aria-modal="true" aria-labelledby="completeConfirmLabel" aria-describedby="completeConfirmDesc" aria-hidden="true" tabindex="-1">
+  <div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+  <div class="dialog__panel">
+    <div class="dialog__content">
+      <button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">
+        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+      <div class="dialog__body text-center pt-6">
+        <span class="icon-box icon-box--success icon-box--circle icon-box--lg mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="m5 12 4 4L19 6" /></svg>
+        </span>
+        <h3 class="dialog__title mb-1" id="completeConfirmLabel">Tandai proposal selesai?</h3>
+        <p class="text-muted-foreground" id="completeConfirmDesc">Proposal <strong data-slot="complete-event"></strong> akan diubah menjadi status selesai.</p>
+      </div>
+      <form id="completeForm" method="post">
+        <?= csrf_field() ?>
+        <div class="dialog__footer justify-center">
+          <button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button>
+          <button type="submit" class="button button--success">Ya, Tandai Selesai</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openCompleteDialog(actionUrl, eventName) {
+    var dialog = document.getElementById('completeConfirm');
+    var form = document.getElementById('completeForm');
+    if (!dialog || !form) return;
+    form.action = actionUrl;
+    dialog.querySelector('[data-slot="complete-event"]').textContent = eventName;
+    dialog.dataset.state = 'open';
+    dialog.setAttribute('aria-hidden', 'false');
+    window.requestAnimationFrame(function () {
+      var confirmButton = form.querySelector('button[type="submit"]');
+      if (confirmButton) confirmButton.focus();
+    });
+  }
+
+  document.addEventListener('click', function (event) {
+    if (!event.target.closest('[data-stisla-dialog-dismiss]')) return;
+    var dialog = event.target.closest('[data-stisla-dialog]');
+    if (!dialog) return;
+    dialog.dataset.state = 'closed';
+    dialog.setAttribute('aria-hidden', 'true');
+  });
+
+  document.getElementById('completeForm')?.addEventListener('submit', function () {
+    var submitButton = this.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+  });
+</script>

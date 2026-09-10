@@ -122,6 +122,46 @@ class LaboratoryLoanProposalController extends BaseController
         return $this->processApproval($uuid, false);
     }
 
+    public function complete(string $uuid)
+    {
+        $proposal = $this->proposalModel->findByUuid($uuid);
+        $redirect = redirect()->to('/peminjaman/lab-loans');
+
+        if (! $proposal) {
+            return $redirect->with('error', 'Proposal peminjaman tidak ditemukan.');
+        }
+
+        if (! activeGroupIs('superadmin') && (! activeGroupIs('laboran') || ! $this->isAssignedLaboran((int) $proposal['id']))) {
+            return $redirect->with('error', 'Anda tidak ditugaskan pada laboratorium proposal ini.');
+        }
+
+        $db = db_connect();
+        $db->transBegin();
+        $lockedProposal = $db->query(
+            'SELECT id, status FROM laboratory_loan_proposals WHERE id = ? FOR UPDATE',
+            [$proposal['id']]
+        )->getRowArray();
+
+        if (! $lockedProposal || $lockedProposal['status'] !== 'approved') {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Hanya proposal yang sudah disetujui yang dapat ditandai selesai.');
+        }
+
+        $this->proposalModel->update((int) $proposal['id'], ['status' => 'completed']);
+        $this->statusHistoryModel->record((int) $proposal['id'], 'approved', 'completed', 'Peminjaman ditandai selesai.');
+
+        if ($db->transStatus() === false) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Gagal mengubah status proposal menjadi selesai.');
+        }
+
+        $db->transCommit();
+
+        return $redirect->with('success', 'Proposal peminjaman berhasil ditandai selesai.');
+    }
+
     public function create()
     {
         if ($redirect = $this->profileCompletionRedirect()) {
@@ -374,7 +414,21 @@ class LaboratoryLoanProposalController extends BaseController
             return false;
         }
 
-        if (strtotime($this->normalizeDateTime($this->request->getPost('event_end'))) <= strtotime($this->normalizeDateTime($this->request->getPost('event_start')))) {
+        $eventStart = strtotime($this->normalizeDateTime($this->request->getPost('event_start')));
+        $eventEnd   = strtotime($this->normalizeDateTime($this->request->getPost('event_end')));
+        $now        = strtotime(date('Y-m-d H:i:00'));
+
+        if ($eventStart < $now) {
+            $this->validator->setError('event_start', 'Waktu mulai tidak boleh backdate.');
+            return false;
+        }
+
+        if ($eventEnd < $now) {
+            $this->validator->setError('event_end', 'Waktu selesai tidak boleh backdate.');
+            return false;
+        }
+
+        if ($eventEnd <= $eventStart) {
             $this->validator->setError('event_end', 'Waktu selesai harus setelah waktu mulai.');
             return false;
         }
