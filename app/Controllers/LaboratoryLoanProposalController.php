@@ -259,14 +259,72 @@ class LaboratoryLoanProposalController extends BaseController
             return redirect()->to('/peminjaman/lab-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
         }
 
-        if ($this->itemModel->where('proposal_id', $proposal['id'])->countAllResults() < 1) {
+        $redirect = redirect()->to('/peminjaman/lab-loans');
+        $db       = db_connect();
+
+        helper('lab_availability');
+        $db->transBegin();
+
+        // Serialize submissions for the same proposal and laboratory rows.
+        $lockedProposal = $db->query(
+            'SELECT * FROM laboratory_loan_proposals WHERE id = ? FOR UPDATE',
+            [$proposal['id']]
+        )->getRowArray();
+
+        if (! $lockedProposal || $lockedProposal['status'] !== 'draft') {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        }
+
+        $cart = $this->itemModel
+            ->where('proposal_id', $lockedProposal['id'])
+            ->findAll();
+
+        if ($cart === []) {
+            $db->transRollback();
+
             return redirect()->to('/peminjaman/lab-loans/items/' . $proposal['uuid'])->with('error', 'Tambahkan minimal satu ruangan sebelum mengajukan proposal.');
         }
 
-        $this->proposalModel->update($proposal['id'], ['status' => 'submitted']);
-    $this->statusHistoryModel->record((int) $proposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
+        $laboratoryIds = array_values(array_unique(array_map(
+            static fn (array $item): int => (int) $item['laboratory_id'],
+            $cart
+        )));
+        $placeholders = implode(',', array_fill(0, count($laboratoryIds), '?'));
 
-        return redirect()->to('/peminjaman/lab-loans')->with('success', 'Proposal peminjaman berhasil diajukan.');
+        // Lock laboratory rows so two proposals cannot pass this check concurrently.
+        $db->query(
+            'SELECT id FROM laboratories WHERE id IN (' . $placeholders . ') ORDER BY id FOR UPDATE',
+            $laboratoryIds
+        )->getResultArray();
+
+        foreach ($laboratoryIds as $laboratoryId) {
+            if (! lab_is_available(
+                $laboratoryId,
+                $lockedProposal['event_start'],
+                $lockedProposal['event_end'],
+                (int) $lockedProposal['id'],
+                true
+            )) {
+                $db->transRollback();
+
+                return $redirect->with('error', 'Laboratorium yang dipilih baru saja diproses atau dibooking pada rentang waktu kegiatan. Silakan pilih ruangan lain.');
+            }
+        }
+
+        $this->proposalModel->update($lockedProposal['id'], ['status' => 'submitted']);
+        $this->statusHistoryModel->record((int) $lockedProposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
+
+        if ($db->transStatus() === false) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Gagal mengajukan proposal. Silakan coba lagi.');
+        }
+
+        $db->transCommit();
+
+        return $redirect->with('success', 'Proposal peminjaman berhasil diajukan.');
     }
 
     public function confirm(string $uuid)
