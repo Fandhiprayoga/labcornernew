@@ -7,9 +7,15 @@
 /** @var int $perPage */
 /** @var int[] $perPageOptions */
 /** @var string $stage */
+/** @var array $history */
+/** @var string $tab */
 $statusLabels = [
+  'draft' => 'Draft',
     'submitted' => 'Menunggu Approval Laboran',
     'laboran_approved' => 'Menunggu Approval Kepala Lab',
+  'approved' => 'Disetujui',
+  'rejected' => 'Ditolak',
+  'completed' => 'Selesai',
 ];
 $statusColors = [
   'submitted' => 'warning',
@@ -17,7 +23,7 @@ $statusColors = [
 ];
 $stageTitle = $stage === 'laboran'
     ? 'Menunggu Approval Laboran'
-    : ($stage === 'kepala_lab' ? 'Menunggu Approval Kepala Lab' : 'Daftar Approval');
+  : ($stage === 'kepala_lab' ? 'Menunggu Approval Kepala Lab' : ($stage === 'history' ? 'Riwayat Approval' : 'Daftar Approval'));
 $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value));
 ?>
 <div class="page__section flex flex-col gap-4">
@@ -32,7 +38,14 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
       </div>
     </div>
     <div class="card__body" style="border-bottom:1px solid var(--color-border);">
+      <div class="toggle-group" data-stisla-toggle-group role="radiogroup" aria-label="Jenis data approval" style="display:inline-flex;width:max-content;max-width:100%;overflow-x:auto;">
+        <a href="<?= base_url('peminjaman/lab-loans-approval?tab=pending') ?>" class="toggle" role="radio" aria-checked="<?= $tab === 'pending' ? 'true' : 'false' ?>" data-state="<?= $tab === 'pending' ? 'active' : 'inactive' ?>">Proposal Butuh Approval</a>
+        <a href="<?= base_url('peminjaman/lab-loans-approval?tab=history') ?>" class="toggle" role="radio" aria-checked="<?= $tab === 'history' ? 'true' : 'false' ?>" data-state="<?= $tab === 'history' ? 'active' : 'inactive' ?>">History Approval</a>
+      </div>
+    </div>
+    <div class="card__body" style="border-bottom:1px solid var(--color-border);">
       <form method="get" action="<?= base_url('peminjaman/lab-loans-approval') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
+        <input type="hidden" name="tab" value="<?= esc($tab) ?>">
         <div style="flex:1 1 280px;min-width:220px;">
           <label class="text-xs text-muted-foreground" for="q">Cari proposal</label>
           <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Nomor identitas, nama, kegiatan, atau laboratorium...">
@@ -57,6 +70,30 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
       </form>
     </div>
     <div class="card__body p-0">
+    <?php if ($tab === 'history'): ?>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Waktu</th><th>Pemohon</th><th>Kegiatan</th><th>Keputusan</th><th>Oleh</th><th>Keterangan</th><th class="text-center">Aksi</th></tr></thead>
+          <tbody>
+          <?php if (! empty($history)): ?>
+            <?php foreach ($history as $entry): ?>
+            <tr>
+              <td><?= esc($fmt($entry['created_at'])) ?></td>
+              <td><strong><?= esc($entry['full_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($entry['identity_number']) ?></div></td>
+              <td><strong><?= esc($entry['event_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($entry['laboratory_name']) ?></div></td>
+              <td><span class="badge badge--soft badge--<?= $entry['to_status'] === 'rejected' ? 'danger' : 'success' ?>"><?= esc($statusLabels[$entry['to_status']] ?? $entry['to_status']) ?></span></td>
+              <td><?= esc($entry['changed_by_name'] ?: '-') ?></td>
+              <td><?= esc($entry['note'] ?: '-') ?></td>
+              <td class="text-center"><a href="<?= base_url('peminjaman/lab-loans/detail/' . $entry['proposal_uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal">&#9432;</a></td>
+            </tr>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <tr><td colspan="7" class="text-center text-muted-foreground py-8"><?= view('partials/empty_table_state', ['message' => 'Belum ada history approval.']) ?></td></tr>
+          <?php endif; ?>
+          </tbody>
+        </table>
+      </div>
+    <?php else: ?>
       <div class="table-responsive">
         <table class="table">
           <thead><tr><th>Pemohon</th><th>Kegiatan</th><th>Laboratorium</th><th>Status</th><th class="text-center">Aksi</th></tr></thead>
@@ -91,8 +128,9 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
           </tbody>
         </table>
       </div>
+    <?php endif; ?>
     </div>
-    <?php if ($pager->getTotal() > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $pager->getTotal() ?> proposal</span><?= $pager->only(['q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
+    <?php if ($pager->getTotal() > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $pager->getTotal() ?> <?= $tab === 'history' ? 'history approval' : 'proposal' ?></span><?= $pager->only(['tab', 'q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
   </div>
 </div>
 

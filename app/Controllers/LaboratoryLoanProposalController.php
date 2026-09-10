@@ -57,14 +57,41 @@ class LaboratoryLoanProposalController extends BaseController
 
     public function approvalIndex()
     {
+        $tab = (string) $this->request->getGet('tab') === 'history' ? 'history' : 'pending';
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
-        $statusOptions = ['submitted', 'laboran_approved'];
+        $statusOptions = $tab === 'history'
+            ? ['laboran_approved', 'approved', 'rejected']
+            : ['submitted', 'laboran_approved'];
         $status = in_array($status, $statusOptions, true) ? $status : '';
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : 10;
         $isLaboran = activeGroupIs('laboran');
         $isKepalaLab = activeGroupIs('kepala_lab');
+
+        if ($tab === 'history') {
+            $history = $this->statusHistoryModel->getApprovalHistory(
+                $perPage,
+                activeGroupIs('superadmin') ? null : (int) auth()->id(),
+                $search,
+                $status
+            );
+
+            return $this->renderView('loan_proposals/approval', [
+                'title' => 'Persetujuan Peminjaman Laboratorium',
+                'page_title' => 'Persetujuan Peminjaman Laboratorium',
+                'proposals' => [],
+                'history' => $history,
+                'pager' => $this->statusHistoryModel->pager,
+                'search' => $search,
+                'status' => $status,
+                'statusOptions' => $statusOptions,
+                'perPage' => $perPage,
+                'perPageOptions' => self::PER_PAGE_OPTIONS,
+                'stage' => 'history',
+                'tab' => $tab,
+            ]);
+        }
 
         $query = $this->proposalModel
             ->select('laboratory_loan_proposals.*, laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name')
@@ -109,6 +136,8 @@ class LaboratoryLoanProposalController extends BaseController
             'perPage' => $perPage,
             'perPageOptions' => self::PER_PAGE_OPTIONS,
             'stage' => $isLaboran ? 'laboran' : ($isKepalaLab ? 'kepala_lab' : 'all'),
+            'history' => [],
+            'tab' => $tab,
         ]);
     }
 

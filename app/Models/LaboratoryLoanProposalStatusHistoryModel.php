@@ -39,4 +39,36 @@ class LaboratoryLoanProposalStatusHistoryModel extends Model
             ->orderBy('created_at', 'DESC')
             ->findAll();
     }
+
+    public function getApprovalHistory(int $perPage, ?int $changedBy, string $search = '', string $status = ''): array
+    {
+        $query = $this->select('laboratory_loan_proposal_status_histories.*, laboratory_loan_proposals.uuid AS proposal_uuid, laboratory_loan_proposals.full_name, laboratory_loan_proposals.identity_number, laboratory_loan_proposals.event_name, laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name, users.username AS changed_by_name')
+            ->join('laboratory_loan_proposals', 'laboratory_loan_proposals.id = laboratory_loan_proposal_status_histories.proposal_id')
+            ->join('laboratory_loan_proposal_items', 'laboratory_loan_proposal_items.proposal_id = laboratory_loan_proposals.id')
+            ->join('laboratories', 'laboratories.id = laboratory_loan_proposal_items.laboratory_id')
+            ->join('rooms', 'rooms.id = laboratories.room_id', 'left')
+            ->join('users', 'users.id = laboratory_loan_proposal_status_histories.changed_by', 'left')
+            ->whereIn('laboratory_loan_proposal_status_histories.to_status', ['laboran_approved', 'approved', 'rejected']);
+
+        if ($changedBy !== null) {
+            $query->where('laboratory_loan_proposal_status_histories.changed_by', $changedBy);
+        }
+
+        if ($search !== '') {
+            $query->groupStart()
+                ->like('laboratory_loan_proposals.identity_number', $search)
+                ->orLike('laboratory_loan_proposals.full_name', $search)
+                ->orLike('laboratory_loan_proposals.event_name', $search)
+                ->orLike('laboratories.name', $search)
+                ->orLike('rooms.code', $search)
+                ->orLike('rooms.name', $search)
+                ->groupEnd();
+        }
+
+        if ($status !== '') {
+            $query->where('laboratory_loan_proposal_status_histories.to_status', $status);
+        }
+
+        return $query->orderBy('laboratory_loan_proposal_status_histories.created_at', 'DESC')->paginate($perPage);
+    }
 }
