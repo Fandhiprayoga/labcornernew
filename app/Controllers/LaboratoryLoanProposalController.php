@@ -197,7 +197,7 @@ class LaboratoryLoanProposalController extends BaseController
         $this->proposalModel->update($proposal['id'], ['status' => 'submitted']);
     $this->statusHistoryModel->record((int) $proposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
 
-        return redirect()->to('/peminjaman/lab-loans/items/' . $proposal['uuid'])->with('success', 'Proposal peminjaman berhasil diajukan.');
+        return redirect()->to('/peminjaman/lab-loans')->with('success', 'Proposal peminjaman berhasil diajukan.');
     }
 
     public function confirm(string $uuid)
