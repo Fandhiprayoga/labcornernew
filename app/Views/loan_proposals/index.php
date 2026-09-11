@@ -26,7 +26,7 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
       <form method="get" action="<?= base_url('peminjaman/lab-loans') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
         <div style="flex:1 1 280px;min-width:220px;">
           <label class="text-xs text-muted-foreground" for="q">Cari proposal</label>
-          <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Nomor identitas, nama, atau event...">
+          <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Nomor identitas, nama, event, atau laboratorium...">
         </div>
         <div style="flex:0 0 160px;">
           <label class="text-xs text-muted-foreground" for="status">Status</label>
@@ -52,13 +52,14 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
     <div class="card__body p-0">
       <div class="table-responsive">
         <table class="table">
-          <thead><tr><th>Applicant</th><th>Event</th><th>Tanggal Proposal</th><th>Status</th><th class="text-center">Aksi</th></tr></thead>
+          <thead><tr><th>Applicant</th><th>Laboratorium</th><th>Event</th><th>Tanggal Proposal</th><th>Status</th><th class="text-center">Aksi</th></tr></thead>
           <tbody>
           <?php if (! empty($proposals)): ?>
             <?php foreach ($proposals as $proposal): ?>
             <?php $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai']; $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'laboran_approved' => 'info', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary']; ?>
             <tr>
               <td><strong><?= esc($proposal['full_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($proposal['identity_number']) ?> &middot; <?= esc($proposal['email']) ?></div></td>
+              <td><?= esc($proposal['laboratory_names'] ?? '-') ?></td>
               <td><strong><?= esc($proposal['event_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc(date('d M Y H:i', strtotime($proposal['event_start']))) ?> - <?= esc(date('d M Y H:i', strtotime($proposal['event_end']))) ?></div></td>
               <td><?= esc(date('d M Y', strtotime($proposal['proposal_date']))) ?></td>
               <td><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? ucfirst($proposal['status'])) ?></span></td>

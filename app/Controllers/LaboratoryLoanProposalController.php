@@ -32,19 +32,23 @@ class LaboratoryLoanProposalController extends BaseController
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : 10;
         $canReview = activeGroupIs('superadmin', 'kepala_lab', 'laboran');
-        $query = $this->proposalModel->select('laboratory_loan_proposals.*, users.username')->join('users', 'users.id = laboratory_loan_proposals.user_id');
+        $query = $this->proposalModel
+            ->select('laboratory_loan_proposals.*, users.username, GROUP_CONCAT(DISTINCT laboratories.name ORDER BY laboratories.name SEPARATOR ", ") AS laboratory_names')
+            ->join('users', 'users.id = laboratory_loan_proposals.user_id')
+            ->join('laboratory_loan_proposal_items', 'laboratory_loan_proposal_items.proposal_id = laboratory_loan_proposals.id', 'left')
+            ->join('laboratories', 'laboratories.id = laboratory_loan_proposal_items.laboratory_id', 'left');
 
         if (! $canReview) {
             $query->where('laboratory_loan_proposals.user_id', auth()->id());
         }
         if ($search !== '') {
-            $query->groupStart()->like('identity_number', $search)->orLike('full_name', $search)->orLike('event_name', $search)->orLike('status', $search)->groupEnd();
+            $query->groupStart()->like('identity_number', $search)->orLike('full_name', $search)->orLike('event_name', $search)->orLike('laboratories.name', $search)->orLike('status', $search)->groupEnd();
         }
         if ($status !== '') {
             $query->where('laboratory_loan_proposals.status', $status);
         }
 
-        $proposals = $query->orderBy('proposal_date', 'DESC')->paginate($perPage);
+        $proposals = $query->groupBy('laboratory_loan_proposals.id')->orderBy('proposal_date', 'DESC')->paginate($perPage);
         return $this->renderView('loan_proposals/index', [
             'title' => 'Peminjaman Laboratorium', 'page_title' => 'Peminjaman Laboratorium',
             'proposals' => $proposals, 'pager' => $this->proposalModel->pager, 'search' => $search,
