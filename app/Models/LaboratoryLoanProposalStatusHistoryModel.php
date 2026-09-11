@@ -40,7 +40,7 @@ class LaboratoryLoanProposalStatusHistoryModel extends Model
             ->findAll();
     }
 
-    public function getApprovalHistory(int $perPage, ?int $changedBy, string $search = '', string $status = ''): array
+    public function getApprovalHistory(int $perPage, ?int $changedBy, string $search = '', string $status = '', string $laboratoryUuid = ''): array
     {
         $query = $this->select('laboratory_loan_proposal_status_histories.*, laboratory_loan_proposals.uuid AS proposal_uuid, laboratory_loan_proposals.full_name, laboratory_loan_proposals.identity_number, laboratory_loan_proposals.event_name, laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name, users.username AS changed_by_name')
             ->join('laboratory_loan_proposals', 'laboratory_loan_proposals.id = laboratory_loan_proposal_status_histories.proposal_id')
@@ -52,6 +52,10 @@ class LaboratoryLoanProposalStatusHistoryModel extends Model
 
         if ($changedBy !== null) {
             $query->where('laboratory_loan_proposal_status_histories.changed_by', $changedBy);
+        }
+
+        if ($laboratoryUuid !== '') {
+            $query->where('laboratories.uuid', $laboratoryUuid);
         }
 
         if ($search !== '') {
@@ -69,6 +73,6 @@ class LaboratoryLoanProposalStatusHistoryModel extends Model
             $query->where('laboratory_loan_proposal_status_histories.to_status', $status);
         }
 
-        return $query->orderBy('laboratory_loan_proposal_status_histories.created_at', 'DESC')->paginate($perPage);
+        return $query->groupBy('laboratory_loan_proposal_status_histories.id')->orderBy('laboratory_loan_proposal_status_histories.created_at', 'DESC')->paginate($perPage);
     }
 }

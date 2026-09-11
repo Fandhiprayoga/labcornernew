@@ -29,9 +29,29 @@ class LaboratoryLoanProposalController extends BaseController
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
         $status = in_array($status, self::STATUS_OPTIONS, true) ? $status : '';
+        $laboratoryUuid = trim((string) $this->request->getGet('laboratory_uuid'));
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : 10;
         $canReview = activeGroupIs('superadmin', 'kepala_lab', 'laboran');
+        $laboratoryOptions = $this->filterLaboratoryOptions();
+
+        if (activeGroupIs('laboran')) {
+            $assignedLaboratoryIds = $this->assignedLaboratoryIds();
+
+            if ($laboratoryUuid === '') {
+                $defaultLaboratory = db_connect()->table('laboratories')
+                    ->select('uuid')
+                    ->whereIn('id', $assignedLaboratoryIds)
+                    ->orderBy('name', 'ASC')
+                    ->get()
+                    ->getRowArray();
+
+                if ($defaultLaboratory) {
+                    $laboratoryUuid = (string) $defaultLaboratory['uuid'];
+                }
+            }
+        }
+
         $query = $this->proposalModel
             ->select('laboratory_loan_proposals.*, users.username, GROUP_CONCAT(DISTINCT laboratories.name ORDER BY laboratories.name SEPARATOR ", ") AS laboratory_names')
             ->join('users', 'users.id = laboratory_loan_proposals.user_id')
@@ -40,6 +60,15 @@ class LaboratoryLoanProposalController extends BaseController
 
         if (! $canReview) {
             $query->where('laboratory_loan_proposals.user_id', auth()->id());
+        }
+        if (activeGroupIs('laboran')) {
+            $assignedLaboratoryIds = $this->assignedLaboratoryIds();
+            if (! empty($assignedLaboratoryIds)) {
+                $query->whereIn('laboratory_loan_proposal_items.laboratory_id', $assignedLaboratoryIds);
+            }
+        }
+        if ($laboratoryUuid !== '') {
+            $query->where('laboratories.uuid', $laboratoryUuid);
         }
         if ($search !== '') {
             $query->groupStart()->like('identity_number', $search)->orLike('full_name', $search)->orLike('event_name', $search)->orLike('laboratories.name', $search)->orLike('status', $search)->groupEnd();
@@ -53,6 +82,7 @@ class LaboratoryLoanProposalController extends BaseController
             'title' => 'Peminjaman Laboratorium', 'page_title' => 'Peminjaman Laboratorium',
             'proposals' => $proposals, 'pager' => $this->proposalModel->pager, 'search' => $search,
             'status' => $status, 'statusOptions' => self::STATUS_OPTIONS,
+            'laboratoryUuid' => $laboratoryUuid, 'laboratoryOptions' => $laboratoryOptions,
             'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE_OPTIONS,
             'currentPage' => $this->proposalModel->pager->getCurrentPage(), 'totalRows' => $this->proposalModel->pager->getTotal(),
             'canReview' => $canReview,
@@ -68,17 +98,34 @@ class LaboratoryLoanProposalController extends BaseController
             ? ['laboran_approved', 'approved', 'rejected']
             : ['submitted', 'laboran_approved'];
         $status = in_array($status, $statusOptions, true) ? $status : '';
+        $laboratoryUuid = trim((string) $this->request->getGet('laboratory_uuid'));
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : 10;
         $isLaboran = activeGroupIs('laboran');
         $isKepalaLab = activeGroupIs('kepala_lab');
+        $laboratoryOptions = $this->filterLaboratoryOptions();
+
+        if ($isLaboran && $laboratoryUuid === '') {
+            $assignedLaboratoryIds = $this->assignedLaboratoryIds();
+            $defaultLaboratory = db_connect()->table('laboratories')
+                ->select('uuid')
+                ->whereIn('id', $assignedLaboratoryIds)
+                ->orderBy('name', 'ASC')
+                ->get()
+                ->getRowArray();
+
+            if ($defaultLaboratory) {
+                $laboratoryUuid = (string) $defaultLaboratory['uuid'];
+            }
+        }
 
         if ($tab === 'history') {
             $history = $this->statusHistoryModel->getApprovalHistory(
                 $perPage,
                 activeGroupIs('superadmin') ? null : (int) auth()->id(),
                 $search,
-                $status
+                $status,
+                $laboratoryUuid
             );
 
             return $this->renderView('loan_proposals/approval', [
@@ -90,6 +137,8 @@ class LaboratoryLoanProposalController extends BaseController
                 'search' => $search,
                 'status' => $status,
                 'statusOptions' => $statusOptions,
+                'laboratoryUuid' => $laboratoryUuid,
+                'laboratoryOptions' => $laboratoryOptions,
                 'perPage' => $perPage,
                 'perPageOptions' => self::PER_PAGE_OPTIONS,
                 'stage' => 'history',
@@ -112,6 +161,10 @@ class LaboratoryLoanProposalController extends BaseController
             $query->whereIn('laboratory_loan_proposals.status', ['submitted', 'laboran_approved']);
         }
 
+        if ($laboratoryUuid !== '') {
+            $query->where('laboratories.uuid', $laboratoryUuid);
+        }
+
         if ($search !== '') {
             $query->groupStart()
                 ->like('laboratory_loan_proposals.identity_number', $search)
@@ -127,7 +180,7 @@ class LaboratoryLoanProposalController extends BaseController
             $query->where('laboratory_loan_proposals.status', $status);
         }
 
-        $proposals = $query->orderBy('proposal_date', 'DESC')->paginate($perPage);
+        $proposals = $query->groupBy('laboratory_loan_proposals.id')->orderBy('proposal_date', 'DESC')->paginate($perPage);
 
         return $this->renderView('loan_proposals/approval', [
             'title' => 'Persetujuan Peminjaman Laboratorium',
@@ -137,6 +190,8 @@ class LaboratoryLoanProposalController extends BaseController
             'search' => $search,
             'status' => $status,
             'statusOptions' => $statusOptions,
+            'laboratoryUuid' => $laboratoryUuid,
+            'laboratoryOptions' => $laboratoryOptions,
             'perPage' => $perPage,
             'perPageOptions' => self::PER_PAGE_OPTIONS,
             'stage' => $isLaboran ? 'laboran' : ($isKepalaLab ? 'kepala_lab' : 'all'),
@@ -622,6 +677,27 @@ class LaboratoryLoanProposalController extends BaseController
         $db->transCommit();
 
         return $redirect->with('success', $approve ? 'Approval berhasil disimpan.' : 'Proposal berhasil ditolak.');
+    }
+
+    private function filterLaboratoryOptions(): array
+    {
+        $query = db_connect()->table('laboratories')
+            ->select('laboratories.id, laboratories.uuid, laboratories.name, rooms.code AS room_code')
+            ->join('rooms', 'rooms.id = laboratories.room_id', 'left')
+            ->where('laboratories.status', 'active')
+            ->orderBy('laboratories.name', 'ASC');
+
+        if (activeGroupIs('laboran')) {
+            $assignedLaboratoryIds = $this->assignedLaboratoryIds();
+
+            if (empty($assignedLaboratoryIds)) {
+                return [];
+            }
+
+            $query->whereIn('laboratories.id', $assignedLaboratoryIds);
+        }
+
+        return $query->get()->getResultArray();
     }
 
     private function assignedLaboratoryIds(): array

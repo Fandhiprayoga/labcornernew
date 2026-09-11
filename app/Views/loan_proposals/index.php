@@ -24,9 +24,20 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
     </div>
     <div class="card__body" style="border-bottom:1px solid var(--color-border);">
       <form method="get" action="<?= base_url('peminjaman/lab-loans') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
-        <div style="flex:1 1 280px;min-width:220px;">
+        <div style="flex:1 1 260px;min-width:220px;">
           <label class="text-xs text-muted-foreground" for="q">Cari proposal</label>
           <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Nomor identitas, nama, event, atau laboratorium...">
+        </div>
+        <div style="flex:0 1 220px;min-width:180px;">
+          <label class="text-xs text-muted-foreground" for="laboratory_uuid">Laboratorium</label>
+          <select class="select" id="laboratory_uuid" name="laboratory_uuid">
+            <?php if (! activeGroupIs('laboran')): ?>
+            <option value="">Semua Laboratorium</option>
+            <?php endif; ?>
+            <?php foreach ($laboratoryOptions as $option): ?>
+            <option value="<?= esc($option['uuid']) ?>" <?= $laboratoryUuid === (string) ($option['uuid'] ?? '') ? 'selected' : '' ?>><?= esc($option['name']) ?><?= ! empty($option['room_code']) ? ' (' . esc($option['room_code']) . ')' : '' ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
         <div style="flex:0 0 160px;">
           <label class="text-xs text-muted-foreground" for="status">Status</label>
@@ -43,7 +54,7 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
         </div>
         <div style="display:flex;gap:.5rem;">
           <button type="submit" class="button button--primary button--sm">Filter</button>
-          <?php if ($search !== '' || $status !== ''): ?>
+          <?php if ($search !== '' || $status !== '' || $laboratoryUuid !== ''): ?>
           <a href="<?= base_url('peminjaman/lab-loans') ?>" class="button button--outline button--sm">Reset</a>
           <?php endif; ?>
         </div>

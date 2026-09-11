@@ -4,6 +4,8 @@
 /** @var string $search */
 /** @var string $status */
 /** @var string[] $statusOptions */
+/** @var string $laboratoryUuid */
+/** @var array $laboratoryOptions */
 /** @var int $perPage */
 /** @var int[] $perPageOptions */
 /** @var string $stage */
@@ -46,9 +48,20 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
     <div class="card__body" style="border-bottom:1px solid var(--color-border);">
       <form method="get" action="<?= base_url('peminjaman/lab-loans-approval') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
         <input type="hidden" name="tab" value="<?= esc($tab) ?>">
-        <div style="flex:1 1 280px;min-width:220px;">
+        <div style="flex:1 1 260px;min-width:220px;">
           <label class="text-xs text-muted-foreground" for="q">Cari proposal</label>
           <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Nomor identitas, nama, kegiatan, atau laboratorium...">
+        </div>
+        <div style="flex:0 1 220px;min-width:180px;">
+          <label class="text-xs text-muted-foreground" for="laboratory_uuid">Laboratorium</label>
+          <select class="select" id="laboratory_uuid" name="laboratory_uuid">
+            <?php if (! activeGroupIs('laboran')): ?>
+            <option value="">Semua Laboratorium</option>
+            <?php endif; ?>
+            <?php foreach ($laboratoryOptions as $option): ?>
+            <option value="<?= esc($option['uuid']) ?>" <?= $laboratoryUuid === (string) ($option['uuid'] ?? '') ? 'selected' : '' ?>><?= esc($option['name']) ?><?= ! empty($option['room_code']) ? ' (' . esc($option['room_code']) . ')' : '' ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
         <div style="flex:0 0 220px;">
           <label class="text-xs text-muted-foreground" for="status">Status Approval</label>
@@ -65,7 +78,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
         </div>
         <div style="display:flex;gap:.5rem;">
           <button type="submit" class="button button--primary button--sm">Filter</button>
-          <?php if ($search !== '' || $status !== ''): ?><a href="<?= base_url('peminjaman/lab-loans-approval') ?>" class="button button--outline button--sm">Reset</a><?php endif; ?>
+          <?php if ($search !== '' || $status !== '' || $laboratoryUuid !== ''): ?><a href="<?= base_url('peminjaman/lab-loans-approval') ?>" class="button button--outline button--sm">Reset</a><?php endif; ?>
         </div>
       </form>
     </div>
@@ -130,7 +143,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
       </div>
     <?php endif; ?>
     </div>
-    <?php if ($pager->getTotal() > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $pager->getTotal() ?> <?= $tab === 'history' ? 'history approval' : 'proposal' ?></span><?= $pager->only(['tab', 'q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
+    <?php if ($pager->getTotal() > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $pager->getTotal() ?> <?= $tab === 'history' ? 'history approval' : 'proposal' ?></span><?= $pager->only(['tab', 'q', 'status', 'laboratory_uuid', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
   </div>
 </div>
 
