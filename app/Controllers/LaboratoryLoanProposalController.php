@@ -375,6 +375,12 @@ class LaboratoryLoanProposalController extends BaseController
         $this->proposalModel->update($lockedProposal['id'], ['status' => 'submitted']);
         $this->statusHistoryModel->record((int) $lockedProposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
 
+        notification()->sendProposalSubmittedToReviewers(
+            (int) $lockedProposal['id'],
+            (string) $lockedProposal['event_name'],
+            '/peminjaman/lab-loans-approval'
+        );
+
         if ($db->transStatus() === false) {
             $db->transRollback();
 
@@ -667,6 +673,26 @@ class LaboratoryLoanProposalController extends BaseController
 
         $this->proposalModel->update((int) $proposal['id'], ['status' => $nextStatus]);
         $this->statusHistoryModel->record((int) $proposal['id'], $currentStatus, $nextStatus, $note);
+
+        if ($approve && $nextStatus === 'approved') {
+            notification()->sendProposalDecisionToApplicant(
+                (int) $proposal['user_id'],
+                (string) $proposal['event_name'],
+                true,
+                '/peminjaman/lab-loans/detail/' . $proposal['uuid'],
+                $note
+            );
+        }
+
+        if (! $approve && $nextStatus === 'rejected') {
+            notification()->sendProposalDecisionToApplicant(
+                (int) $proposal['user_id'],
+                (string) $proposal['event_name'],
+                false,
+                '/peminjaman/lab-loans/detail/' . $proposal['uuid'],
+                $note
+            );
+        }
 
         if ($db->transStatus() === false) {
             $db->transRollback();
