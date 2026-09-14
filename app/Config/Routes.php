@@ -69,6 +69,26 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
     $routes->post('peminjaman/lab-loans-approval/(:uuid)/approve', 'LaboratoryLoanProposalController::approve/$1', ['filter' => 'permission:loans.approve']);
     $routes->post('peminjaman/lab-loans-approval/(:uuid)/reject', 'LaboratoryLoanProposalController::reject/$1', ['filter' => 'permission:loans.approve']);
 
+    // Asset loan proposals
+    $routes->group('peminjaman/asset-loans', ['filter' => 'permission:loans.access'], static function ($routes) {
+        $routes->get('/', 'AssetLoanProposalController::index', ['filter' => 'permission:loans.list']);
+        $routes->get('create', 'AssetLoanProposalController::create', ['filter' => 'permission:loans.create']);
+        $routes->post('store', 'AssetLoanProposalController::store', ['filter' => 'permission:loans.create']);
+        $routes->get('edit/(:uuid)', 'AssetLoanProposalController::edit/$1', ['filter' => 'permission:loans.edit']);
+        $routes->post('update/(:uuid)', 'AssetLoanProposalController::update/$1', ['filter' => 'permission:loans.edit']);
+        $routes->post('delete/(:uuid)', 'AssetLoanProposalController::delete/$1', ['filter' => 'permission:loans.delete']);
+        $routes->post('complete/(:uuid)', 'AssetLoanProposalController::complete/$1', ['filter' => 'permission:loans.complete']);
+        $routes->get('items/(:uuid)', 'AssetLoanProposalController::items/$1', ['filter' => 'permission:loans.list']);
+        $routes->post('items/(:uuid)/add', 'AssetLoanProposalController::addItem/$1', ['filter' => 'permission:loans.edit']);
+        $routes->post('items/(:uuid)/remove/(:uuid)', 'AssetLoanProposalController::removeItem/$1/$2', ['filter' => 'permission:loans.edit']);
+        $routes->get('confirm/(:uuid)', 'AssetLoanProposalController::confirm/$1', ['filter' => 'permission:loans.edit']);
+        $routes->post('submit/(:uuid)', 'AssetLoanProposalController::submit/$1', ['filter' => 'permission:loans.edit']);
+        $routes->get('detail/(:uuid)', 'AssetLoanProposalController::detail/$1', ['filter' => 'permission:loans.list']);
+        $routes->get('detail-approval/(:uuid)', 'AssetLoanProposalController::approvalDetail/$1', ['filter' => 'permission:loans.approve']);
+        $routes->post('(:uuid)/approve', 'AssetLoanProposalController::approve/$1', ['filter' => 'permission:loans.approve']);
+        $routes->post('(:uuid)/reject', 'AssetLoanProposalController::reject/$1', ['filter' => 'permission:loans.approve']);
+    });
+
     // ---------------------------------------------------------------
     // Admin Routes (require admin.access permission)
     // ---------------------------------------------------------------

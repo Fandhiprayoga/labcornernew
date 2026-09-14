@@ -1,0 +1,221 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Models\AssetLoanProposalItemModel;
+use App\Models\AssetLoanProposalModel;
+use App\Models\AssetLoanProposalStatusHistoryModel;
+use App\Models\AssetModel;
+
+class AssetLoanProposalController extends BaseController
+{
+    private const PER_PAGE = [10, 25, 50, 100];
+    private const CATALOG_PER_PAGE = [8, 12, 24, 48];
+    private const STATUSES = ['draft', 'submitted', 'rejected', 'approved', 'completed'];
+    protected AssetLoanProposalModel $proposalModel;
+    protected AssetLoanProposalItemModel $itemModel;
+    protected AssetLoanProposalStatusHistoryModel $historyModel;
+
+    public function __construct()
+    {
+        helper('asset_availability');
+        $this->proposalModel = new AssetLoanProposalModel();
+        $this->itemModel = new AssetLoanProposalItemModel();
+        $this->historyModel = new AssetLoanProposalStatusHistoryModel();
+    }
+
+    public function index()
+    {
+        $search = trim((string) $this->request->getGet('q'));
+        $status = trim((string) $this->request->getGet('status'));
+        $status = in_array($status, self::STATUSES, true) ? $status : '';
+        $perPage = (int) $this->request->getGet('perPage');
+        $perPage = in_array($perPage, self::PER_PAGE, true) ? $perPage : 10;
+        $reviewer = activeGroupIs('superadmin', 'kepala_lab', 'laboran');
+        $query = $this->proposalModel
+            ->select('asset_loan_proposals.*, GROUP_CONCAT(DISTINCT CONCAT(assets.asset_code, " - ", assets.name) ORDER BY assets.asset_code SEPARATOR ", ") AS asset_names')
+            ->join('asset_loan_proposal_items', 'asset_loan_proposal_items.proposal_id = asset_loan_proposals.id', 'left')
+            ->join('assets', 'assets.id = asset_loan_proposal_items.asset_id', 'left');
+        if (! $reviewer) $query->where('asset_loan_proposals.user_id', auth()->id());
+        if ($search !== '') $query->groupStart()->like('asset_loan_proposals.identity_number', $search)->orLike('asset_loan_proposals.full_name', $search)->orLike('asset_loan_proposals.event_name', $search)->orLike('assets.asset_code', $search)->orLike('assets.name', $search)->groupEnd();
+        if ($status !== '') $query->where('asset_loan_proposals.status', $status);
+        $proposals = $query->groupBy('asset_loan_proposals.id')->orderBy('proposal_date', 'DESC')->paginate($perPage);
+        return $this->renderView('asset_loan_proposals/index', [
+            'title' => 'Peminjaman Asset', 'page_title' => 'Peminjaman Asset', 'proposals' => $proposals,
+            'pager' => $this->proposalModel->pager, 'search' => $search, 'status' => $status,
+            'statusOptions' => self::STATUSES, 'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE,
+            'totalRows' => $this->proposalModel->pager->getTotal(),
+        ]);
+    }
+
+    public function create()
+    {
+        if ($redirect = $this->profileCompletionRedirect()) return $redirect;
+        return $this->renderView('asset_loan_proposals/form', ['title' => 'Ajukan Peminjaman Asset', 'page_title' => 'Ajukan Peminjaman Asset', 'proposal' => null, 'user' => auth()->user()]);
+    }
+
+    public function store()
+    {
+        if ($redirect = $this->profileCompletionRedirect()) return $redirect;
+        if (! $this->validateSubmission()) return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        $this->proposalModel->insert($this->proposalData());
+        $this->historyModel->record((int) $this->proposalModel->getInsertID(), null, 'draft', 'Proposal dibuat.');
+        return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal peminjaman asset berhasil disimpan.');
+    }
+
+    public function edit(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        return $this->renderView('asset_loan_proposals/form', ['title' => 'Edit Proposal Peminjaman Asset', 'page_title' => 'Edit Proposal Peminjaman Asset', 'proposal' => $proposal, 'user' => auth()->user()]);
+    }
+
+    public function update(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        if (! $this->validateSubmission()) return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        $this->proposalModel->update($proposal['id'], $this->proposalData());
+        return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal peminjaman asset berhasil diperbarui.');
+    }
+
+    public function delete(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        $this->proposalModel->delete($proposal['id']);
+        return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal peminjaman asset dibatalkan.');
+    }
+
+    public function items(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        $search = trim((string) $this->request->getGet('q'));
+        $perPage = (int) $this->request->getGet('perPage');
+        $perPage = in_array($perPage, self::CATALOG_PER_PAGE, true) ? $perPage : 12;
+        $cart = $this->itemModel->getCart((int) $proposal['id']);
+        $cartLaboratoryId = ! empty($cart) ? (int) $cart[0]['laboratory_id'] : null;
+        $query = (new AssetModel())->select('assets.*, laboratories.name AS laboratory_name, rooms.code AS room_code')->join('laboratories', 'laboratories.id = assets.laboratory_id', 'left')->join('rooms', 'rooms.id = laboratories.room_id', 'left')->where('assets.status', AssetModel::STATUS_READY)->where('assets.can_be_borrowed', 1);
+        if ($cartLaboratoryId !== null) $query->where('assets.laboratory_id', $cartLaboratoryId);
+        $blockedAssetIds = asset_availability_blocked_ids($proposal['event_start'], $proposal['event_end'], (int) $proposal['id']);
+        if ($blockedAssetIds !== []) $query->whereNotIn('assets.id', $blockedAssetIds);
+        if ($search !== '') $query->groupStart()->like('assets.asset_code', $search)->orLike('assets.name', $search)->orLike('assets.category', $search)->orLike('assets.brand', $search)->groupEnd();
+        $assets = $query->orderBy('assets.asset_code', 'ASC')->paginate($perPage);
+        return $this->renderView('asset_loan_proposals/items', ['title' => 'Asset yang Dipinjam', 'page_title' => 'Asset yang Dipinjam', 'proposal' => $proposal, 'assets' => $assets, 'cart' => $cart, 'search' => $search, 'pager' => $query->pager, 'perPage' => $perPage, 'perPageOptions' => self::CATALOG_PER_PAGE, 'totalRows' => $query->pager->getTotal(), 'editable' => true]);
+    }
+
+    public function addItem(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        $redirect = redirect()->to('/peminjaman/asset-loans/items/' . $uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        $assetId = (int) $this->request->getPost('asset_id');
+        $asset = (new AssetModel())->where(['id' => $assetId, 'status' => AssetModel::STATUS_READY, 'can_be_borrowed' => 1])->first();
+        if (! $asset) return $redirect->with('error', 'Asset tidak ditemukan atau tidak dapat dipinjam.');
+        if ($this->itemModel->where(['proposal_id' => $proposal['id'], 'asset_id' => $assetId])->first()) return $redirect->with('error', 'Asset tersebut sudah ada di cart.');
+        $cart = $this->itemModel->getCart((int) $proposal['id']);
+        if ($cart !== [] && (int) $asset['laboratory_id'] !== (int) $cart[0]['laboratory_id']) return $redirect->with('error', 'Asset harus berada di laboratorium yang sama dengan asset di cart.');
+        if (! asset_is_available($assetId, $proposal['event_start'], $proposal['event_end'], (int) $proposal['id'])) return $redirect->with('error', 'Asset tersebut sudah dipakai pada rentang waktu kegiatan.');
+        $notes = trim((string) $this->request->getPost('notes')) ?: null;
+        $deletedItem = $this->itemModel->withDeleted()->where(['proposal_id' => $proposal['id'], 'asset_id' => $assetId])->first();
+
+        if ($deletedItem && $deletedItem['deleted_at'] !== null) {
+            db_connect()->table('asset_loan_proposal_items')
+                ->where('id', $deletedItem['id'])
+                ->update(['notes' => $notes, 'deleted_at' => null, 'updated_at' => date('Y-m-d H:i:s')]);
+        } else {
+            $this->itemModel->insert(['proposal_id' => $proposal['id'], 'asset_id' => $assetId, 'notes' => $notes]);
+        }
+        return $redirect->with('success', 'Asset ditambahkan ke cart.');
+    }
+
+    public function removeItem(string $uuid, string $itemUuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        $item = $this->itemModel->where(['uuid' => $itemUuid, 'proposal_id' => $proposal['id']])->first();
+        if ($item) $this->itemModel->delete($item['id']);
+        return redirect()->to('/peminjaman/asset-loans/items/' . $uuid)->with('success', 'Asset dihapus dari cart.');
+    }
+
+    public function confirm(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        $cart = $this->itemModel->getCart((int) $proposal['id']);
+        if (! $cart) return redirect()->to('/peminjaman/asset-loans/items/' . $uuid)->with('error', 'Tambahkan minimal satu asset.');
+        return $this->renderView('asset_loan_proposals/confirm', ['title' => 'Konfirmasi Peminjaman Asset', 'page_title' => 'Konfirmasi Peminjaman Asset', 'proposal' => $proposal, 'cart' => $cart]);
+    }
+
+    public function submit(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        $redirect = redirect()->to('/peminjaman/asset-loans');
+        if (! $proposal || $proposal['status'] !== 'draft') return $redirect->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        $cart = $this->itemModel->getCart((int) $proposal['id']);
+        if (! $cart) return redirect()->to('/peminjaman/asset-loans/items/' . $uuid)->with('error', 'Tambahkan minimal satu asset sebelum mengajukan proposal.');
+        foreach ($cart as $item) if (! asset_is_available((int) $item['asset_id'], $proposal['event_start'], $proposal['event_end'], (int) $proposal['id'])) return $redirect->with('error', 'Salah satu asset baru saja dipakai pada rentang waktu kegiatan.');
+        $this->proposalModel->update($proposal['id'], ['status' => 'submitted']);
+        $this->historyModel->record((int) $proposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
+        return $redirect->with('success', 'Proposal peminjaman asset berhasil diajukan.');
+    }
+
+    public function detail(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] === 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Detail tersedia setelah proposal diajukan.');
+        return $this->renderView('asset_loan_proposals/detail', ['title' => 'Detail Proposal Asset', 'page_title' => 'Detail Proposal Asset', 'proposal' => $proposal, 'items' => $this->itemModel->getCart((int) $proposal['id']), 'history' => $this->historyModel->getForProposal((int) $proposal['id']), 'approvalMode' => false]);
+    }
+
+    public function approvalDetail(string $uuid)
+    {
+        $proposal = $this->proposalModel->findByUuid($uuid);
+        if (! $proposal || ! activeGroupCan('loans.approve') || ! in_array($proposal['status'], ['submitted'], true)) return redirect()->to('/peminjaman/asset-loans?status=submitted')->with('error', 'Proposal tidak tersedia untuk approval.');
+        return $this->renderView('asset_loan_proposals/detail', ['title' => 'Approval Proposal Asset', 'page_title' => 'Approval Proposal Asset', 'proposal' => $proposal, 'items' => $this->itemModel->getCart((int) $proposal['id']), 'history' => $this->historyModel->getForProposal((int) $proposal['id']), 'approvalMode' => true]);
+    }
+
+    public function approve(string $uuid) { return $this->processApproval($uuid, true); }
+    public function reject(string $uuid) { return $this->processApproval($uuid, false); }
+
+    public function complete(string $uuid)
+    {
+        $proposal = $this->proposalModel->findByUuid($uuid);
+        if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Hanya proposal yang disetujui yang dapat diselesaikan.');
+        $this->proposalModel->update($proposal['id'], ['status' => 'completed']);
+        $this->historyModel->record((int) $proposal['id'], 'approved', 'completed', 'Peminjaman ditandai selesai.');
+        return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal ditandai selesai.');
+    }
+
+    private function processApproval(string $uuid, bool $approve)
+    {
+        $proposal = $this->proposalModel->findByUuid($uuid);
+        $redirect = redirect()->to('/peminjaman/asset-loans?status=submitted');
+        if (! $proposal || $proposal['status'] !== 'submitted' || ! activeGroupCan('loans.approve')) return $redirect->with('error', 'Proposal tidak tersedia untuk approval.');
+        $note = trim((string) $this->request->getPost('note'));
+        if (! $approve && $note === '') return $redirect->with('error', 'Alasan penolakan wajib diisi.');
+        if ($approve) foreach ($this->itemModel->getCart((int) $proposal['id']) as $item) if (! asset_is_available((int) $item['asset_id'], $proposal['event_start'], $proposal['event_end'], (int) $proposal['id'])) return $redirect->with('error', 'Asset tidak lagi tersedia pada rentang waktu kegiatan.');
+        $next = $approve ? 'approved' : 'rejected';
+        $this->proposalModel->update($proposal['id'], ['status' => $next]);
+        $this->historyModel->record((int) $proposal['id'], 'submitted', $next, $note ?: 'Proposal disetujui.');
+        return $redirect->with('success', $approve ? 'Proposal berhasil disetujui.' : 'Proposal berhasil ditolak.');
+    }
+
+    private function validateSubmission(): bool
+    {
+        if (! $this->validate(['identity_number' => 'required|max_length[50]', 'full_name' => 'required|min_length[3]|max_length[150]', 'phone' => 'required|max_length[30]', 'email' => 'required|valid_email|max_length[150]', 'proposal_date' => 'required|valid_date[Y-m-d]', 'event_name' => 'required|max_length[200]', 'event_start' => 'required|valid_date[Y-m-d\\TH:i]', 'event_end' => 'required|valid_date[Y-m-d\\TH:i]', 'usage_location' => 'required|in_list[inside_lab,outside_lab]', 'acknowledgement' => 'required|in_list[1]'])) return false;
+        $start = strtotime($this->normalizeDateTime($this->request->getPost('event_start'))); $end = strtotime($this->normalizeDateTime($this->request->getPost('event_end'))); $now = strtotime(date('Y-m-d H:i:00'));
+        if ($start < $now) { $this->validator->setError('event_start', 'Waktu mulai tidak boleh backdate.'); return false; }
+        if ($end <= $start) { $this->validator->setError('event_end', 'Waktu selesai harus setelah waktu mulai.'); return false; }
+        return true;
+    }
+
+    private function proposalData(): array
+    {
+        return ['user_id' => auth()->id(), 'identity_number' => trim((string) $this->request->getPost('identity_number')), 'full_name' => trim((string) $this->request->getPost('full_name')), 'phone' => trim((string) $this->request->getPost('phone')), 'email' => trim((string) $this->request->getPost('email')), 'proposal_date' => $this->request->getPost('proposal_date'), 'event_name' => trim((string) $this->request->getPost('event_name')), 'event_start' => $this->normalizeDateTime($this->request->getPost('event_start')), 'event_end' => $this->normalizeDateTime($this->request->getPost('event_end')), 'usage_location' => $this->request->getPost('usage_location'), 'acknowledgement' => 1];
+    }
+
+    private function profileCompletionRedirect() { $user = auth()->user(); return trim((string) $user->username) !== '' && trim((string) $user->phone) !== '' ? null : redirect()->to('/profile')->with('error', 'Lengkapi nama profil dan nomor HP sebelum mengajukan peminjaman asset.'); }
+    private function normalizeDateTime(?string $value): string { $value = str_replace('T', ' ', trim((string) $value)); return strlen($value) === 16 ? $value . ':00' : $value; }
+    private function findAccessible(string $uuid): ?array { $proposal = $this->proposalModel->findByUuid($uuid); if ($proposal && ! activeGroupIs('superadmin', 'kepala_lab', 'laboran') && (int) $proposal['user_id'] !== (int) auth()->id()) return null; return $proposal; }
+}
