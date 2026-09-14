@@ -151,13 +151,73 @@ class AssetLoanProposalController extends BaseController
     public function submit(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'draft') {
+            return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        }
+
         $redirect = redirect()->to('/peminjaman/asset-loans');
-        if (! $proposal || $proposal['status'] !== 'draft') return $redirect->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
-        $cart = $this->itemModel->getCart((int) $proposal['id']);
-        if (! $cart) return redirect()->to('/peminjaman/asset-loans/items/' . $uuid)->with('error', 'Tambahkan minimal satu asset sebelum mengajukan proposal.');
-        foreach ($cart as $item) if (! asset_is_available((int) $item['asset_id'], $proposal['event_start'], $proposal['event_end'], (int) $proposal['id'])) return $redirect->with('error', 'Salah satu asset baru saja dipakai pada rentang waktu kegiatan.');
-        $this->proposalModel->update($proposal['id'], ['status' => 'submitted']);
-        $this->historyModel->record((int) $proposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
+        $db       = db_connect();
+
+        $db->transBegin();
+
+        // Kunci proposal agar dua submit pada proposal yang sama tidak berjalan bersamaan.
+        $lockedProposal = $db->query(
+            'SELECT * FROM asset_loan_proposals WHERE id = ? FOR UPDATE',
+            [$proposal['id']]
+        )->getRowArray();
+
+        if (! $lockedProposal || $lockedProposal['status'] !== 'draft') {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
+        }
+
+        $cart = $this->itemModel
+            ->where('proposal_id', $lockedProposal['id'])
+            ->findAll();
+
+        if ($cart === []) {
+            $db->transRollback();
+
+            return redirect()->to('/peminjaman/asset-loans/items/' . $proposal['uuid'])->with('error', 'Tambahkan minimal satu asset sebelum mengajukan proposal.');
+        }
+
+        $assetIds = array_values(array_unique(array_map(
+            static fn (array $item): int => (int) $item['asset_id'],
+            $cart
+        )));
+        $placeholders = implode(',', array_fill(0, count($assetIds), '?'));
+
+        // Kunci asset agar dua proposal tidak lolos pengecekan pada waktu yang sama.
+        $db->query(
+            'SELECT id FROM assets WHERE id IN (' . $placeholders . ') ORDER BY id FOR UPDATE',
+            $assetIds
+        )->getResultArray();
+
+        foreach ($assetIds as $assetId) {
+            if (! asset_is_available(
+                $assetId,
+                $lockedProposal['event_start'],
+                $lockedProposal['event_end'],
+                (int) $lockedProposal['id']
+            )) {
+                $db->transRollback();
+
+                return $redirect->with('error', 'Salah satu asset baru saja diproses atau dipinjam pada rentang waktu kegiatan.');
+            }
+        }
+
+        $this->proposalModel->update($lockedProposal['id'], ['status' => 'submitted']);
+        $this->historyModel->record((int) $lockedProposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
+
+        if ($db->transStatus() === false) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Gagal mengajukan proposal. Silakan coba lagi.');
+        }
+
+        $db->transCommit();
+
         return $redirect->with('success', 'Proposal peminjaman asset berhasil diajukan.');
     }
 
