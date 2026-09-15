@@ -109,10 +109,10 @@
           </thead>
           <tbody>
             <?php if (! empty($assets)): ?>
-              <?php $no = (($currentPage - 1) * $perPage) + 1; foreach ($assets as $asset): ?>
+              <?php foreach ($assets as $asset): ?>
               <?php $status = $asset['status'] ?? 'ready'; ?>
               <tr>
-                <td class="text-center"><input type="checkbox" name="asset_uuids[]" value="<?= esc($asset['uuid']) ?>" form="bulk-qr-form" class="asset-selection" aria-label="Pilih <?= esc($asset['asset_code']) ?>"><?= $no++ ?></td>
+                <td class="text-center"><input type="checkbox" name="asset_uuids[]" value="<?= esc($asset['uuid']) ?>" form="bulk-qr-form" class="asset-selection" aria-label="Pilih <?= esc($asset['asset_code']) ?>"></td>
                 <td class="text-center"><img src="<?= base_url($asset['photo'] ?: 'assets/images/default-asset.svg') ?>" alt="Foto <?= esc($asset['name']) ?>" width="48" height="48" style="object-fit:cover;border-radius:8px;"></td>
                 <td><strong><?= esc($asset['asset_code']) ?></strong></td>
                 <td>
