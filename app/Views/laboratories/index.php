@@ -89,7 +89,7 @@
                 <td><span class="badge badge--soft badge--<?= $laboratory['status'] === 'active' ? 'success' : 'secondary' ?>"><?= $laboratory['status'] === 'active' ? 'Aktif' : 'Nonaktif' ?></span></td>
                 <td class="text-center"><div class="flex justify-center gap-1">
                   <?php if (activeGroupCan('laboratories.edit')): ?><a href="<?= base_url('admin/laboratories/edit/' . $laboratory['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.475 5.408 2.117 2.117m-.756-3.482-5.727 5.727a2.1 2.1 0 0 0-.58 1.082L11 13l2.148-.53c.408-.1.787-.3 1.083-.579l5.727-5.727a1.85 1.85 0 1 0-2.617-2.617" /></svg></a><?php endif; ?>
-                  <?php if (activeGroupCan('laboratories.delete')): ?><form action="<?= base_url('admin/laboratories/delete/' . $laboratory['uuid']) ?>" method="post" onsubmit="return confirm('Yakin ingin menghapus laboratorium ini?')"><?= csrf_field() ?><button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Hapus"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?>
+                  <?php if (activeGroupCan('laboratories.delete')): ?><form action="<?= base_url('admin/laboratories/delete/' . $laboratory['uuid']) ?>" method="post" data-laboratory-delete-form><?= csrf_field() ?><button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Hapus"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?>
                 </div></td>
               </tr>
               <?php endforeach; ?>
@@ -110,3 +110,55 @@
     <?php endif; ?>
   </div>
 </div>
+
+<div class="dialog dialog--sm" id="laboratoryDeleteConfirm" data-state="closed" role="alertdialog" aria-modal="true" aria-labelledby="laboratoryDeleteConfirmLabel" aria-describedby="laboratoryDeleteConfirmDesc" aria-hidden="true" tabindex="-1">
+  <div class="dialog__backdrop" data-laboratory-dialog-dismiss></div>
+  <div class="dialog__panel">
+    <div class="dialog__content">
+      <button type="button" class="dialog__close" data-laboratory-dialog-dismiss aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+      <div class="dialog__body text-center pt-6">
+        <span class="icon-box icon-box--danger icon-box--circle icon-box--lg mb-3"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M6 7h12m-9 0v10m6-10v10M8 7l.75-2h6.5L16 7m-9 0 .75 13h6.5L15 7" /></svg></span>
+        <h3 class="dialog__title mb-1" id="laboratoryDeleteConfirmLabel">Hapus laboratorium?</h3>
+        <p class="text-muted-foreground" id="laboratoryDeleteConfirmDesc">Laboratorium <strong id="laboratoryDeleteConfirmName"></strong> akan dihapus.</p>
+      </div>
+      <form id="laboratoryDeleteForm" method="post">
+        <?= csrf_field() ?>
+        <div class="dialog__footer justify-center">
+          <button type="button" class="button button--outline button--neutral" data-laboratory-dialog-dismiss>Batal</button>
+          <button type="submit" class="button button--danger">Ya, Hapus</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var dialog = document.getElementById('laboratoryDeleteConfirm');
+    var modalForm = document.getElementById('laboratoryDeleteForm');
+    var name = document.getElementById('laboratoryDeleteConfirmName');
+
+    document.querySelectorAll('[data-laboratory-delete-form]').forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        modalForm.action = form.action;
+        name.textContent = form.closest('tr')?.querySelector('td:nth-child(3)')?.firstChild?.textContent.trim() || 'ini';
+        dialog.dataset.state = 'open';
+        dialog.setAttribute('aria-hidden', 'false');
+        window.requestAnimationFrame(function () { modalForm.querySelector('[data-laboratory-dialog-dismiss]').focus(); });
+      });
+    });
+
+    dialog.querySelectorAll('[data-laboratory-dialog-dismiss]').forEach(function (element) {
+      element.addEventListener('click', function () {
+        dialog.dataset.state = 'closed';
+        dialog.setAttribute('aria-hidden', 'true');
+      });
+    });
+
+    modalForm.addEventListener('submit', function () {
+      var submitButton = this.querySelector('button[type="submit"]');
+      if (submitButton) submitButton.disabled = true;
+    });
+  });
+</script>
