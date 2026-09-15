@@ -82,7 +82,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
       <div class="card__header"><span class="card__title">Cart Peminjaman</span><div class="card__action"><span class="badge badge--soft badge--primary"><?= count($cart) ?> asset</span></div></div>
       <div class="card__body">
         <?php if (empty($cart)): ?><div class="flex flex-col items-center gap-2 py-4 text-center"><img src="<?= base_url('assets/img/empty-cart.svg') ?>" alt="" width="120" height="120"><p class="text-sm text-muted-foreground" style="margin:0;">Belum ada asset yang dipilih.</p></div>
-        <?php else: ?><ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.75rem;"><?php foreach ($cart as $item): ?><li style="border:1px solid var(--color-border);border-radius:.625rem;padding:.75rem;display:flex;gap:.75rem;align-items:flex-start;"><img src="<?= base_url($item['photo'] ?: 'assets/images/default-asset.svg') ?>" alt="" width="44" height="44" style="object-fit:cover;border-radius:.5rem;flex:0 0 44px;"><div style="flex:1;min-width:0;"><strong><?= esc($item['asset_code']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($item['asset_name']) ?></div><?php if (! empty($item['notes'])): ?><div class="text-xs" style="margin-top:.25rem;"><?= esc($item['notes']) ?></div><?php endif; ?></div><?php if ($editable): ?><form action="<?= base_url('peminjaman/asset-loans/items/' . $proposal['uuid'] . '/remove/' . $item['uuid']) ?>" method="post" onsubmit="return confirm('Hapus asset ini dari cart?')"><?= csrf_field() ?><button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Hapus"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?></li><?php endforeach; ?></ul><?php endif; ?>
+        <?php else: ?><ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.75rem;"><?php foreach ($cart as $item): ?><li style="border:1px solid var(--color-border);border-radius:.625rem;padding:.75rem;display:flex;gap:.75rem;align-items:flex-start;"><img src="<?= base_url($item['photo'] ?: 'assets/images/default-asset.svg') ?>" alt="" width="44" height="44" style="object-fit:cover;border-radius:.5rem;flex:0 0 44px;"><div style="flex:1;min-width:0;"><strong><?= esc($item['asset_code']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($item['asset_name']) ?></div><?php if (! empty($item['notes'])): ?><div class="text-xs" style="margin-top:.25rem;"><?= esc($item['notes']) ?></div><?php endif; ?></div><?php if ($editable): ?><button type="button" class="button button--ghost button--danger button--icon-only button--sm" title="Hapus" aria-label="Hapus <?= esc($item['asset_name'], 'attr') ?> dari cart" data-asset-remove-url="<?= esc(base_url('peminjaman/asset-loans/items/' . $proposal['uuid'] . '/remove/' . $item['uuid']), 'attr') ?>" data-asset-remove-name="<?= esc($item['asset_name'], 'attr') ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button><?php endif; ?></li><?php endforeach; ?></ul><?php endif; ?>
       </div>
       <?php if ($editable && ! empty($cart)): ?><div class="card__body" style="border-top:1px solid var(--color-border);"><a href="<?= base_url('peminjaman/asset-loans/confirm/' . $proposal['uuid']) ?>" class="button button--primary w-full">Selanjutnya <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M5 12h14m-6-6 6 6-6 6" /></svg></a></div><?php endif; ?>
     </div>
@@ -90,6 +90,16 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
 </div>
 
 <div class="asset-items__lightbox" id="assetPhotoLightbox" role="dialog" aria-modal="true" aria-labelledby="assetPhotoCaption"><div class="asset-items__lightbox-panel"><div class="card__header"><span class="card__title" id="assetPhotoCaption"></span><div class="card__action"><button type="button" class="button button--ghost button--neutral button--icon-only button--sm" data-lightbox-close aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M6 6l12 12M18 6 6 18" /></svg></button></div></div><img id="assetPhotoImage" src="" alt=""></div></div>
+<div class="dialog dialog--sm" id="assetRemoveConfirm" data-stisla-dialog data-state="closed" role="alertdialog" aria-modal="true" aria-labelledby="assetRemoveConfirmLabel" aria-describedby="assetRemoveConfirmDesc" aria-hidden="true" tabindex="-1">
+  <div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+  <div class="dialog__panel">
+    <div class="dialog__content">
+      <button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+      <div class="dialog__body text-center pt-6"><span class="icon-box icon-box--danger icon-box--circle icon-box--lg mb-3"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M6 7h12m-9 0v10m6-10v10M8 7l.75-2h6.5L16 7m-9 0 .75 13h6.5L15 7" /></svg></span><h3 class="dialog__title mb-1" id="assetRemoveConfirmLabel">Hapus asset dari cart?</h3><p class="text-muted-foreground" id="assetRemoveConfirmDesc">Asset <strong id="assetRemoveConfirmName"></strong> akan dihapus dari cart peminjaman.</p></div>
+      <form id="assetRemoveForm" method="post"><?= csrf_field() ?><div class="dialog__footer justify-center"><button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button><button type="submit" class="button button--danger">Ya, Hapus</button></div></form>
+    </div>
+  </div>
+</div>
 <script>
 (function () {
   const lightbox = document.getElementById('assetPhotoLightbox');
@@ -99,5 +109,23 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
   document.querySelectorAll('.asset-items__zoom').forEach((button) => button.addEventListener('click', () => { image.src = button.dataset.photo; image.alt = button.dataset.caption; caption.textContent = button.dataset.caption; lightbox.setAttribute('open', ''); }));
   lightbox.addEventListener('click', (event) => { if (event.target === lightbox || event.target.closest('[data-lightbox-close]')) close(); });
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') close(); });
+
+  const removeDialog = document.getElementById('assetRemoveConfirm');
+  const removeForm = document.getElementById('assetRemoveForm');
+  const removeName = document.getElementById('assetRemoveConfirmName');
+  document.querySelectorAll('[data-asset-remove-url]').forEach((button) => button.addEventListener('click', () => {
+    removeForm.action = button.dataset.assetRemoveUrl;
+    removeName.textContent = button.dataset.assetRemoveName;
+    removeDialog.dataset.state = 'open';
+    removeDialog.setAttribute('aria-hidden', 'false');
+    window.requestAnimationFrame(() => removeDialog.querySelector('[data-stisla-dialog-dismiss]').focus());
+  }));
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('[data-stisla-dialog-dismiss]')) return;
+    const dialog = event.target.closest('[data-stisla-dialog]');
+    if (!dialog) return;
+    dialog.dataset.state = 'closed';
+    dialog.setAttribute('aria-hidden', 'true');
+  });
 })();
 </script>
