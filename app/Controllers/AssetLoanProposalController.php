@@ -39,7 +39,7 @@ class AssetLoanProposalController extends BaseController
         if (! $reviewer) $query->where('asset_loan_proposals.user_id', auth()->id());
         if ($search !== '') $query->groupStart()->like('asset_loan_proposals.identity_number', $search)->orLike('asset_loan_proposals.full_name', $search)->orLike('asset_loan_proposals.event_name', $search)->orLike('assets.asset_code', $search)->orLike('assets.name', $search)->groupEnd();
         if ($status !== '') $query->where('asset_loan_proposals.status', $status);
-        $proposals = $query->groupBy('asset_loan_proposals.id')->orderBy('proposal_date', 'DESC')->paginate($perPage);
+        $proposals = $query->groupBy('asset_loan_proposals.id')->orderBy('asset_loan_proposals.proposal_date', 'DESC')->orderBy('asset_loan_proposals.id', 'DESC')->paginate($perPage);
         return $this->renderView('asset_loan_proposals/index', [
             'title' => 'Peminjaman Asset', 'page_title' => 'Peminjaman Asset', 'proposals' => $proposals,
             'pager' => $this->proposalModel->pager, 'search' => $search, 'status' => $status,
@@ -108,7 +108,7 @@ class AssetLoanProposalController extends BaseController
 
         if ($status !== '') $query->where('asset_loan_proposals.status', $status);
 
-        $proposals = $query->groupBy('asset_loan_proposals.id')->orderBy('proposal_date', 'DESC')->paginate($perPage);
+        $proposals = $query->groupBy('asset_loan_proposals.id')->orderBy('asset_loan_proposals.proposal_date', 'DESC')->orderBy('asset_loan_proposals.id', 'DESC')->paginate($perPage);
 
         return $this->renderView('asset_loan_proposals/approval', [
             'title' => 'Persetujuan Peminjaman Asset',
@@ -135,7 +135,7 @@ class AssetLoanProposalController extends BaseController
     {
         if ($redirect = $this->profileCompletionRedirect()) return $redirect;
         if (! $this->validateSubmission()) return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        $this->proposalModel->insert($this->proposalData());
+        $this->proposalModel->insert($this->proposalData(date('Y-m-d H:i:s')));
         $this->historyModel->record((int) $this->proposalModel->getInsertID(), null, 'draft', 'Proposal dibuat.');
         return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal peminjaman asset berhasil disimpan.');
     }
@@ -152,7 +152,7 @@ class AssetLoanProposalController extends BaseController
         $proposal = $this->findAccessible($uuid);
         if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
         if (! $this->validateSubmission()) return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
-        $this->proposalModel->update($proposal['id'], $this->proposalData());
+        $this->proposalModel->update($proposal['id'], $this->proposalData($proposal['proposal_date']));
         return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal peminjaman asset berhasil diperbarui.');
     }
 
@@ -423,9 +423,9 @@ class AssetLoanProposalController extends BaseController
         return true;
     }
 
-    private function proposalData(): array
+    private function proposalData(string $proposalDate): array
     {
-        return ['user_id' => auth()->id(), 'identity_number' => trim((string) $this->request->getPost('identity_number')), 'full_name' => trim((string) $this->request->getPost('full_name')), 'phone' => trim((string) $this->request->getPost('phone')), 'email' => trim((string) $this->request->getPost('email')), 'proposal_date' => $this->request->getPost('proposal_date'), 'event_name' => trim((string) $this->request->getPost('event_name')), 'event_start' => $this->normalizeDateTime($this->request->getPost('event_start')), 'event_end' => $this->normalizeDateTime($this->request->getPost('event_end')), 'usage_location' => $this->request->getPost('usage_location'), 'acknowledgement' => 1];
+        return ['user_id' => auth()->id(), 'identity_number' => trim((string) $this->request->getPost('identity_number')), 'full_name' => trim((string) $this->request->getPost('full_name')), 'phone' => trim((string) $this->request->getPost('phone')), 'email' => trim((string) $this->request->getPost('email')), 'proposal_date' => $proposalDate, 'event_name' => trim((string) $this->request->getPost('event_name')), 'event_start' => $this->normalizeDateTime($this->request->getPost('event_start')), 'event_end' => $this->normalizeDateTime($this->request->getPost('event_end')), 'usage_location' => $this->request->getPost('usage_location'), 'acknowledgement' => 1];
     }
 
     private function profileCompletionRedirect() { $user = auth()->user(); return trim((string) $user->username) !== '' && trim((string) $user->phone) !== '' ? null : redirect()->to('/profile')->with('error', 'Lengkapi nama profil dan nomor HP sebelum mengajukan peminjaman asset.'); }
