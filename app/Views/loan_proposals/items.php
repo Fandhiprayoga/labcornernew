@@ -165,12 +165,9 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
                 <?php if (! empty($item['notes'])): ?><div class="text-xs" style="margin-top:.25rem;"><?= esc($item['notes']) ?></div><?php endif; ?>
               </div>
               <?php if ($editable): ?>
-              <form action="<?= base_url('peminjaman/lab-loans/items/' . $proposal['uuid'] . '/remove/' . $item['uuid']) ?>" method="post" onsubmit="return confirm('Hapus ruangan ini dari cart?')">
-                <?= csrf_field() ?>
-                <button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Hapus">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg>
-                </button>
-              </form>
+              <button type="button" class="button button--ghost button--danger button--icon-only button--sm" title="Hapus" aria-label="Hapus <?= esc($item['laboratory_name'], 'attr') ?> dari cart" data-lab-remove-url="<?= esc(base_url('peminjaman/lab-loans/items/' . $proposal['uuid'] . '/remove/' . $item['uuid']), 'attr') ?>" data-lab-remove-name="<?= esc($item['laboratory_name'] . ' - ' . $item['room_name'], 'attr') ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg>
+              </button>
               <?php endif; ?>
             </li>
             <?php endforeach; ?>
@@ -205,6 +202,17 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
   </div>
 </div>
 
+<div class="dialog dialog--sm" id="labRemoveConfirm" data-stisla-dialog data-state="closed" role="alertdialog" aria-modal="true" aria-labelledby="labRemoveConfirmLabel" aria-describedby="labRemoveConfirmDesc" aria-hidden="true" tabindex="-1">
+  <div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+  <div class="dialog__panel">
+    <div class="dialog__content">
+      <button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+      <div class="dialog__body text-center pt-6"><span class="icon-box icon-box--danger icon-box--circle icon-box--lg mb-3"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M6 7h12m-9 0v10m6-10v10M8 7l.75-2h6.5L16 7m-9 0 .75 13h6.5L15 7" /></svg></span><h3 class="dialog__title mb-1" id="labRemoveConfirmLabel">Hapus ruangan dari cart?</h3><p class="text-muted-foreground" id="labRemoveConfirmDesc">Ruangan <strong id="labRemoveConfirmName"></strong> akan dihapus dari cart peminjaman.</p></div>
+      <form id="labRemoveForm" method="post"><?= csrf_field() ?><div class="dialog__footer justify-center"><button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button><button type="submit" class="button button--danger">Ya, Hapus</button></div></form>
+    </div>
+  </div>
+</div>
+
 <script>
   (function () {
     const lightbox = document.getElementById('labPhotoLightbox');
@@ -232,6 +240,24 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
       if (event.key === 'Escape') {
         close();
       }
+    });
+
+    const removeDialog = document.getElementById('labRemoveConfirm');
+    const removeForm = document.getElementById('labRemoveForm');
+    const removeName = document.getElementById('labRemoveConfirmName');
+    document.querySelectorAll('[data-lab-remove-url]').forEach((button) => button.addEventListener('click', () => {
+      removeForm.action = button.dataset.labRemoveUrl;
+      removeName.textContent = button.dataset.labRemoveName;
+      removeDialog.dataset.state = 'open';
+      removeDialog.setAttribute('aria-hidden', 'false');
+      window.requestAnimationFrame(() => removeDialog.querySelector('[data-stisla-dialog-dismiss]').focus());
+    }));
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('[data-stisla-dialog-dismiss]')) return;
+      const dialog = event.target.closest('[data-stisla-dialog]');
+      if (!dialog) return;
+      dialog.dataset.state = 'closed';
+      dialog.setAttribute('aria-hidden', 'true');
     });
   })();
 </script>
