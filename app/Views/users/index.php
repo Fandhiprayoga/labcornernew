@@ -75,9 +75,9 @@
                       </svg>
                     </a>
                     <?php endif; ?>
-                    <?php if (activeGroupCan('users.delete') && $user->id !== auth()->id()): ?>
-                    <form action="<?= base_url('admin/users/delete/' . $user->id) ?>" method="post" class="d-inline"
-                          onsubmit="return confirm('Yakin ingin menghapus user ini?')">
+                      <?php if (activeGroupCan('users.delete') && $user->id !== auth()->id()): ?>
+                      <form action="<?= base_url('admin/users/delete/' . $user->id) ?>" method="post" class="d-inline"
+                        data-user-delete-form data-user-name="<?= esc($user->username, 'attr') ?>">
                       <?= csrf_field() ?>
                       <button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Hapus">
                         <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
@@ -101,3 +101,55 @@
     </div>
   </div>
 </div>
+
+<div class="dialog dialog--sm" id="userDeleteConfirm" data-state="closed" role="alertdialog" aria-modal="true" aria-labelledby="userDeleteConfirmLabel" aria-describedby="userDeleteConfirmDesc" aria-hidden="true" tabindex="-1">
+  <div class="dialog__backdrop" data-user-dialog-dismiss></div>
+  <div class="dialog__panel">
+    <div class="dialog__content">
+      <button type="button" class="dialog__close" data-user-dialog-dismiss aria-label="Tutup"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+      <div class="dialog__body text-center pt-6">
+        <span class="icon-box icon-box--danger icon-box--circle icon-box--lg mb-3"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M6 7h12m-9 0v10m6-10v10M8 7l.75-2h6.5L16 7m-9 0 .75 13.5h6.5L15 7" /></svg></span>
+        <h3 class="dialog__title mb-1" id="userDeleteConfirmLabel">Hapus user?</h3>
+        <p class="text-muted-foreground" id="userDeleteConfirmDesc">User <strong id="userDeleteConfirmName"></strong> akan dihapus.</p>
+      </div>
+      <form id="userDeleteForm" method="post">
+        <?= csrf_field() ?>
+        <div class="dialog__footer justify-center">
+          <button type="button" class="button button--outline button--neutral" data-user-dialog-dismiss>Batal</button>
+          <button type="submit" class="button button--danger">Ya, Hapus</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var dialog = document.getElementById('userDeleteConfirm');
+    var modalForm = document.getElementById('userDeleteForm');
+    var name = document.getElementById('userDeleteConfirmName');
+
+    document.querySelectorAll('[data-user-delete-form]').forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        modalForm.action = form.action;
+        name.textContent = form.dataset.userName || 'ini';
+        dialog.dataset.state = 'open';
+        dialog.setAttribute('aria-hidden', 'false');
+        window.requestAnimationFrame(function () { modalForm.querySelector('[data-user-dialog-dismiss]').focus(); });
+      });
+    });
+
+    dialog.querySelectorAll('[data-user-dialog-dismiss]').forEach(function (element) {
+      element.addEventListener('click', function () {
+        dialog.dataset.state = 'closed';
+        dialog.setAttribute('aria-hidden', 'true');
+      });
+    });
+
+    modalForm.addEventListener('submit', function () {
+      var submitButton = this.querySelector('button[type="submit"]');
+      if (submitButton) submitButton.disabled = true;
+    });
+  });
+</script>
