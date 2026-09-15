@@ -123,7 +123,7 @@ function isDropdownActive(array $paths): string
                   </li>
                   <?php if ($canApproveSubmittedProposals): ?>
                   <li class="sidebar__item <?= isMenuActive('peminjaman/asset-loans') && $currentStatus === 'submitted' ? 'active' : '' ?>">
-                    <a class="sidebar__button" href="<?= base_url('peminjaman/asset-loans?status=submitted') ?>"><span>Persetujuan</span></a>
+                    <a class="sidebar__button" href="<?= base_url('peminjaman/asset-loans-approval') ?>"><span>Persetujuan</span></a>
                   </li>
                   <?php endif; ?>
                 </ul>
