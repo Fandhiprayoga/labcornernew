@@ -116,7 +116,7 @@ $badgeColors = [
             <path fill="currentColor" d="M7.828 20.24a4.185 4.185 0 0 0 8.344 0c-2.767.32-5.577.32-8.344 0" />
           </svg>
           <?php if ($navUnreadCount > 0): ?>
-            <span class="badge badge--danger" style="position: absolute; top: 2px; right: 2px; font-size: .6rem; padding: 0 4px;"><?= $navUnreadCount > 9 ? '9+' : $navUnreadCount ?></span>
+            <span style="position: absolute; top: 4px; right: 4px; display: block; width: 8px; height: 8px; background: #dc3545; border-radius: 50%;" aria-hidden="true"></span>
           <?php endif; ?>
         </button>
         <div class="menu__popup w-64" id="topbarNotifications" data-stisla-menu role="menu" data-state="closed">
