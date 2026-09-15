@@ -126,9 +126,9 @@ $badgeColors = [
               <span class="menu__item disabled">Belum ada notifikasi.</span>
             <?php else: ?>
               <?php foreach ($navNotifications as $notif): ?>
-                <a href="<?= base_url('notifications/read/' . $notif['id']) ?>" class="menu__item flex-col items-start" role="menuitem" style="white-space: normal;">
+                <a href="<?= base_url('notifications/read/' . $notif['id']) ?>" class="menu__item flex-col items-start" role="menuitem" style="white-space: normal;<?= ! $notif['is_read'] ? ' background: rgba(220, 53, 69, .06);' : '' ?>">
                   <span class="flex items-center gap-2">
-                    <?php if (! $notif['is_read']): ?><span class="badge badge--danger" style="width:6px;height:6px;padding:0;border-radius:50%;"></span><?php endif; ?>
+                    <?php if (! $notif['is_read']): ?><span style="display: block; flex: 0 0 8px; width: 8px; height: 8px; background: #dc3545; border: 2px solid var(--color-background, #fff); border-radius: 50%; box-shadow: 0 0 0 1px rgba(220, 53, 69, .25);" aria-label="Belum dibaca"></span><?php endif; ?>
                     <span class="font-medium"><?= esc($notif['title']) ?></span>
                   </span>
                   <?php if (! empty($notif['message'])): ?>
