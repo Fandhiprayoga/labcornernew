@@ -11,7 +11,7 @@ class AssetLoanProposalController extends BaseController
 {
     private const PER_PAGE = [10, 25, 50, 100];
     private const CATALOG_PER_PAGE = [8, 12, 24, 48];
-    private const STATUSES = ['draft', 'submitted', 'rejected', 'approved', 'completed'];
+    private const STATUSES = ['draft', 'submitted', 'laboran_approved', 'rejected', 'approved', 'completed'];
     protected AssetLoanProposalModel $proposalModel;
     protected AssetLoanProposalItemModel $itemModel;
     protected AssetLoanProposalStatusHistoryModel $historyModel;
@@ -45,6 +45,83 @@ class AssetLoanProposalController extends BaseController
             'pager' => $this->proposalModel->pager, 'search' => $search, 'status' => $status,
             'statusOptions' => self::STATUSES, 'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE,
             'totalRows' => $this->proposalModel->pager->getTotal(),
+        ]);
+    }
+
+    public function approvalIndex()
+    {
+        $tab = (string) $this->request->getGet('tab') === 'history' ? 'history' : 'pending';
+        $search = trim((string) $this->request->getGet('q'));
+        $statusOptions = $tab === 'history' ? ['laboran_approved', 'approved', 'rejected'] : ['submitted', 'laboran_approved'];
+        $status = trim((string) $this->request->getGet('status'));
+        $status = in_array($status, $statusOptions, true) ? $status : '';
+        $perPage = (int) $this->request->getGet('perPage');
+        $perPage = in_array($perPage, self::PER_PAGE, true) ? $perPage : 10;
+
+        if ($tab === 'history') {
+            $history = $this->historyModel->getApprovalHistory(
+                $perPage,
+                activeGroupIs('superadmin') ? null : (int) auth()->id(),
+                $search,
+                $status
+            );
+
+            return $this->renderView('asset_loan_proposals/approval', [
+                'title' => 'Persetujuan Peminjaman Asset',
+                'page_title' => 'Persetujuan Peminjaman Asset',
+                'proposals' => [],
+                'history' => $history,
+                'pager' => $this->historyModel->pager,
+                'search' => $search,
+                'status' => $status,
+                'statusOptions' => $statusOptions,
+                'perPage' => $perPage,
+                'perPageOptions' => self::PER_PAGE,
+                'tab' => $tab,
+            ]);
+        }
+
+        $query = $this->proposalModel
+            ->select('asset_loan_proposals.*, GROUP_CONCAT(DISTINCT CONCAT(assets.asset_code, " - ", assets.name) ORDER BY assets.asset_code SEPARATOR ", ") AS asset_names')
+            ->join('asset_loan_proposal_items', 'asset_loan_proposal_items.proposal_id = asset_loan_proposals.id')
+            ->join('assets', 'assets.id = asset_loan_proposal_items.asset_id')
+            ->join('laboratory_laborans', 'laboratory_laborans.laboratory_id = assets.laboratory_id', 'left');
+
+        if (activeGroupIs('laboran')) {
+            $query->where('asset_loan_proposals.status', 'submitted')
+                ->where('laboratory_laborans.user_id', auth()->id());
+        } elseif (activeGroupIs('kepala_lab')) {
+            $query->where('asset_loan_proposals.status', 'laboran_approved');
+        } else {
+            $query->whereIn('asset_loan_proposals.status', ['submitted', 'laboran_approved']);
+        }
+
+        if ($search !== '') {
+            $query->groupStart()
+                ->like('asset_loan_proposals.identity_number', $search)
+                ->orLike('asset_loan_proposals.full_name', $search)
+                ->orLike('asset_loan_proposals.event_name', $search)
+                ->orLike('assets.asset_code', $search)
+                ->orLike('assets.name', $search)
+                ->groupEnd();
+        }
+
+        if ($status !== '') $query->where('asset_loan_proposals.status', $status);
+
+        $proposals = $query->groupBy('asset_loan_proposals.id')->orderBy('proposal_date', 'DESC')->paginate($perPage);
+
+        return $this->renderView('asset_loan_proposals/approval', [
+            'title' => 'Persetujuan Peminjaman Asset',
+            'page_title' => 'Persetujuan Peminjaman Asset',
+            'proposals' => $proposals,
+            'history' => [],
+            'pager' => $this->proposalModel->pager,
+            'search' => $search,
+            'status' => $status,
+            'statusOptions' => $statusOptions,
+            'perPage' => $perPage,
+            'perPageOptions' => self::PER_PAGE,
+            'tab' => $tab,
         ]);
     }
 
@@ -231,7 +308,7 @@ class AssetLoanProposalController extends BaseController
     public function approvalDetail(string $uuid)
     {
         $proposal = $this->proposalModel->findByUuid($uuid);
-        if (! $proposal || ! activeGroupCan('loans.approve') || ! in_array($proposal['status'], ['submitted'], true)) return redirect()->to('/peminjaman/asset-loans?status=submitted')->with('error', 'Proposal tidak tersedia untuk approval.');
+        if (! $proposal || ! activeGroupCan('loans.approve') || ! $this->canReviewProposal($proposal)) return redirect()->to('/peminjaman/asset-loans-approval')->with('error', 'Proposal tidak tersedia untuk approval.');
         return $this->renderView('asset_loan_proposals/detail', ['title' => 'Approval Proposal Asset', 'page_title' => 'Approval Proposal Asset', 'proposal' => $proposal, 'items' => $this->itemModel->getCart((int) $proposal['id']), 'history' => $this->historyModel->getForProposal((int) $proposal['id']), 'approvalMode' => true]);
     }
 
@@ -250,15 +327,47 @@ class AssetLoanProposalController extends BaseController
     private function processApproval(string $uuid, bool $approve)
     {
         $proposal = $this->proposalModel->findByUuid($uuid);
-        $redirect = redirect()->to('/peminjaman/asset-loans?status=submitted');
-        if (! $proposal || $proposal['status'] !== 'submitted' || ! activeGroupCan('loans.approve')) return $redirect->with('error', 'Proposal tidak tersedia untuk approval.');
+        $redirect = redirect()->to('/peminjaman/asset-loans-approval');
+        if (! $proposal || ! activeGroupCan('loans.approve')) return $redirect->with('error', 'Proposal tidak tersedia untuk approval.');
+
+        $db = db_connect();
+        $db->transBegin();
+        $lockedProposal = $db->query('SELECT id, user_id, status, event_start, event_end, event_name, uuid FROM asset_loan_proposals WHERE id = ? FOR UPDATE', [$proposal['id']])->getRowArray();
+        if (! $lockedProposal) {
+            $db->transRollback();
+            return $redirect->with('error', 'Proposal tidak ditemukan.');
+        }
+
+        $current = $lockedProposal['status'];
+        $canApprove = activeGroupIs('superadmin')
+            ? in_array($current, ['submitted', 'laboran_approved'], true)
+            : (activeGroupIs('laboran')
+                ? $current === 'submitted' && $this->isAssignedLaboran((int) $lockedProposal['id'])
+                : activeGroupIs('kepala_lab') && $current === 'laboran_approved');
+        if (! $canApprove) {
+            $db->transRollback();
+            return $redirect->with('error', 'Anda tidak dapat memproses proposal pada tahap ini.');
+        }
+
         $note = trim((string) $this->request->getPost('note'));
-        if (! $approve && $note === '') return $redirect->with('error', 'Alasan penolakan wajib diisi.');
-        if ($approve) foreach ($this->itemModel->getCart((int) $proposal['id']) as $item) if (! asset_is_available((int) $item['asset_id'], $proposal['event_start'], $proposal['event_end'], (int) $proposal['id'])) return $redirect->with('error', 'Asset tidak lagi tersedia pada rentang waktu kegiatan.');
-        $next = $approve ? 'approved' : 'rejected';
-        $this->proposalModel->update($proposal['id'], ['status' => $next]);
-        $this->historyModel->record((int) $proposal['id'], 'submitted', $next, $note ?: 'Proposal disetujui.');
-        return $redirect->with('success', $approve ? 'Proposal berhasil disetujui.' : 'Proposal berhasil ditolak.');
+        if (! $approve && $note === '') {
+            $db->transRollback();
+            return $redirect->with('error', 'Alasan penolakan wajib diisi.');
+        }
+        if ($approve) foreach ($this->itemModel->getCart((int) $lockedProposal['id']) as $item) if (! asset_is_available((int) $item['asset_id'], $lockedProposal['event_start'], $lockedProposal['event_end'], (int) $lockedProposal['id'])) {
+            $db->transRollback();
+            return $redirect->with('error', 'Asset tidak lagi tersedia pada rentang waktu kegiatan.');
+        }
+
+        $next = $approve ? ($current === 'submitted' ? 'laboran_approved' : 'approved') : 'rejected';
+        $this->proposalModel->update($lockedProposal['id'], ['status' => $next]);
+        $this->historyModel->record((int) $lockedProposal['id'], $current, $next, $note ?: 'Proposal disetujui.');
+        if ($db->transStatus() === false) {
+            $db->transRollback();
+            return $redirect->with('error', 'Gagal menyimpan keputusan approval.');
+        }
+        $db->transCommit();
+        return $redirect->with('success', $approve ? 'Approval berhasil disimpan.' : 'Proposal berhasil ditolak.');
     }
 
     private function validateSubmission(): bool
@@ -277,5 +386,22 @@ class AssetLoanProposalController extends BaseController
 
     private function profileCompletionRedirect() { $user = auth()->user(); return trim((string) $user->username) !== '' && trim((string) $user->phone) !== '' ? null : redirect()->to('/profile')->with('error', 'Lengkapi nama profil dan nomor HP sebelum mengajukan peminjaman asset.'); }
     private function normalizeDateTime(?string $value): string { $value = str_replace('T', ' ', trim((string) $value)); return strlen($value) === 16 ? $value . ':00' : $value; }
+    private function isAssignedLaboran(int $proposalId): bool
+    {
+        return db_connect()->table('asset_loan_proposal_items items')
+            ->join('assets', 'assets.id = items.asset_id')
+            ->join('laboratory_laborans assignments', 'assignments.laboratory_id = assets.laboratory_id')
+            ->where('items.proposal_id', $proposalId)
+            ->where('assignments.user_id', auth()->id())
+            ->countAllResults() > 0;
+    }
+
+    private function canReviewProposal(array $proposal): bool
+    {
+        if (activeGroupIs('superadmin')) return in_array($proposal['status'], ['submitted', 'laboran_approved'], true);
+        if (activeGroupIs('laboran')) return $proposal['status'] === 'submitted' && $this->isAssignedLaboran((int) $proposal['id']);
+        return activeGroupIs('kepala_lab') && $proposal['status'] === 'laboran_approved';
+    }
+
     private function findAccessible(string $uuid): ?array { $proposal = $this->proposalModel->findByUuid($uuid); if ($proposal && ! activeGroupIs('superadmin', 'kepala_lab', 'laboran') && (int) $proposal['user_id'] !== (int) auth()->id()) return null; return $proposal; }
 }

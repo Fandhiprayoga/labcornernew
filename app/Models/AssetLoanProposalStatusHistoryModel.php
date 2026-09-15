@@ -32,13 +32,14 @@ class AssetLoanProposalStatusHistoryModel extends Model
             ->where('proposal_id', $proposalId)->orderBy('created_at', 'DESC')->findAll();
     }
 
-    public function getApprovalHistory(int $perPage, ?int $changedBy, string $search = ''): array
+    public function getApprovalHistory(int $perPage, ?int $changedBy, string $search = '', string $status = ''): array
     {
         $query = $this->select('asset_loan_proposal_status_histories.*, asset_loan_proposals.uuid AS proposal_uuid, asset_loan_proposals.full_name, asset_loan_proposals.identity_number, asset_loan_proposals.event_name, users.username AS changed_by_name')
             ->join('asset_loan_proposals', 'asset_loan_proposals.id = asset_loan_proposal_status_histories.proposal_id')
             ->join('users', 'users.id = asset_loan_proposal_status_histories.changed_by', 'left')
             ->whereIn('asset_loan_proposal_status_histories.to_status', ['approved', 'rejected']);
         if ($changedBy !== null) $query->where('asset_loan_proposal_status_histories.changed_by', $changedBy);
+        if ($status !== '') $query->where('asset_loan_proposal_status_histories.to_status', $status);
         if ($search !== '') $query->groupStart()->like('asset_loan_proposals.identity_number', $search)->orLike('asset_loan_proposals.full_name', $search)->orLike('asset_loan_proposals.event_name', $search)->groupEnd();
         return $query->orderBy('asset_loan_proposal_status_histories.created_at', 'DESC')->paginate($perPage);
     }

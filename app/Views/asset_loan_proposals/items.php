@@ -10,7 +10,7 @@
 /** @var int $totalRows */
 
 $cartAssetIds = array_map(static fn (array $item): int => (int) $item['asset_id'], $cart);
-$statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
+$statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
 $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary'];
 $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value));
 ?>
