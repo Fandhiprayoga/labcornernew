@@ -91,7 +91,7 @@
       </form>
     </div>
     <div class="card__body p-0">
-      <form method="get" action="<?= base_url('admin/assets/print-qr-labels') ?>" id="bulk-qr-form" target="_blank">
+      <form method="get" action="<?= base_url('admin/assets/print-qr-labels') ?>" id="bulk-qr-form" target="_blank"></form>
       <div class="table-responsive">
         <table class="table">
           <thead>
@@ -112,7 +112,7 @@
               <?php $no = (($currentPage - 1) * $perPage) + 1; foreach ($assets as $asset): ?>
               <?php $status = $asset['status'] ?? 'ready'; ?>
               <tr>
-                <td class="text-center"><input type="checkbox" name="asset_uuids[]" value="<?= esc($asset['uuid']) ?>" class="asset-selection" aria-label="Pilih <?= esc($asset['asset_code']) ?>"><?= $no++ ?></td>
+                <td class="text-center"><input type="checkbox" name="asset_uuids[]" value="<?= esc($asset['uuid']) ?>" form="bulk-qr-form" class="asset-selection" aria-label="Pilih <?= esc($asset['asset_code']) ?>"><?= $no++ ?></td>
                 <td class="text-center"><img src="<?= base_url($asset['photo'] ?: 'assets/images/default-asset.svg') ?>" alt="Foto <?= esc($asset['name']) ?>" width="48" height="48" style="object-fit:cover;border-radius:8px;"></td>
                 <td><strong><?= esc($asset['asset_code']) ?></strong></td>
                 <td>
@@ -142,7 +142,6 @@
           </tbody>
         </table>
       </div>
-      </form>
     </div>
     <?php if ($totalRows > 0): ?>
     <div class="card__body" style="border-top: 1px solid var(--color-border); display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem;">
