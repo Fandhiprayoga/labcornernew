@@ -315,10 +315,54 @@ class AssetLoanProposalController extends BaseController
     public function approve(string $uuid) { return $this->processApproval($uuid, true); }
     public function reject(string $uuid) { return $this->processApproval($uuid, false); }
 
+    public function returnPage(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Pengembalian hanya tersedia untuk proposal yang sudah disetujui.');
+
+        return $this->renderView('asset_loan_proposals/return', [
+            'title' => 'Pengembalian Asset',
+            'page_title' => 'Pengembalian Asset',
+            'proposal' => $proposal,
+            'items' => $this->itemModel->getCart((int) $proposal['id']),
+            'allReturned' => $this->itemModel->hasAllReturned((int) $proposal['id']),
+        ]);
+    }
+
+    public function saveReturnStatus(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Pengembalian hanya tersedia untuk proposal yang sudah disetujui.');
+
+        $items = $this->itemModel->where('proposal_id', $proposal['id'])->findAll();
+        $returnedIds = array_map('intval', (array) $this->request->getPost('returned') ?? []);
+        $returnedMap = array_fill_keys($returnedIds, true);
+
+        foreach ($items as $item) {
+            $isReturned = isset($returnedMap[(int) $item['asset_id']]) ? 1 : 0;
+            $payload = [
+                'is_returned' => $isReturned,
+                'returned_at' => $isReturned ? date('Y-m-d H:i:s') : null,
+                'return_note' => $isReturned ? trim((string) ($this->request->getPost('return_note_' . $item['asset_id']) ?? '')) ?: null : null,
+            ];
+
+            $this->itemModel->update((int) $item['id'], $payload);
+        }
+
+        if ($this->itemModel->hasAllReturned((int) $proposal['id'])) {
+            $this->proposalModel->update($proposal['id'], ['status' => 'completed']);
+            $this->historyModel->record((int) $proposal['id'], 'approved', 'completed', 'Semua asset telah dikembalikan dan proposal ditandai selesai.');
+            return redirect()->to('/peminjaman/asset-loans')->with('success', 'Semua asset telah dikembalikan. Proposal ditandai selesai.');
+        }
+
+        return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('success', 'Status pengembalian barang berhasil disimpan. Tunggu semua asset dikembalikan sebelum proposal dinyatakan selesai.');
+    }
+
     public function complete(string $uuid)
     {
         $proposal = $this->proposalModel->findByUuid($uuid);
         if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Hanya proposal yang disetujui yang dapat diselesaikan.');
+        if (! $this->itemModel->hasAllReturned((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('error', 'Semua asset harus dikembalikan terlebih dahulu sebelum proposal dapat ditandai selesai.');
         $this->proposalModel->update($proposal['id'], ['status' => 'completed']);
         $this->historyModel->record((int) $proposal['id'], 'approved', 'completed', 'Peminjaman ditandai selesai.');
         return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal ditandai selesai.');
