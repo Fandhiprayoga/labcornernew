@@ -77,7 +77,7 @@ class LaboratoryLoanProposalController extends BaseController
             $query->where('laboratory_loan_proposals.status', $status);
         }
 
-        $proposals = $query->groupBy('laboratory_loan_proposals.id')->orderBy('proposal_date', 'DESC')->paginate($perPage);
+        $proposals = $query->groupBy('laboratory_loan_proposals.id')->orderBy('laboratory_loan_proposals.proposal_date', 'DESC')->orderBy('laboratory_loan_proposals.id', 'DESC')->paginate($perPage);
         return $this->renderView('loan_proposals/index', [
             'title' => 'Peminjaman Laboratorium', 'page_title' => 'Peminjaman Laboratorium',
             'proposals' => $proposals, 'pager' => $this->proposalModel->pager, 'search' => $search,
@@ -180,7 +180,7 @@ class LaboratoryLoanProposalController extends BaseController
             $query->where('laboratory_loan_proposals.status', $status);
         }
 
-        $proposals = $query->groupBy('laboratory_loan_proposals.id')->orderBy('proposal_date', 'DESC')->paginate($perPage);
+        $proposals = $query->groupBy('laboratory_loan_proposals.id')->orderBy('laboratory_loan_proposals.proposal_date', 'DESC')->orderBy('laboratory_loan_proposals.id', 'DESC')->paginate($perPage);
 
         return $this->renderView('loan_proposals/approval', [
             'title' => 'Persetujuan Peminjaman Laboratorium',
@@ -271,7 +271,7 @@ class LaboratoryLoanProposalController extends BaseController
         if (! $this->validateSubmission()) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
-        $this->proposalModel->insert($this->proposalData());
+        $this->proposalModel->insert($this->proposalData(date('Y-m-d H:i:s')));
         $this->statusHistoryModel->record((int) $this->proposalModel->getInsertID(), null, 'draft', 'Proposal dibuat.');
         return redirect()->to('/peminjaman/lab-loans')->with('success', 'Proposal peminjaman berhasil disimpan.');
     }
@@ -297,7 +297,7 @@ class LaboratoryLoanProposalController extends BaseController
         if (! $this->validateSubmission()) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
-        $this->proposalModel->update($proposal['id'], $this->proposalData());
+        $this->proposalModel->update($proposal['id'], $this->proposalData($proposal['proposal_date']));
         return redirect()->to('/peminjaman/lab-loans')->with('success', 'Proposal peminjaman berhasil diperbarui.');
     }
 
@@ -591,7 +591,7 @@ class LaboratoryLoanProposalController extends BaseController
         if (! $this->validate([
             'identity_number' => 'required|max_length[50]', 'full_name' => 'required|min_length[3]|max_length[150]',
             'phone' => 'required|max_length[30]', 'email' => 'required|valid_email|max_length[150]',
-            'proposal_date' => 'required|valid_date[Y-m-d]', 'event_name' => 'required|max_length[200]',
+            'proposal_date' => 'required|valid_date[Y-m-d\\TH:i]', 'event_name' => 'required|max_length[200]',
             'event_start' => 'required|valid_date[Y-m-d\TH:i]', 'event_end' => 'required|valid_date[Y-m-d\TH:i]',
             'acknowledgement' => 'required|in_list[1]',
         ])) {
@@ -783,12 +783,12 @@ class LaboratoryLoanProposalController extends BaseController
         return redirect()->to('/profile')->with('error', 'Lengkapi nama profil dan nomor HP sebelum mengajukan peminjaman laboratorium.');
     }
 
-    private function proposalData(): array
+    private function proposalData(string $proposalDate): array
     {
         return [
             'user_id' => auth()->id(), 'identity_number' => trim((string) $this->request->getPost('identity_number')),
             'full_name' => trim((string) $this->request->getPost('full_name')), 'phone' => trim((string) $this->request->getPost('phone')),
-            'email' => trim((string) $this->request->getPost('email')), 'proposal_date' => $this->request->getPost('proposal_date'),
+            'email' => trim((string) $this->request->getPost('email')), 'proposal_date' => $proposalDate,
             'event_name' => trim((string) $this->request->getPost('event_name')),
             'event_start' => $this->normalizeDateTime($this->request->getPost('event_start')),
             'event_end' => $this->normalizeDateTime($this->request->getPost('event_end')),

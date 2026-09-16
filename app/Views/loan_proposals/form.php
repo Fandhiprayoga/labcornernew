@@ -7,6 +7,7 @@ $datetime = static function (string $field) use ($value): string {
     $raw = $value($field);
     return $raw ? date('Y-m-d\TH:i', strtotime($raw)) : '';
 };
+$proposalDate = old('proposal_date', ! empty($proposal['proposal_date']) ? date('Y-m-d\TH:i', strtotime($proposal['proposal_date'])) : date('Y-m-d\TH:i'));
 $minDateTime = date('Y-m-d\TH:i');
 ?>
 <div class="page__section">
@@ -38,7 +39,7 @@ $minDateTime = date('Y-m-d\TH:i');
             </div>
             <div class="field">
               <label for="proposal_date" class="field__label">Tanggal Proposal <span class="text-danger">*</span></label>
-              <input type="date" class="input w-full" id="proposal_date" name="proposal_date" value="<?= esc($value('proposal_date', date('Y-m-d'))) ?>" required readonly>
+              <input type="datetime-local" class="input w-full" id="proposal_date" name="proposal_date" value="<?= esc($proposalDate) ?>" required readonly>
             </div>
           </div>
         </fieldset>
