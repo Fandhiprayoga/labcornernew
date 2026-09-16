@@ -1,3 +1,16 @@
+<?= $this->section('css') ?>
+<style>
+  .notification-item {
+    transition: background-color .2s ease, box-shadow .2s ease, transform .2s ease;
+  }
+
+  .notification-item:hover {
+    background-color: var(--color-accent);
+    transform: translateX(2px);
+  }
+</style>
+<?= $this->endSection() ?>
+
 <div class="page__section">
   <div class="card">
     <div class="card__header flex items-center justify-between">
@@ -23,7 +36,7 @@
                 default   => 'info',
               };
             ?>
-            <li class="list-group__item flex items-start justify-between gap-3 <?= ! $notif['is_read'] ? 'bg-muted' : '' ?>">
+            <li class="list-group__item notification-item flex items-start justify-between gap-3 <?= ! $notif['is_read'] ? 'bg-muted' : '' ?>">
               <a href="<?= base_url('notifications/read/' . $notif['id']) ?>" class="flex-1 text-decoration-none">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="badge badge--soft badge--<?= $badgeClass ?>"><?= esc(ucfirst($notif['type'])) ?></span>
@@ -42,9 +55,9 @@
               </a>
               <form action="<?= base_url('notifications/delete/' . $notif['id']) ?>" method="post" onsubmit="return confirm('Hapus notifikasi ini?');">
                 <?= csrf_field() ?>
-                <button type="submit" class="button button--ghost button--danger button--icon-only" aria-label="Hapus">
+                <button type="submit" class="button button--danger button--icon-only button--sm" title="Hapus" aria-label="Hapus">
                   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
-                    <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7h16M10 11v6m4-6v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" />
+                    <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" />
                   </svg>
                 </button>
               </form>
