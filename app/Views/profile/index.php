@@ -11,6 +11,7 @@
           <h5 class="text-lg font-semibold"><?= esc($currentUser->username) ?></h5>
           <p class="text-muted-foreground"><?= esc($currentUser->email) ?></p>
           <p class="text-muted-foreground text-sm"><?= $currentStudyProgram ? esc($currentStudyProgram['degree'] . ' ' . $currentStudyProgram['code'] . ' - ' . $currentStudyProgram['name']) : '-' ?></p>
+          <p class="text-muted-foreground text-sm"><?= $currentUser->identity_number ? esc($currentUser->identity_number) : '-' ?></p>
           <p class="text-muted-foreground text-sm"><?= $currentUser->phone ? esc($currentUser->phone) : '-' ?></p>
           <div class="flex justify-center gap-1 mt-2">
             <?php foreach ($userGroups as $group): ?>
@@ -61,6 +62,14 @@
               <div class="input-group">
                 <input type="text" class="input" id="phone" name="phone"
                        value="<?= old('phone', $currentUser->phone) ?>" maxlength="20" placeholder="08xxxxxxxxxx">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="identity_number" class="field__label">Nomor Identitas</label>
+              <div class="input-group">
+                <input type="text" class="input" id="identity_number" name="identity_number"
+                       value="<?= old('identity_number', $currentUser->identity_number) ?>" maxlength="50" placeholder="Nomor Induk Mahasiswa atau Nomor Induk Pegawai">
               </div>
             </div>
 

@@ -40,6 +40,7 @@ class ProfileController extends BaseController
         $rules = [
             'username'         => 'required|min_length[3]|max_length[30]',
             'phone'            => 'permit_empty|max_length[20]|regex_match[/^[0-9+\-\s()]+$/]',
+            'identity_number'  => 'permit_empty|max_length[50]',
             'study_program_id' => 'permit_empty|is_natural_no_zero',
         ];
 
@@ -49,6 +50,7 @@ class ProfileController extends BaseController
 
         $user->username         = $this->request->getPost('username');
         $user->phone            = $this->request->getPost('phone') ?: null;
+        $user->identity_number  = $this->request->getPost('identity_number') ?: null;
         $user->study_program_id = $this->request->getPost('study_program_id') ?: null;
 
         // Update password jika diisi

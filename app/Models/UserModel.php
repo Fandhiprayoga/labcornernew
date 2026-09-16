@@ -17,5 +17,6 @@ class UserModel extends ShieldUserModel
         'last_active',
         'study_program_id',
         'phone',
+        'identity_number',
     ];
 }
