@@ -23,19 +23,19 @@ $minDateTime = date('Y-m-d\TH:i');
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="field">
               <label for="identity_number" class="field__label">Nomor Identitas <span class="text-danger">*</span></label>
-              <input class="input w-full" id="identity_number" name="identity_number" value="<?= esc($value('identity_number')) ?>" placeholder="NIM / NIP" required>
+              <input class="input w-full" id="identity_number" name="identity_number" value="<?= esc($value('identity_number', $user->identity_number ?? '')) ?>" placeholder="NIM / NIP" required readonly>
             </div>
             <div class="field">
               <label for="full_name" class="field__label">Nama Lengkap <span class="text-danger">*</span></label>
-              <input class="input w-full" id="full_name" name="full_name" value="<?= esc($value('full_name', $user->username ?? '')) ?>" required>
+              <input class="input w-full" id="full_name" name="full_name" value="<?= esc($value('full_name', $user->username ?? '')) ?>" required readonly>
             </div>
             <div class="field">
               <label for="phone" class="field__label">Nomor HP <span class="text-danger">*</span></label>
-              <input type="tel" class="input w-full" id="phone" name="phone" value="<?= esc($value('phone', $user->phone ?? '')) ?>" placeholder="08xxxxxxxxxx" required>
+              <input type="tel" class="input w-full" id="phone" name="phone" value="<?= esc($value('phone', $user->phone ?? '')) ?>" placeholder="08xxxxxxxxxx" required readonly>
             </div>
             <div class="field">
               <label for="email" class="field__label">Email <span class="text-danger">*</span></label>
-              <input type="email" class="input w-full" id="email" name="email" value="<?= esc($value('email', $user->email ?? '')) ?>" required>
+              <input type="email" class="input w-full" id="email" name="email" value="<?= esc($value('email', $user->email ?? '')) ?>" required readonly>
             </div>
             <div class="field">
               <label for="proposal_date" class="field__label">Tanggal Proposal <span class="text-danger">*</span></label>
