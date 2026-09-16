@@ -15,7 +15,8 @@ $calendarFirstWeekday = (int) $calendarDate->format('N');
 $calendarDaysInMonth = (int) $calendarDate->format('t');
 $calendarPrevious = $calendarDate->modify('-1 month');
 $calendarNext = $calendarDate->modify('+1 month');
-$calendarUrl = static fn (DateTimeImmutable $date): string => base_url('dashboard') . '?month=' . $date->format('n') . '&year=' . $date->format('Y');
+$selectedLaboratoryUuid = (string) ($selectedLaboratoryUuid ?? '');
+$calendarUrl = static fn (DateTimeImmutable $date): string => base_url('dashboard') . '?month=' . $date->format('n') . '&year=' . $date->format('Y') . ($selectedLaboratoryUuid !== '' ? '&laboratory_uuid=' . $selectedLaboratoryUuid : '');
 $calendarStatusLabels = ['approved' => 'Disetujui', 'completed' => 'Selesai'];
 $calendarFormatDate = static fn (string $value): string => date('d M Y H:i', strtotime($value));
 $calendarEventsByDay = [];
@@ -78,6 +79,11 @@ foreach ($loanEvents ?? [] as $loanEvent) {
             </select>
             <label class="sr-only" for="calendar-year">Tahun</label>
             <input class="input" id="calendar-year" name="year" type="number" min="2000" max="2100" value="<?= $calendarYear ?>" aria-label="Pilih tahun">
+            <label class="sr-only" for="calendar-laboratory">Laboratorium</label>
+            <select class="select" id="calendar-laboratory" name="laboratory_uuid" aria-label="Pilih laboratorium">
+              <option value="">Semua Laboratorium</option>
+              <?php foreach ($laboratories ?? [] as $laboratory): ?><option value="<?= esc($laboratory['uuid'], 'attr') ?>" <?= $selectedLaboratoryUuid === $laboratory['uuid'] ? 'selected' : '' ?>><?= esc($laboratory['name']) ?></option><?php endforeach; ?>
+            </select>
             <button class="button button--primary button--sm" type="submit">Tampilkan</button>
           </form>
           <a class="button button--outline button--neutral button--icon-only button--sm" href="<?= esc($calendarUrl($calendarNext), 'attr') ?>" title="Bulan berikutnya" aria-label="Bulan berikutnya">
@@ -93,7 +99,7 @@ foreach ($loanEvents ?? [] as $loanEvent) {
           <div class="dashboard-calendar__day">
             <span class="dashboard-calendar__number"><?= $day ?></span>
             <?php foreach ($calendarEventsByDay[$day] ?? [] as $loanEvent): ?>
-              <button type="button" class="dashboard-calendar__event" data-status="<?= esc($loanEvent['status']) ?>" data-event-name="<?= esc($loanEvent['event_name'], 'attr') ?>" data-event-applicant="<?= esc($loanEvent['full_name'], 'attr') ?>" data-event-start="<?= esc($calendarFormatDate($loanEvent['event_start']), 'attr') ?>" data-event-end="<?= esc($calendarFormatDate($loanEvent['event_end']), 'attr') ?>" data-event-status="<?= esc($calendarStatusLabels[$loanEvent['status']] ?? ucfirst($loanEvent['status']), 'attr') ?>" data-event-detail-url="<?= esc(base_url('peminjaman/lab-loans/detail/' . $loanEvent['uuid']), 'attr') ?>" title="Lihat detail <?= esc($loanEvent['event_name'], 'attr') ?>">
+              <button type="button" class="dashboard-calendar__event" data-status="<?= esc($loanEvent['status']) ?>" data-event-name="<?= esc($loanEvent['event_name'], 'attr') ?>" data-event-applicant="<?= esc($loanEvent['full_name'], 'attr') ?>" data-event-laboratories="<?= esc($loanEvent['laboratories'] ?: '-', 'attr') ?>" data-event-start="<?= esc($calendarFormatDate($loanEvent['event_start']), 'attr') ?>" data-event-end="<?= esc($calendarFormatDate($loanEvent['event_end']), 'attr') ?>" data-event-status="<?= esc($calendarStatusLabels[$loanEvent['status']] ?? ucfirst($loanEvent['status']), 'attr') ?>" data-event-detail-url="<?= esc(base_url('peminjaman/lab-loans/detail/' . $loanEvent['uuid']), 'attr') ?>" title="Lihat detail <?= esc($loanEvent['event_name'], 'attr') ?>">
                 <?= esc($loanEvent['event_name']) ?>
               </button>
             <?php endforeach; ?>
@@ -122,6 +128,7 @@ foreach ($loanEvents ?? [] as $loanEvent) {
       <div class="dialog__body">
         <div class="grid grid-cols-1 gap-4">
           <div><div class="text-xs text-muted-foreground">Pemohon</div><strong data-calendar-detail="applicant">-</strong></div>
+          <div><div class="text-xs text-muted-foreground">Laboratorium</div><strong data-calendar-detail="laboratories">-</strong></div>
           <div><div class="text-xs text-muted-foreground">Waktu Mulai</div><strong data-calendar-detail="start">-</strong></div>
           <div><div class="text-xs text-muted-foreground">Waktu Selesai</div><strong data-calendar-detail="end">-</strong></div>
         </div>
@@ -142,6 +149,7 @@ foreach ($loanEvents ?? [] as $loanEvent) {
       eventButton.addEventListener('click', () => {
         dialog.querySelector('[data-calendar-detail="event-name"]').textContent = eventButton.dataset.eventName || '-';
         dialog.querySelector('[data-calendar-detail="applicant"]').textContent = eventButton.dataset.eventApplicant || '-';
+        dialog.querySelector('[data-calendar-detail="laboratories"]').textContent = eventButton.dataset.eventLaboratories || '-';
         dialog.querySelector('[data-calendar-detail="start"]').textContent = eventButton.dataset.eventStart || '-';
         dialog.querySelector('[data-calendar-detail="end"]').textContent = eventButton.dataset.eventEnd || '-';
         const statusBadge = dialog.querySelector('[data-calendar-detail="status"]');
