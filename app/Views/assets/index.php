@@ -104,7 +104,7 @@
               <th>Kategori</th>
               <th>Boleh Dipinjam</th>
               <th>Status</th>
-              <th class="text-center">Aksi</th>
+              <th class="text-end">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -124,12 +124,12 @@
                 <td><?= esc($asset['category'] ?: '-') ?></td>
                 <td><span class="badge badge--soft badge--<?= (int) $asset['can_be_borrowed'] === 1 ? 'success' : 'secondary' ?>"><?= (int) $asset['can_be_borrowed'] === 1 ? 'Ya' : 'Tidak' ?></span></td>
                 <td><span class="badge badge--soft badge--<?= esc($statusBadges[$status] ?? 'secondary') ?>"><?= esc($statuses[$status] ?? ucfirst($status)) ?></span></td>
-                <td class="text-center">
-                  <div class="flex justify-center gap-1">
-                    <?php if (activeGroupCan('assets.edit')): ?><a href="<?= base_url('admin/assets/edit/' . $asset['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.475 5.408 2.117 2.117m-.756-3.482-5.727 5.727a2.1 2.1 0 0 0-.58 1.082L11 13l2.148-.53c.408-.1.787-.3 1.083-.579l5.727-5.727a1.85 1.85 0 1 0-2.617-2.617" /></svg></a><?php endif; ?>
+                <td class="text-end">
+                  <div class="flex justify-end gap-1">
+                    <?php if (activeGroupCan('assets.edit')): ?><a href="<?= base_url('admin/assets/edit/' . $asset['uuid']) ?>" class="button button--warning button--icon-only button--sm" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" /></svg></a><?php endif; ?>
                     <?php if (activeGroupCan('assets.delete')): ?>
                     <form action="<?= base_url('admin/assets/delete/' . $asset['uuid']) ?>" method="post" data-asset-delete-form data-asset-name="<?= esc($asset['name']) ?>">
-                      <?= csrf_field() ?><button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Hapus"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button>
+                      <?= csrf_field() ?><button type="submit" class="button button--danger button--icon-only button--sm" title="Hapus"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button>
                     </form>
                     <?php endif; ?>
                   </div>

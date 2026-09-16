@@ -23,7 +23,7 @@
               <th>Email</th>
               <th>Role</th>
               <th>Status</th>
-              <th class="text-center">Aksi</th>
+              <th class="text-end">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -66,12 +66,12 @@
                     <span class="badge badge--soft badge--danger">Nonaktif</span>
                   <?php endif; ?>
                 </td>
-                <td class="text-center">
-                  <div class="flex justify-center gap-1">
+                <td class="text-end">
+                  <div class="flex justify-end gap-1">
                     <?php if (activeGroupCan('users.edit')): ?>
-                    <a href="<?= base_url('admin/users/edit/' . $user->id) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Edit">
+                    <a href="<?= base_url('admin/users/edit/' . $user->id) ?>" class="button button--warning button--icon-only button--sm" title="Edit">
                       <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.475 5.408l2.117 2.117m-.756-3.482L12.109 9.77a2.1 2.1 0 0 0-.58 1.082L11 13l2.148-.53c.408-.1.787-.3 1.083-.579l5.727-5.727a1.85 1.85 0 1 0-2.617-2.617" />
+                        <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" />
                       </svg>
                     </a>
                     <?php endif; ?>
@@ -79,7 +79,7 @@
                       <form action="<?= base_url('admin/users/delete/' . $user->id) ?>" method="post" class="d-inline"
                         data-user-delete-form data-user-name="<?= esc($user->username, 'attr') ?>">
                       <?= csrf_field() ?>
-                      <button type="submit" class="button button--ghost button--danger button--icon-only button--sm" title="Hapus">
+                      <button type="submit" class="button button--danger button--icon-only button--sm" title="Hapus">
                         <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
                           <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0l.5-2h11l.5 2" />
                         </svg>
