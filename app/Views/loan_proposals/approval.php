@@ -86,7 +86,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
     <?php if ($tab === 'history'): ?>
       <div class="table-responsive">
         <table class="table">
-          <thead><tr><th>Waktu</th><th>Pemohon</th><th>Kegiatan</th><th>Keputusan</th><th>Oleh</th><th>Keterangan</th><th class="text-center">Aksi</th></tr></thead>
+          <thead><tr><th>Waktu</th><th>Pemohon</th><th>Kegiatan</th><th>Keputusan</th><th>Oleh</th><th>Keterangan</th><th class="text-end">Aksi</th></tr></thead>
           <tbody>
           <?php if (! empty($history)): ?>
             <?php foreach ($history as $entry): ?>
@@ -97,7 +97,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
               <td><span class="badge badge--soft badge--<?= $entry['to_status'] === 'rejected' ? 'danger' : 'success' ?>"><?= esc($statusLabels[$entry['to_status']] ?? $entry['to_status']) ?></span></td>
               <td><?= esc($entry['changed_by_name'] ?: '-') ?></td>
               <td><?= esc($entry['note'] ?: '-') ?></td>
-              <td class="text-center"><a href="<?= base_url('peminjaman/lab-loans/detail-approval-history/' . $entry['proposal_uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal">&#9432;</a></td>
+              <td class="text-end"><a href="<?= base_url('peminjaman/lab-loans/detail-approval-history/' . $entry['proposal_uuid']) ?>" class="button button--info button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 0 0 0-15Zm0 3.25v.5m0 2.5v4.5" /></svg></a></td>
             </tr>
             <?php endforeach; ?>
           <?php else: ?>
@@ -109,7 +109,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
     <?php else: ?>
       <div class="table-responsive">
         <table class="table">
-          <thead><tr><th>Pemohon</th><th>Kegiatan</th><th>Laboratorium</th><th>Status</th><th class="text-center">Aksi</th></tr></thead>
+          <thead><tr><th>Pemohon</th><th>Kegiatan</th><th>Laboratorium</th><th>Status</th><th class="text-end">Aksi</th></tr></thead>
           <tbody>
           <?php if (! empty($proposals)): ?>
             <?php foreach ($proposals as $proposal): ?>
@@ -118,16 +118,16 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
               <td><strong><?= esc($proposal['event_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($fmt($proposal['event_start'])) ?> - <?= esc($fmt($proposal['event_end'])) ?></div></td>
               <td><strong><?= esc($proposal['laboratory_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc(($proposal['room_code'] ?? '-') . ' - ' . ($proposal['room_name'] ?? '-')) ?></div></td>
               <td><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? $proposal['status']) ?></span></td>
-              <td class="text-center">
-                <div class="flex justify-center gap-1">
-                  <a href="<?= base_url('peminjaman/lab-loans/detail-approval/' . $proposal['uuid']) ?>" class="button button--ghost button--neutral button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal">
+              <td class="text-end">
+                <div class="flex justify-end gap-1">
+                  <a href="<?= base_url('peminjaman/lab-loans/detail-approval/' . $proposal['uuid']) ?>" class="button button--info button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal">
                     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 0 0 0-15Zm0 3.25v.5m0 2.5v4.5" /></svg>
                   </a>
-                  <button type="button" class="button button--ghost button--success button--icon-only button--sm" title="Setujui" aria-label="Setujui"
+                  <button type="button" class="button button--success button--icon-only button--sm" title="Setujui" aria-label="Setujui"
                     onclick="openApprovalDialog('approveConfirm', '<?= esc(base_url('peminjaman/lab-loans-approval/' . $proposal['uuid'] . '/approve'), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')">
                     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="m5 12 4 4L19 6" /></svg>
                   </button>
-                  <button type="button" class="button button--ghost button--danger button--icon-only button--sm" title="Tolak" aria-label="Tolak"
+                  <button type="button" class="button button--danger button--icon-only button--sm" title="Tolak" aria-label="Tolak"
                     onclick="openApprovalDialog('rejectConfirm', '<?= esc(base_url('peminjaman/lab-loans-approval/' . $proposal['uuid'] . '/reject'), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')">
                     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.75" d="m7 7 10 10M17 7 7 17" /></svg>
                   </button>
