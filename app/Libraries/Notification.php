@@ -81,6 +81,23 @@ class Notification
     }
 
     /**
+     * Notifikasi proposal peminjaman asset yang diajukan, dikirim ke laboran terkait dan kepala lab.
+     */
+    public function sendAssetProposalSubmittedToReviewers(int $proposalId, string $eventName, string $url): void
+    {
+        $userIds = $this->userIdsForAssetProposalReview($proposalId);
+
+        if (empty($userIds)) {
+            return;
+        }
+
+        $this->sendToMany($userIds, 'Proposal peminjaman asset menunggu persetujuan',
+            "Proposal kegiatan {$eventName} menunggu persetujuan laboran dan kepala laboratorium.",
+            ['url' => $url, 'type' => 'warning', 'module' => 'asset_loan_proposal']
+        );
+    }
+
+    /**
      * Notifikasi persetujuan yang dibutuhkan oleh kepala lab setelah laboran menyetujui.
      */
     public function sendApprovalNeededToHeadLab(string $eventName, string $url): void
@@ -94,7 +111,7 @@ class Notification
     /**
      * Notifikasi hasil keputusan proposal ke pemohon.
      */
-    public function sendProposalDecisionToApplicant(int $userId, string $eventName, bool $approved, string $url, ?string $reason = null): void
+    public function sendProposalDecisionToApplicant(int $userId, string $eventName, bool $approved, string $url, ?string $reason = null, string $module = 'loan_proposal'): void
     {
         $statusText = $approved ? 'disetujui' : 'ditolak';
         $message    = "Proposal kegiatan {$eventName} {$statusText}.";
@@ -106,7 +123,7 @@ class Notification
         $this->send($userId, $approved ? 'Proposal Anda disetujui' : 'Proposal Anda ditolak', $message, [
             'url' => $url,
             'type' => $approved ? 'success' : 'danger',
-            'module' => 'loan_proposal',
+            'module' => $module,
         ]);
     }
 
@@ -214,6 +231,37 @@ class Notification
             FROM laboratory_loan_proposal_items items
             INNER JOIN laboratory_laborans assignments
                 ON assignments.laboratory_id = items.laboratory_id
+            WHERE items.proposal_id = ?',
+            [(int) $proposalId]
+        );
+
+        if (! $result || ! method_exists($result, 'getResultArray')) {
+            return $this->userIdsByGroup('kepala_lab');
+        }
+
+        $rows = $result->getResultArray();
+        $userIds = array_map(static fn (array $row): int => (int) ($row['user_id'] ?? 0), $rows);
+        $userIds = array_values(array_filter($userIds, static fn (int $userId): bool => $userId > 0));
+
+        $headLabIds = $this->userIdsByGroup('kepala_lab');
+
+        return array_values(array_unique(array_merge($userIds, $headLabIds)));
+    }
+
+    protected function userIdsForAssetProposalReview(int $proposalId): array
+    {
+        $db = db_connect();
+
+        if (! $db) {
+            return [];
+        }
+
+        $result = $db->query(
+            'SELECT DISTINCT assignments.user_id AS user_id
+            FROM asset_loan_proposal_items items
+            INNER JOIN assets ON assets.id = items.asset_id
+            INNER JOIN laboratory_laborans assignments
+                ON assignments.laboratory_id = assets.laboratory_id
             WHERE items.proposal_id = ?',
             [(int) $proposalId]
         );

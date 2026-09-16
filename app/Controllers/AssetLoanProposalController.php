@@ -295,6 +295,12 @@ class AssetLoanProposalController extends BaseController
 
         $db->transCommit();
 
+        notification()->sendAssetProposalSubmittedToReviewers(
+            (int) $lockedProposal['id'],
+            (string) $lockedProposal['event_name'],
+            '/peminjaman/asset-loans-approval'
+        );
+
         return $redirect->with('success', 'Proposal peminjaman asset berhasil diajukan.');
     }
 
@@ -411,6 +417,18 @@ class AssetLoanProposalController extends BaseController
             return $redirect->with('error', 'Gagal menyimpan keputusan approval.');
         }
         $db->transCommit();
+
+        if ($next === 'approved' || $next === 'rejected') {
+            notification()->sendProposalDecisionToApplicant(
+                (int) $lockedProposal['user_id'],
+                (string) $lockedProposal['event_name'],
+                $next === 'approved',
+                '/peminjaman/asset-loans/detail/' . $lockedProposal['uuid'],
+                $note,
+                'asset_loan_proposal'
+            );
+        }
+
         return $redirect->with('success', $approve ? 'Approval berhasil disimpan.' : 'Proposal berhasil ditolak.');
     }
 
