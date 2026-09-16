@@ -428,7 +428,7 @@ class AssetLoanProposalController extends BaseController
         return ['user_id' => auth()->id(), 'identity_number' => trim((string) $this->request->getPost('identity_number')), 'full_name' => trim((string) $this->request->getPost('full_name')), 'phone' => trim((string) $this->request->getPost('phone')), 'email' => trim((string) $this->request->getPost('email')), 'proposal_date' => $proposalDate, 'event_name' => trim((string) $this->request->getPost('event_name')), 'event_start' => $this->normalizeDateTime($this->request->getPost('event_start')), 'event_end' => $this->normalizeDateTime($this->request->getPost('event_end')), 'usage_location' => $this->request->getPost('usage_location'), 'acknowledgement' => 1];
     }
 
-    private function profileCompletionRedirect() { $user = auth()->user(); return trim((string) $user->username) !== '' && trim((string) $user->phone) !== '' ? null : redirect()->to('/profile')->with('error', 'Lengkapi nama profil dan nomor HP sebelum mengajukan peminjaman asset.'); }
+    private function profileCompletionRedirect() { $user = auth()->user(); return trim((string) $user->username) !== '' && trim((string) $user->phone) !== '' && trim((string) $user->identity_number) !== '' && ! empty($user->study_program_id) ? null : redirect()->to('/profile')->with('error', 'Lengkapi nama profil, nomor identitas, nomor HP, dan program studi sebelum mengajukan peminjaman asset.'); }
     private function normalizeDateTime(?string $value): string { $value = str_replace('T', ' ', trim((string) $value)); return strlen($value) === 16 ? $value . ':00' : $value; }
     private function isAssignedLaboran(int $proposalId): bool
     {

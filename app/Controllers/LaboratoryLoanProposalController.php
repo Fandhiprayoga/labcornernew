@@ -776,11 +776,11 @@ class LaboratoryLoanProposalController extends BaseController
     {
         $user = auth()->user();
 
-        if (trim((string) $user->username) !== '' && trim((string) $user->phone) !== '') {
+        if (trim((string) $user->username) !== '' && trim((string) $user->phone) !== '' && trim((string) $user->identity_number) !== '' && ! empty($user->study_program_id)) {
             return null;
         }
 
-        return redirect()->to('/profile')->with('error', 'Lengkapi nama profil dan nomor HP sebelum mengajukan peminjaman laboratorium.');
+        return redirect()->to('/profile')->with('error', 'Lengkapi nama profil, nomor identitas, nomor HP, dan program studi sebelum mengajukan peminjaman laboratorium.');
     }
 
     private function proposalData(string $proposalDate): array
