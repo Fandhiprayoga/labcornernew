@@ -35,23 +35,6 @@ class LaboratoryLoanProposalController extends BaseController
         $canReview = activeGroupIs('superadmin', 'kepala_lab', 'laboran');
         $laboratoryOptions = $this->filterLaboratoryOptions();
 
-        if (activeGroupIs('laboran')) {
-            $assignedLaboratoryIds = $this->assignedLaboratoryIds();
-
-            if ($laboratoryUuid === '') {
-                $defaultLaboratory = db_connect()->table('laboratories')
-                    ->select('uuid')
-                    ->whereIn('id', $assignedLaboratoryIds)
-                    ->orderBy('name', 'ASC')
-                    ->get()
-                    ->getRowArray();
-
-                if ($defaultLaboratory) {
-                    $laboratoryUuid = (string) $defaultLaboratory['uuid'];
-                }
-            }
-        }
-
         $query = $this->proposalModel
             ->select('laboratory_loan_proposals.*, users.username, GROUP_CONCAT(DISTINCT laboratories.name ORDER BY laboratories.name SEPARATOR ", ") AS laboratory_names')
             ->join('users', 'users.id = laboratory_loan_proposals.user_id')

@@ -31,9 +31,7 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
         <div style="flex:0 1 220px;min-width:180px;">
           <label class="text-xs text-muted-foreground" for="laboratory_uuid">Laboratorium</label>
           <select class="select" id="laboratory_uuid" name="laboratory_uuid">
-            <?php if (! activeGroupIs('laboran')): ?>
-            <option value="">Semua Laboratorium</option>
-            <?php endif; ?>
+            <option value=""><?= activeGroupIs('laboran') ? 'Semua Lab Ditugaskan' : 'Semua Laboratorium' ?></option>
             <?php foreach ($laboratoryOptions as $option): ?>
             <option value="<?= esc($option['uuid']) ?>" <?= $laboratoryUuid === (string) ($option['uuid'] ?? '') ? 'selected' : '' ?>><?= esc($option['name']) ?><?= ! empty($option['room_code']) ? ' (' . esc($option['room_code']) . ')' : '' ?></option>
             <?php endforeach; ?>
