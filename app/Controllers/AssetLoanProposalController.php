@@ -82,6 +82,7 @@ class AssetLoanProposalController extends BaseController
         $statusOptions = $tab === 'history' ? ['laboran_approved', 'approved', 'rejected'] : ['submitted', 'laboran_approved'];
         $status = trim((string) $this->request->getGet('status'));
         $status = in_array($status, $statusOptions, true) ? $status : '';
+        $laboratoryUuid = trim((string) $this->request->getGet('laboratory_uuid'));
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::PER_PAGE, true) ? $perPage : 10;
 
@@ -90,7 +91,8 @@ class AssetLoanProposalController extends BaseController
                 $perPage,
                 activeGroupIs('superadmin') ? null : (int) auth()->id(),
                 $search,
-                $status
+                $status,
+                $laboratoryUuid
             );
 
             return $this->renderView('asset_loan_proposals/approval', [
@@ -102,6 +104,8 @@ class AssetLoanProposalController extends BaseController
                 'search' => $search,
                 'status' => $status,
                 'statusOptions' => $statusOptions,
+                'laboratoryUuid' => $laboratoryUuid,
+                'laboratoryOptions' => $this->assignedLaboratoryOptions(),
                 'perPage' => $perPage,
                 'perPageOptions' => self::PER_PAGE,
                 'tab' => $tab,
@@ -121,6 +125,11 @@ class AssetLoanProposalController extends BaseController
             $query->where('asset_loan_proposals.status', 'laboran_approved');
         } else {
             $query->whereIn('asset_loan_proposals.status', ['submitted', 'laboran_approved']);
+        }
+
+        if ($laboratoryUuid !== '') {
+            $query->join('laboratories', 'laboratories.id = assets.laboratory_id', 'left')
+                ->where('laboratories.uuid', $laboratoryUuid);
         }
 
         if ($search !== '') {
@@ -146,6 +155,8 @@ class AssetLoanProposalController extends BaseController
             'search' => $search,
             'status' => $status,
             'statusOptions' => $statusOptions,
+            'laboratoryUuid' => $laboratoryUuid,
+            'laboratoryOptions' => $this->assignedLaboratoryOptions(),
             'perPage' => $perPage,
             'perPageOptions' => self::PER_PAGE,
             'tab' => $tab,
