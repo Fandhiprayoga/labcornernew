@@ -4,6 +4,8 @@
 /** @var array $cart */
 /** @var string $search */
 /** @var bool $editable */
+/** @var string $laboratoryUuid */
+/** @var array $laboratoryOptions */
 /** @var CodeIgniter\Pager\Pager $pager */
 /** @var int $perPage */
 /** @var int[] $perPageOptions */
@@ -55,8 +57,9 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
       <div class="card__body" style="border-bottom:1px solid var(--color-border);">
         <form method="get" action="<?= base_url('peminjaman/asset-loans/items/' . $proposal['uuid']) ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
           <div style="flex:1 1 240px;min-width:200px;"><label class="text-xs text-muted-foreground" for="q">Cari asset</label><input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Kode, nama, kategori, atau brand..."></div>
+          <div style="flex:0 1 220px;min-width:180px;"><label class="text-xs text-muted-foreground" for="laboratory_uuid">Laboratorium</label><select class="select" id="laboratory_uuid" name="laboratory_uuid"><option value="">Semua Laboratorium</option><?php foreach ($laboratoryOptions as $option): ?><option value="<?= esc($option['uuid'], 'attr') ?>" <?= $laboratoryUuid === (string) $option['uuid'] ? 'selected' : '' ?>><?= esc($option['name']) ?><?= ! empty($option['room_code']) ? ' (' . esc($option['room_code']) . ')' : '' ?></option><?php endforeach; ?></select></div>
           <div style="flex:0 0 110px;"><label class="text-xs text-muted-foreground" for="perPage">Per halaman</label><select class="select" id="perPage" name="perPage"><?php foreach ($perPageOptions as $option): ?><option value="<?= $option ?>" <?= $perPage === $option ? 'selected' : '' ?>><?= $option ?></option><?php endforeach; ?></select></div>
-          <div style="display:flex;gap:.5rem;"><button type="submit" class="button button--primary button--sm">Filter</button><?php if ($search !== ''): ?><a href="<?= base_url('peminjaman/asset-loans/items/' . $proposal['uuid']) ?>" class="button button--outline button--sm">Reset</a><?php endif; ?></div>
+          <div style="display:flex;gap:.5rem;"><button type="submit" class="button button--primary button--sm">Filter</button><?php if ($search !== '' || $laboratoryUuid !== ''): ?><a href="<?= base_url('peminjaman/asset-loans/items/' . $proposal['uuid']) ?>" class="button button--outline button--sm">Reset</a><?php endif; ?></div>
         </form>
         <p class="text-xs text-muted-foreground" style="margin:.75rem 0 0;">Katalog menampilkan asset yang tersedia dan dapat dipinjam pada rentang kegiatan <?= esc($fmt($proposal['event_start'])) ?> &ndash; <?= esc($fmt($proposal['event_end'])) ?>.</p>
       </div>
@@ -75,7 +78,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
         </div>
         <?php endif; ?>
       </div>
-      <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> asset</span><?= $pager->only(['q', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
+      <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> asset</span><?= $pager->only(['q', 'laboratory_uuid', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
     </div>
 
     <div class="card">

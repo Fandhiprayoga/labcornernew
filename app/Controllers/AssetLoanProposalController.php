@@ -6,6 +6,7 @@ use App\Models\AssetLoanProposalItemModel;
 use App\Models\AssetLoanProposalModel;
 use App\Models\AssetLoanProposalStatusHistoryModel;
 use App\Models\AssetModel;
+use App\Models\LaboratoryModel;
 
 class AssetLoanProposalController extends BaseController
 {
@@ -15,6 +16,7 @@ class AssetLoanProposalController extends BaseController
     protected AssetLoanProposalModel $proposalModel;
     protected AssetLoanProposalItemModel $itemModel;
     protected AssetLoanProposalStatusHistoryModel $historyModel;
+    protected LaboratoryModel $laboratoryModel;
 
     public function __construct()
     {
@@ -22,6 +24,7 @@ class AssetLoanProposalController extends BaseController
         $this->proposalModel = new AssetLoanProposalModel();
         $this->itemModel = new AssetLoanProposalItemModel();
         $this->historyModel = new AssetLoanProposalStatusHistoryModel();
+        $this->laboratoryModel = new LaboratoryModel();
     }
 
     public function index()
@@ -171,17 +174,19 @@ class AssetLoanProposalController extends BaseController
         $proposal = $this->findAccessible($uuid);
         if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
         $search = trim((string) $this->request->getGet('q'));
+        $laboratoryUuid = trim((string) $this->request->getGet('laboratory_uuid'));
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::CATALOG_PER_PAGE, true) ? $perPage : 12;
         $cart = $this->itemModel->getCart((int) $proposal['id']);
         $cartLaboratoryId = ! empty($cart) ? (int) $cart[0]['laboratory_id'] : null;
         $query = (new AssetModel())->select('assets.*, laboratories.name AS laboratory_name, rooms.code AS room_code')->join('laboratories', 'laboratories.id = assets.laboratory_id', 'left')->join('rooms', 'rooms.id = laboratories.room_id', 'left')->where('assets.status', AssetModel::STATUS_READY)->where('assets.can_be_borrowed', 1);
         if ($cartLaboratoryId !== null) $query->where('assets.laboratory_id', $cartLaboratoryId);
+        if ($laboratoryUuid !== '') $query->where('laboratories.uuid', $laboratoryUuid);
         $blockedAssetIds = asset_availability_blocked_ids($proposal['event_start'], $proposal['event_end'], (int) $proposal['id']);
         if ($blockedAssetIds !== []) $query->whereNotIn('assets.id', $blockedAssetIds);
         if ($search !== '') $query->groupStart()->like('assets.asset_code', $search)->orLike('assets.name', $search)->orLike('assets.category', $search)->orLike('assets.brand', $search)->groupEnd();
         $assets = $query->orderBy('assets.asset_code', 'ASC')->paginate($perPage);
-        return $this->renderView('asset_loan_proposals/items', ['title' => 'Asset yang Dipinjam', 'page_title' => 'Asset yang Dipinjam', 'proposal' => $proposal, 'assets' => $assets, 'cart' => $cart, 'search' => $search, 'pager' => $query->pager, 'perPage' => $perPage, 'perPageOptions' => self::CATALOG_PER_PAGE, 'totalRows' => $query->pager->getTotal(), 'editable' => true]);
+        return $this->renderView('asset_loan_proposals/items', ['title' => 'Asset yang Dipinjam', 'page_title' => 'Asset yang Dipinjam', 'proposal' => $proposal, 'assets' => $assets, 'cart' => $cart, 'search' => $search, 'laboratoryUuid' => $laboratoryUuid, 'laboratoryOptions' => $this->laboratoryOptions(), 'pager' => $query->pager, 'perPage' => $perPage, 'perPageOptions' => self::CATALOG_PER_PAGE, 'totalRows' => $query->pager->getTotal(), 'editable' => true]);
     }
 
     public function addItem(string $uuid)
@@ -450,6 +455,16 @@ class AssetLoanProposalController extends BaseController
 
     private function profileCompletionRedirect() { $user = auth()->user(); return trim((string) $user->username) !== '' && trim((string) $user->phone) !== '' && trim((string) $user->identity_number) !== '' && ! empty($user->study_program_id) ? null : redirect()->to('/profile')->with('error', 'Lengkapi nama profil, nomor identitas, nomor HP, dan program studi sebelum mengajukan peminjaman asset.'); }
     private function normalizeDateTime(?string $value): string { $value = str_replace('T', ' ', trim((string) $value)); return strlen($value) === 16 ? $value . ':00' : $value; }
+    private function laboratoryOptions(): array
+    {
+        return $this->laboratoryModel
+            ->select('laboratories.id, laboratories.uuid, laboratories.name, rooms.code AS room_code')
+            ->join('rooms', 'rooms.id = laboratories.room_id', 'left')
+            ->where('laboratories.status', 'active')
+            ->orderBy('laboratories.name', 'ASC')
+            ->findAll();
+    }
+
     private function isAssignedLaboran(int $proposalId): bool
     {
         return db_connect()->table('asset_loan_proposal_items items')
