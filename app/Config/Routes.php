@@ -70,6 +70,10 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
     $routes->post('peminjaman/lab-loans-approval/(:uuid)/approve', 'LaboratoryLoanProposalController::approve/$1', ['filter' => 'permission:loans.approve']);
     $routes->post('peminjaman/lab-loans-approval/(:uuid)/reject', 'LaboratoryLoanProposalController::reject/$1', ['filter' => 'permission:loans.approve']);
 
+    // Laboratory loan reports
+    $routes->get('peminjaman/lab-report', 'LaboratoryLoanReportController::index', ['filter' => 'permission:reports.view']);
+    $routes->get('peminjaman/lab-report/export/csv', 'LaboratoryLoanReportController::exportCsv', ['filter' => 'permission:reports.export']);
+
     // Asset loan proposals
     $routes->get('peminjaman/asset-loans-approval', 'AssetLoanProposalController::approvalIndex', ['filter' => 'permission:loans.approve']);
     $routes->post('peminjaman/asset-loans-approval/(:uuid)/approve', 'AssetLoanProposalController::approve/$1', ['filter' => 'permission:loans.approve']);

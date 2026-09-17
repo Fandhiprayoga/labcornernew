@@ -4,6 +4,7 @@ $currentUrl  = uri_string();
 $currentStatus = (string) service('request')->getGet('status');
 $canApproveSubmittedProposals = activeGroupIs('superadmin', 'kepala_lab', 'laboran');
 $isLaboratoryApprovalPage = str_contains($currentUrl, 'peminjaman/lab-loans-approval') || in_array($currentStatus, ['submitted', 'laboran_approved'], true);
+$isLaboratoryReportPage = str_contains($currentUrl, 'peminjaman/lab-report');
 $isAssetApprovalPage = str_contains($currentUrl, 'peminjaman/asset-loans-approval');
 
 function isMenuActive(string $path): string
@@ -75,7 +76,7 @@ function isDropdownActive(array $paths): string
           <ul class="sidebar__list">
             <!-- Laboratory Loan Management -->
             <?php if (activeGroupCan('loans.list')): ?>
-              <li class="sidebar__item" data-state="<?= isDropdownActive(['peminjaman/lab-loans']) ? 'open' : 'closed' ?>">
+              <li class="sidebar__item" data-state="<?= isDropdownActive(['peminjaman/lab-loans', 'peminjaman/lab-report']) ? 'open' : 'closed' ?>">
                 <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans') ?>">
                   <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
                     <path fill="currentColor" d="M4 4h16v16H4z" opacity=".35" />
@@ -84,7 +85,7 @@ function isDropdownActive(array $paths): string
                   <span>Laboratorium</span>
                 </a>
                 <button type="button" class="sidebar__item-action" data-stisla-sidebar-submenu-toggle
-                  aria-expanded="<?= isDropdownActive(['peminjaman/lab-loans']) ? 'true' : 'false' ?>"
+                  aria-expanded="<?= isDropdownActive(['peminjaman/lab-loans', 'peminjaman/lab-report']) ? 'true' : 'false' ?>"
                   aria-controls="nav-lab-loans" aria-label="Toggle Peminjaman Laboratorium submenu">
                   <span class="sidebar__caret"></span>
                 </button>
@@ -96,6 +97,11 @@ function isDropdownActive(array $paths): string
                     <?php if ($canApproveSubmittedProposals): ?>
                     <li class="sidebar__item <?= $isLaboratoryApprovalPage ? 'active' : '' ?>">
                       <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans-approval') ?>"><span>Persetujuan</span></a>
+                    </li>
+                    <?php endif; ?>
+                    <?php if (activeGroupCan('reports.view')): ?>
+                    <li class="sidebar__item <?= $isLaboratoryReportPage ? 'active' : '' ?>">
+                      <a class="sidebar__button" href="<?= base_url('peminjaman/lab-report') ?>"><span>Laporan</span></a>
                     </li>
                     <?php endif; ?>
                   </ul>
