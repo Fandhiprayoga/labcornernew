@@ -31,7 +31,11 @@ $canApprove = activeGroupCan('loans.approve');
 				<div style="flex:1 1 260px"><label class="text-xs text-muted-foreground" for="q">Cari pengajuan</label><input class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Identitas, nama, kegiatan, kode atau nama asset..."></div>
 				<div style="flex:0 0 180px"><label class="text-xs text-muted-foreground" for="status">Status</label><select class="select" id="status" name="status">
 						<option value="">Semua Status</option><?php foreach ($statusOptions as $option): ?><option value="<?= $option ?>" <?= $status === $option ? 'selected' : '' ?>><?= $statusLabels[$option] ?></option><?php endforeach; ?>
-					</select></div><button class="button button--primary button--sm">Filter</button>
+					</select></div>
+				<div style="flex:0 0 220px"><label class="text-xs text-muted-foreground" for="laboratory_uuid">Laboratorium</label><select class="select" id="laboratory_uuid" name="laboratory_uuid">
+						<option value="">Semua Laboratorium</option><?php foreach ($laboratoryOptions as $lab): ?><option value="<?= esc($lab['uuid']) ?>" <?= $laboratoryUuid === $lab['uuid'] ? 'selected' : '' ?>><?= esc($lab['name']) ?></option><?php endforeach; ?>
+					</select></div>
+				<div style="display:flex;gap:.5rem;"><button type="submit" class="button button--primary button--sm">Filter</button><?php if ($search !== '' || $status !== '' || $laboratoryUuid !== ''): ?><a href="<?= base_url('peminjaman/asset-loans') ?>" class="button button--outline button--sm">Reset</a><?php endif; ?></div>
 			</form>
 		</div>
 		<div class="card__body p-0">

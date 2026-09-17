@@ -32,6 +32,7 @@ class AssetLoanProposalController extends BaseController
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
         $status = in_array($status, self::STATUSES, true) ? $status : '';
+        $laboratoryUuid = trim((string) $this->request->getGet('laboratory_uuid'));
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::PER_PAGE, true) ? $perPage : 10;
         $reviewer = activeGroupIs('superadmin', 'kepala_lab', 'laboran');
@@ -40,7 +41,11 @@ class AssetLoanProposalController extends BaseController
             ->join('asset_loan_proposal_items', 'asset_loan_proposal_items.proposal_id = asset_loan_proposals.id', 'left')
             ->join('assets', 'assets.id = asset_loan_proposal_items.asset_id', 'left');
         if (! $reviewer) $query->where('asset_loan_proposals.user_id', auth()->id());
-        if (activeGroupIs('laboran')) $query->where('asset_loan_proposals.status !=', 'draft');
+        if (activeGroupIs('laboran')) {
+            $query->where('asset_loan_proposals.status !=', 'draft');
+            $query->whereIn('assets.laboratory_id', $this->assignedLaboratoryIds());
+        }
+        if ($laboratoryUuid !== '') $query->join('laboratories', 'laboratories.id = assets.laboratory_id', 'left')->where('laboratories.uuid', $laboratoryUuid);
         if ($search !== '') $query->groupStart()->like('asset_loan_proposals.identity_number', $search)->orLike('asset_loan_proposals.full_name', $search)->orLike('asset_loan_proposals.event_name', $search)->orLike('assets.asset_code', $search)->orLike('assets.name', $search)->groupEnd();
         if ($status !== '') $query->where('asset_loan_proposals.status', $status);
         $proposals = $query->groupBy('asset_loan_proposals.id')->orderBy('asset_loan_proposals.proposal_date', 'DESC')->orderBy('asset_loan_proposals.id', 'DESC')->paginate($perPage);
@@ -48,9 +53,26 @@ class AssetLoanProposalController extends BaseController
             'title' => 'Peminjaman Asset', 'page_title' => 'Peminjaman Asset', 'proposals' => $proposals,
             'pager' => $this->proposalModel->pager, 'search' => $search, 'status' => $status,
             'statusOptions' => activeGroupIs('laboran') ? array_values(array_diff(self::STATUSES, ['draft'])) : self::STATUSES,
+            'laboratoryUuid' => $laboratoryUuid, 'laboratoryOptions' => $this->assignedLaboratoryOptions(),
             'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE,
             'totalRows' => $this->proposalModel->pager->getTotal(),
         ]);
+    }
+
+    private function assignedLaboratoryIds(): array
+    {
+        $rows = db_connect()->table('laboratory_laborans')->select('laboratory_id')->where('user_id', auth()->id())->get()->getResultArray();
+        return $rows ? array_map(static fn (array $row): int => (int) $row['laboratory_id'], $rows) : [0];
+    }
+
+    private function assignedLaboratoryOptions(): array
+    {
+        $query = db_connect()->table('laboratories')
+            ->select('laboratories.id, laboratories.uuid, laboratories.name')
+            ->where('laboratories.status', 'active')
+            ->orderBy('laboratories.name', 'ASC');
+        if (activeGroupIs('laboran')) $query->whereIn('laboratories.id', $this->assignedLaboratoryIds());
+        return $query->get()->getResultArray();
     }
 
     public function approvalIndex()
