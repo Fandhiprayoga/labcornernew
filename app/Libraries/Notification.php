@@ -142,6 +142,16 @@ class Notification
             ]);
     }
 
+    public function sendProposalCancelledToApplicant(int $userId, string $eventName, string $url, string $reason): void
+    {
+        $this->send($userId, 'Proposal peminjaman dibatalkan',
+            "Proposal kegiatan {$eventName} dibatalkan. Alasan: " . trim($reason), [
+                'url' => $url,
+                'type' => 'danger',
+                'module' => 'loan_proposal',
+            ]);
+    }
+
     /**
      * Ambil daftar notifikasi milik seorang user.
      */

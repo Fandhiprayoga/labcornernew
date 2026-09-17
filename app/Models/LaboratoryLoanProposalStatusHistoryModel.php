@@ -48,7 +48,7 @@ class LaboratoryLoanProposalStatusHistoryModel extends Model
             ->join('laboratories', 'laboratories.id = laboratory_loan_proposal_items.laboratory_id')
             ->join('rooms', 'rooms.id = laboratories.room_id', 'left')
             ->join('users', 'users.id = laboratory_loan_proposal_status_histories.changed_by', 'left')
-            ->whereIn('laboratory_loan_proposal_status_histories.to_status', ['laboran_approved', 'approved', 'rejected']);
+            ->whereIn('laboratory_loan_proposal_status_histories.to_status', ['laboran_approved', 'approved', 'rejected', 'cancelled']);
 
         if ($changedBy !== null) {
             $query->where('laboratory_loan_proposal_status_histories.changed_by', $changedBy);

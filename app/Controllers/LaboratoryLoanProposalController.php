@@ -22,7 +22,7 @@ class LaboratoryLoanProposalController extends BaseController
         $this->statusHistoryModel = new LaboratoryLoanProposalStatusHistoryModel();
     }
 
-    private const STATUS_OPTIONS = ['draft', 'submitted', 'laboran_approved', 'rejected', 'approved', 'completed'];
+    private const STATUS_OPTIONS = ['draft', 'submitted', 'laboran_approved', 'rejected', 'approved', 'cancelled', 'completed'];
 
     public function index()
     {
@@ -78,7 +78,7 @@ class LaboratoryLoanProposalController extends BaseController
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
         $statusOptions = $tab === 'history'
-            ? ['laboran_approved', 'approved', 'rejected']
+            ? ['laboran_approved', 'approved', 'rejected', 'cancelled']
             : ['submitted', 'laboran_approved'];
         $status = in_array($status, $statusOptions, true) ? $status : '';
         $laboratoryUuid = trim((string) $this->request->getGet('laboratory_uuid'));
@@ -222,6 +222,57 @@ class LaboratoryLoanProposalController extends BaseController
         $db->transCommit();
 
         return $redirect->with('success', 'Proposal peminjaman berhasil ditandai selesai.');
+    }
+
+    public function cancel(string $uuid)
+    {
+        $proposal = $this->proposalModel->findByUuid($uuid);
+        $redirect = redirect()->to('/peminjaman/lab-loans');
+
+        if (! $proposal) {
+            return $redirect->with('error', 'Proposal peminjaman tidak ditemukan.');
+        }
+
+        if (! activeGroupIs('laboran') || ! $this->isAssignedLaboran((int) $proposal['id'])) {
+            return $redirect->with('error', 'Hanya laboran yang ditugaskan pada laboratorium proposal ini yang dapat membatalkannya.');
+        }
+
+        $note = trim((string) $this->request->getPost('note'));
+        if ($note === '') {
+            return $redirect->with('error', 'Alasan pembatalan wajib diisi.');
+        }
+
+        $db = db_connect();
+        $db->transBegin();
+        $lockedProposal = $db->query(
+            'SELECT id, status FROM laboratory_loan_proposals WHERE id = ? FOR UPDATE',
+            [$proposal['id']]
+        )->getRowArray();
+
+        if (! $lockedProposal || $lockedProposal['status'] !== 'approved') {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Hanya proposal yang sudah disetujui yang dapat dibatalkan.');
+        }
+
+        $this->proposalModel->update((int) $proposal['id'], ['status' => 'cancelled']);
+        $this->statusHistoryModel->record((int) $proposal['id'], 'approved', 'cancelled', $note);
+        notification()->sendProposalCancelledToApplicant(
+            (int) $proposal['user_id'],
+            (string) $proposal['event_name'],
+            '/peminjaman/lab-loans/detail/' . $proposal['uuid'],
+            $note
+        );
+
+        if ($db->transStatus() === false) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Gagal membatalkan proposal peminjaman.');
+        }
+
+        $db->transCommit();
+
+        return $redirect->with('success', 'Proposal peminjaman berhasil dibatalkan.');
     }
 
     public function create()
@@ -737,7 +788,7 @@ class LaboratoryLoanProposalController extends BaseController
         return db_connect()->table('laboratory_loan_proposal_status_histories')
             ->where('proposal_id', $proposalId)
             ->where('changed_by', auth()->id())
-            ->whereIn('to_status', ['laboran_approved', 'approved', 'rejected'])
+            ->whereIn('to_status', ['laboran_approved', 'approved', 'rejected', 'cancelled'])
             ->countAllResults() > 0;
     }
 

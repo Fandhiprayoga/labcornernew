@@ -55,6 +55,7 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
         $routes->post('update/(:uuid)', 'LaboratoryLoanProposalController::update/$1', ['filter' => 'permission:loans.edit']);
         $routes->post('delete/(:uuid)', 'LaboratoryLoanProposalController::delete/$1', ['filter' => 'permission:loans.delete']);
         $routes->post('complete/(:uuid)', 'LaboratoryLoanProposalController::complete/$1', ['filter' => 'permission:loans.complete']);
+        $routes->post('cancel/(:uuid)', 'LaboratoryLoanProposalController::cancel/$1', ['filter' => 'permission:loans.complete']);
         $routes->get('confirm/(:uuid)', 'LaboratoryLoanProposalController::confirm/$1', ['filter' => 'permission:loans.edit']);
         $routes->post('submit/(:uuid)', 'LaboratoryLoanProposalController::submit/$1', ['filter' => 'permission:loans.edit']);
         $routes->get('items/(:uuid)', 'LaboratoryLoanProposalController::items/$1', ['filter' => 'permission:loans.list']);

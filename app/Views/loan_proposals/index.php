@@ -7,7 +7,9 @@
 /** @var int $totalRows */
 /** @var string $status */
 /** @var string[] $statusOptions */
-$statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
+/** @var string $laboratoryUuid */
+/** @var array $laboratoryOptions */
+$statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'cancelled' => 'Dibatalkan', 'completed' => 'Selesai'];
 ?>
 <div class="page__section">
   <div class="card">
@@ -65,7 +67,7 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
           <tbody>
           <?php if (! empty($proposals)): ?>
             <?php foreach ($proposals as $proposal): ?>
-            <?php $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai']; $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'laboran_approved' => 'info', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary']; ?>
+            <?php $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'cancelled' => 'Dibatalkan', 'completed' => 'Selesai']; $statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'laboran_approved' => 'info', 'rejected' => 'danger', 'approved' => 'success', 'cancelled' => 'danger', 'completed' => 'primary']; ?>
             <tr>
               <td><strong><?= esc($proposal['full_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($proposal['identity_number']) ?> &middot; <?= esc($proposal['email']) ?></div></td>
               <td><?= esc($proposal['laboratory_names'] ?? '-') ?></td>
@@ -78,6 +80,7 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
                 <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.edit')): ?><a href="<?= base_url('peminjaman/lab-loans/items/' . $proposal['uuid']) ?>" class="button button--primary button--icon-only button--sm" title="Tambah Item Ruangan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg></a><?php endif; ?>
                 <?php if ($proposal['status'] === 'draft' && activeGroupCan('loans.delete')): ?><button type="button" class="button button--danger button--icon-only button--sm" title="Batalkan" aria-label="Batalkan proposal <?= esc($proposal['event_name'], 'attr') ?>" onclick="openDeleteDialog('<?= esc(base_url('peminjaman/lab-loans/delete/' . $proposal['uuid']), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button><?php endif; ?>
                 <?php if ($proposal['status'] === 'approved' && activeGroupCan('loans.complete')): ?><button type="button" class="button button--success button--icon-only button--sm" title="Tandai Selesai" aria-label="Tandai Selesai" onclick="openCompleteDialog('<?= esc(base_url('peminjaman/lab-loans/complete/' . $proposal['uuid']), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="m5 12 4 4L19 6" /></svg></button><?php endif; ?>
+                <?php if ($proposal['status'] === 'approved' && activeGroupIs('laboran')): ?><button type="button" class="button button--danger button--icon-only button--sm" title="Batalkan karena kebutuhan mendesak" aria-label="Batalkan proposal <?= esc($proposal['event_name'], 'attr') ?>" onclick="openCancelDialog('<?= esc(base_url('peminjaman/lab-loans/cancel/' . $proposal['uuid']), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 6l12 12m0-12L6 18" /></svg></button><?php endif; ?>
               </div></td>
             </tr>
             <?php endforeach; ?>
@@ -89,6 +92,26 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
       </div>
     </div>
     <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> proposal</span><?= $pager->only(['q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
+  </div>
+</div>
+
+<div class="dialog dialog--sm" id="cancelConfirm" data-stisla-dialog data-state="closed" role="dialog" aria-modal="true" aria-labelledby="cancelConfirmLabel" aria-hidden="true" tabindex="-1">
+  <div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+  <div class="dialog__panel">
+    <div class="dialog__content">
+      <button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">
+        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+      <form id="cancelForm" method="post">
+        <?= csrf_field() ?>
+        <div class="dialog__body">
+          <h3 class="dialog__title mb-1" id="cancelConfirmLabel">Batalkan proposal?</h3>
+          <p class="text-muted-foreground mb-4">Proposal <strong data-slot="cancel-event"></strong> akan dibatalkan dan pemohon akan menerima pemberitahuan.</p>
+          <div class="field"><label class="field__label" for="cancel_note">Alasan Pembatalan <span class="text-danger">*</span></label><textarea class="input" id="cancel_note" name="note" rows="3" required></textarea></div>
+        </div>
+        <div class="dialog__footer"><button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button><button type="submit" class="button button--danger">Batalkan Proposal</button></div>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -157,6 +180,18 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
     });
   }
 
+  function openCancelDialog(actionUrl, eventName) {
+    var dialog = document.getElementById('cancelConfirm');
+    var form = document.getElementById('cancelForm');
+    if (!dialog || !form) return;
+    form.action = actionUrl;
+    form.querySelector('#cancel_note').value = '';
+    dialog.querySelector('[data-slot="cancel-event"]').textContent = eventName;
+    dialog.dataset.state = 'open';
+    dialog.setAttribute('aria-hidden', 'false');
+    window.requestAnimationFrame(function () { form.querySelector('#cancel_note').focus(); });
+  }
+
   function openDeleteDialog(actionUrl, eventName) {
     var dialog = document.getElementById('deleteConfirm');
     var form = document.getElementById('deleteForm');
@@ -185,6 +220,11 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
   });
 
   document.getElementById('deleteForm')?.addEventListener('submit', function () {
+    var submitButton = this.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+  });
+
+  document.getElementById('cancelForm')?.addEventListener('submit', function () {
     var submitButton = this.querySelector('button[type="submit"]');
     if (submitButton) submitButton.disabled = true;
   });

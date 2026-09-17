@@ -17,11 +17,13 @@ $statusLabels = [
     'laboran_approved' => 'Menunggu Approval Kepala Lab',
   'approved' => 'Disetujui',
   'rejected' => 'Ditolak',
+  'cancelled' => 'Dibatalkan',
   'completed' => 'Selesai',
 ];
 $statusColors = [
   'submitted' => 'warning',
   'laboran_approved' => 'info',
+  'cancelled' => 'danger',
 ];
 $stageTitle = $stage === 'laboran'
     ? 'Menunggu Approval Laboran'
@@ -92,7 +94,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
               <td><?= esc($fmt($entry['created_at'])) ?></td>
               <td><strong><?= esc($entry['full_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($entry['identity_number']) ?></div></td>
               <td><strong><?= esc($entry['event_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($entry['laboratory_name']) ?></div></td>
-              <td><span class="badge badge--soft badge--<?= $entry['to_status'] === 'rejected' ? 'danger' : 'success' ?>"><?= esc($statusLabels[$entry['to_status']] ?? $entry['to_status']) ?></span></td>
+              <td><span class="badge badge--soft badge--<?= in_array($entry['to_status'], ['rejected', 'cancelled'], true) ? 'danger' : 'success' ?>"><?= esc($statusLabels[$entry['to_status']] ?? $entry['to_status']) ?></span></td>
               <td><?= esc($entry['changed_by_name'] ?: '-') ?></td>
               <td><?= esc($entry['note'] ?: '-') ?></td>
               <td class="text-end"><a href="<?= base_url('peminjaman/lab-loans/detail-approval-history/' . $entry['proposal_uuid']) ?>" class="button button--info button--icon-only button--sm" title="Detail Proposal" aria-label="Detail Proposal"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 0 0 0-15Zm0 3.25v.5m0 2.5v4.5" /></svg></a></td>
