@@ -1,6 +1,6 @@
 <?php
-$statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'completed' => 'Selesai'];
-$statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'laboran_approved' => 'info', 'rejected' => 'danger', 'approved' => 'success', 'completed' => 'primary'];
+$statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'cancelled' => 'Dibatalkan', 'completed' => 'Selesai'];
+$statusColors = ['draft' => 'secondary', 'submitted' => 'warning', 'laboran_approved' => 'info', 'rejected' => 'danger', 'approved' => 'success', 'cancelled' => 'danger', 'completed' => 'primary'];
 $canApprove = activeGroupCan('loans.approve');
 ?>
 <style>
@@ -62,6 +62,7 @@ $canApprove = activeGroupCan('loans.approve');
 								<td class="text-end">
 									<div class="flex justify-end gap-1"><?php if ($proposal['status'] !== 'draft'): ?><a class="button button--info button--icon-only button--sm" title="Detail" href="<?= base_url(($canApprove && $proposal['status'] === 'submitted' ? 'peminjaman/asset-loans/detail-approval/' : 'peminjaman/asset-loans/detail/') . $proposal['uuid']) ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 0 0 0-15Zm0 3.25v.5m0 2.5v4.5" /></svg></a><?php endif; ?><?php if ($proposal['status'] === 'draft'): ?><a class="button button--warning button--icon-only button--sm" title="Edit" href="<?= base_url('peminjaman/asset-loans/edit/' . $proposal['uuid']) ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" /></svg></a><a class="button button--primary button--icon-only button--sm" title="Tambah Asset" href="<?= base_url('peminjaman/asset-loans/items/' . $proposal['uuid']) ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 5v14m-7-7h14" /></svg></a>
 											<form method="post" action="<?= base_url('peminjaman/asset-loans/delete/' . $proposal['uuid']) ?>" onsubmit="return confirm('Batalkan pengajuan ini?')"><?= csrf_field() ?><button class="button button--danger button--icon-only button--sm" title="Batalkan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?><?php if ($proposal['status'] === 'approved' && activeGroupCan('loans.complete')): ?><a href="<?= base_url('peminjaman/asset-loans/returns/' . $proposal['uuid']) ?>" class="button button--success button--icon-only button--sm" title="Pengembalian"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7V5.5A1.5 1.5 0 0 1 8.5 4h7A1.5 1.5 0 0 1 17 5.5v13A1.5 1.5 0 0 1 15.5 20h-7A1.5 1.5 0 0 1 7 18.5V17"/><path d="M3 12h12"/><path d="m13 9 3 3-3 3"/></svg></a><?php endif; ?>
+									<?php if ($proposal['status'] === 'approved' && activeGroupIs('laboran')): ?><button type="button" class="button button--danger button--icon-only button--sm" title="Batalkan karena kebutuhan mendesak" aria-label="Batalkan pengajuan <?= esc($proposal['event_name'], 'attr') ?>" onclick="openAssetCancelDialog('<?= esc(base_url('peminjaman/asset-loans/cancel/' . $proposal['uuid']), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 6l12 12m0-12L6 18" /></svg></button><?php endif; ?>
 									</div>
 								</td>
 							</tr><?php endforeach; ?><?php if (! $proposals): ?><tr>
@@ -71,6 +72,17 @@ $canApprove = activeGroupCan('loans.approve');
 			</div>
 		</div><?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border)">Total <?= $totalRows ?> pengajuan <?= $pager->links('default', 'app') ?></div><?php endif; ?>
 	</div>
+</div>
+
+<div class="dialog dialog--sm" id="assetCancelConfirm" data-stisla-dialog data-state="closed" role="dialog" aria-modal="true" aria-labelledby="assetCancelConfirmLabel" aria-hidden="true" tabindex="-1">
+	<div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+	<div class="dialog__panel"><div class="dialog__content">
+		<button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">&times;</button>
+		<form id="assetCancelForm" method="post"><?= csrf_field() ?>
+			<div class="dialog__body"><h3 class="dialog__title mb-1" id="assetCancelConfirmLabel">Batalkan pengajuan?</h3><p class="text-muted-foreground mb-4">Pengajuan <strong data-slot="asset-cancel-event"></strong> akan dibatalkan dan pemohon akan menerima pemberitahuan.</p><div class="field"><label class="field__label" for="asset_cancel_note">Alasan Pembatalan <span class="text-danger">*</span></label><textarea class="input" id="asset_cancel_note" name="note" rows="3" required></textarea></div></div>
+			<div class="dialog__footer"><button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button><button type="submit" class="button button--danger">Batalkan Pengajuan</button></div>
+		</form>
+	</div></div>
 </div>
 
 <div class="dialog dialog--sm" id="assetDeleteConfirm" data-stisla-dialog data-state="closed" role="alertdialog" aria-modal="true" aria-labelledby="assetDeleteConfirmLabel" aria-describedby="assetDeleteConfirmDesc" aria-hidden="true" tabindex="-1">
@@ -93,6 +105,17 @@ $canApprove = activeGroupCan('loans.approve');
 					var dialog = document.getElementById('assetDeleteConfirm');
 					var modalForm = document.getElementById('assetDeleteForm');
 					var name = document.getElementById('assetDeleteConfirmName');
+					window.openAssetCancelDialog = function(actionUrl, eventName) {
+						var cancelDialog = document.getElementById('assetCancelConfirm');
+						var cancelForm = document.getElementById('assetCancelForm');
+						if (!cancelDialog || !cancelForm) return;
+						cancelForm.action = actionUrl;
+						cancelForm.querySelector('#asset_cancel_note').value = '';
+						cancelDialog.querySelector('[data-slot="asset-cancel-event"]').textContent = eventName;
+						cancelDialog.dataset.state = 'open';
+						cancelDialog.setAttribute('aria-hidden', 'false');
+						window.requestAnimationFrame(function() { cancelForm.querySelector('#asset_cancel_note').focus(); });
+					};
 					var deleteForms = document.querySelectorAll('form[action*="/peminjaman/asset-loans/delete/"]');
 					deleteForms.forEach(function(form) {
 						form.removeAttribute('onsubmit');

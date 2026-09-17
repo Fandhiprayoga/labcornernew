@@ -152,6 +152,16 @@ class Notification
             ]);
     }
 
+    public function sendAssetProposalCancelledToApplicant(int $userId, string $eventName, string $url, string $reason): void
+    {
+        $this->send($userId, 'Pengajuan peminjaman asset dibatalkan',
+            "Pengajuan kegiatan {$eventName} dibatalkan. Alasan: " . trim($reason), [
+                'url' => $url,
+                'type' => 'danger',
+                'module' => 'asset_loan_proposal',
+            ]);
+    }
+
     /**
      * Ambil daftar notifikasi milik seorang user.
      */

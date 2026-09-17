@@ -86,6 +86,7 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
         $routes->post('update/(:uuid)', 'AssetLoanProposalController::update/$1', ['filter' => 'permission:loans.edit']);
         $routes->post('delete/(:uuid)', 'AssetLoanProposalController::delete/$1', ['filter' => 'permission:loans.delete']);
         $routes->post('complete/(:uuid)', 'AssetLoanProposalController::complete/$1', ['filter' => 'permission:loans.complete']);
+        $routes->post('cancel/(:uuid)', 'AssetLoanProposalController::cancel/$1', ['filter' => 'permission:loans.complete']);
         $routes->get('items/(:uuid)', 'AssetLoanProposalController::items/$1', ['filter' => 'permission:loans.list']);
         $routes->post('items/(:uuid)/add', 'AssetLoanProposalController::addItem/$1', ['filter' => 'permission:loans.edit']);
         $routes->post('items/(:uuid)/remove/(:uuid)', 'AssetLoanProposalController::removeItem/$1/$2', ['filter' => 'permission:loans.edit']);

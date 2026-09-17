@@ -37,7 +37,7 @@ class AssetLoanProposalStatusHistoryModel extends Model
         $query = $this->select('asset_loan_proposal_status_histories.*, asset_loan_proposals.uuid AS proposal_uuid, asset_loan_proposals.full_name, asset_loan_proposals.identity_number, asset_loan_proposals.event_name, users.username AS changed_by_name')
             ->join('asset_loan_proposals', 'asset_loan_proposals.id = asset_loan_proposal_status_histories.proposal_id')
             ->join('users', 'users.id = asset_loan_proposal_status_histories.changed_by', 'left')
-            ->whereIn('asset_loan_proposal_status_histories.to_status', ['laboran_approved', 'approved', 'rejected']);
+            ->whereIn('asset_loan_proposal_status_histories.to_status', ['laboran_approved', 'approved', 'rejected', 'cancelled']);
         if ($changedBy !== null) $query->where('asset_loan_proposal_status_histories.changed_by', $changedBy);
         if ($status !== '') $query->where('asset_loan_proposal_status_histories.to_status', $status);
         if ($laboratoryUuid !== '') {

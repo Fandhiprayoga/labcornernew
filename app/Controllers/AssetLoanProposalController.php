@@ -12,7 +12,7 @@ class AssetLoanProposalController extends BaseController
 {
     private const PER_PAGE = [10, 25, 50, 100];
     private const CATALOG_PER_PAGE = [8, 12, 24, 48];
-    private const STATUSES = ['draft', 'submitted', 'laboran_approved', 'rejected', 'approved', 'completed'];
+    private const STATUSES = ['draft', 'submitted', 'laboran_approved', 'rejected', 'approved', 'cancelled', 'completed'];
     protected AssetLoanProposalModel $proposalModel;
     protected AssetLoanProposalItemModel $itemModel;
     protected AssetLoanProposalStatusHistoryModel $historyModel;
@@ -412,6 +412,58 @@ class AssetLoanProposalController extends BaseController
         $this->proposalModel->update($proposal['id'], ['status' => 'completed']);
         $this->historyModel->record((int) $proposal['id'], 'approved', 'completed', 'Peminjaman ditandai selesai.');
         return redirect()->to('/peminjaman/asset-loans')->with('success', 'Pengajuan ditandai selesai.');
+    }
+
+    public function cancel(string $uuid)
+    {
+        $proposal = $this->proposalModel->findByUuid($uuid);
+        $redirect = redirect()->to('/peminjaman/asset-loans');
+
+        if (! $proposal) {
+            return $redirect->with('error', 'Pengajuan peminjaman asset tidak ditemukan.');
+        }
+
+        if (! activeGroupIs('laboran') || ! $this->isAssignedLaboran((int) $proposal['id'])) {
+            return $redirect->with('error', 'Hanya laboran yang ditugaskan pada laboratorium asset pengajuan ini yang dapat membatalkannya.');
+        }
+
+        $note = trim((string) $this->request->getPost('note'));
+        if ($note === '') {
+            return $redirect->with('error', 'Alasan pembatalan wajib diisi.');
+        }
+
+        $db = db_connect();
+        $db->transBegin();
+        $lockedProposal = $db->query(
+            'SELECT id, status FROM asset_loan_proposals WHERE id = ? FOR UPDATE',
+            [$proposal['id']]
+        )->getRowArray();
+
+        if (! $lockedProposal || $lockedProposal['status'] !== 'approved') {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Hanya pengajuan yang sudah disetujui yang dapat dibatalkan.');
+        }
+
+        $this->proposalModel->update((int) $proposal['id'], ['status' => 'cancelled']);
+        $this->historyModel->record((int) $proposal['id'], 'approved', 'cancelled', $note);
+
+        if ($db->transStatus() === false) {
+            $db->transRollback();
+
+            return $redirect->with('error', 'Gagal membatalkan pengajuan peminjaman asset.');
+        }
+
+        $db->transCommit();
+
+        notification()->sendAssetProposalCancelledToApplicant(
+            (int) $proposal['user_id'],
+            (string) $proposal['event_name'],
+            '/peminjaman/asset-loans/detail/' . $proposal['uuid'],
+            $note
+        );
+
+        return $redirect->with('success', 'Pengajuan peminjaman asset berhasil dibatalkan.');
     }
 
     private function processApproval(string $uuid, bool $approve)

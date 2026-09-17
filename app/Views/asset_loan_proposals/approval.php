@@ -1,6 +1,6 @@
 <?php
-$statusLabels = ['submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'approved' => 'Disetujui', 'rejected' => 'Ditolak'];
-$statusColors = ['submitted' => 'warning', 'laboran_approved' => 'info', 'approved' => 'success', 'rejected' => 'danger'];
+$statusLabels = ['submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'approved' => 'Disetujui', 'rejected' => 'Ditolak', 'cancelled' => 'Dibatalkan'];
+$statusColors = ['submitted' => 'warning', 'laboran_approved' => 'info', 'approved' => 'success', 'rejected' => 'danger', 'cancelled' => 'danger'];
 $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value));
 ?>
 <div class="page__section flex flex-col gap-4">
