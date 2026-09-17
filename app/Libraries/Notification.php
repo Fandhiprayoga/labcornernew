@@ -64,20 +64,25 @@ class Notification
     }
 
     /**
-     * Notifikasi proposal yang diajukan, dikirim ke laboran terkait dan kepala lab.
+     * Notifikasi proposal yang diajukan ke laboran yang ditugaskan pada lab proposal.
      */
-    public function sendProposalSubmittedToReviewers(int $proposalId, string $eventName, string $url): void
+    public function sendProposalSubmittedToLaborans(int $proposalId, string $eventName, string $url): void
     {
-        $userIds = $this->userIdsForProposalReview($proposalId);
+        $userIds = $this->userIdsForAssignedLaborans($proposalId);
 
         if (empty($userIds)) {
             return;
         }
 
         $this->sendToMany($userIds, 'Proposal peminjaman menunggu persetujuan',
-            "Proposal kegiatan {$eventName} menunggu persetujuan laboran dan kepala laboratorium.",
+            "Proposal kegiatan {$eventName} menunggu persetujuan laboran.",
             ['url' => $url, 'type' => 'warning', 'module' => 'loan_proposal']
         );
+    }
+
+    public function sendProposalSubmittedToReviewers(int $proposalId, string $eventName, string $url): void
+    {
+        $this->sendProposalSubmittedToLaborans($proposalId, $eventName, $url);
     }
 
     /**
@@ -125,6 +130,16 @@ class Notification
             'type' => $approved ? 'success' : 'danger',
             'module' => $module,
         ]);
+    }
+
+    public function sendProposalCompletedToApplicant(int $userId, string $eventName, string $url): void
+    {
+        $this->send($userId, 'Proposal peminjaman selesai',
+            "Peminjaman untuk kegiatan {$eventName} telah ditandai selesai.", [
+                'url' => $url,
+                'type' => 'success',
+                'module' => 'loan_proposal',
+            ]);
     }
 
     /**
@@ -218,7 +233,7 @@ class Notification
         return array_values(array_unique(array_filter(array_map(static fn (array $row): int => (int) ($row['user_id'] ?? 0), $rows))));
     }
 
-    protected function userIdsForProposalReview(int $proposalId): array
+    protected function userIdsForAssignedLaborans(int $proposalId): array
     {
         $db = db_connect();
 
@@ -236,16 +251,14 @@ class Notification
         );
 
         if (! $result || ! method_exists($result, 'getResultArray')) {
-            return $this->userIdsByGroup('kepala_lab');
+            return [];
         }
 
         $rows = $result->getResultArray();
         $userIds = array_map(static fn (array $row): int => (int) ($row['user_id'] ?? 0), $rows);
         $userIds = array_values(array_filter($userIds, static fn (int $userId): bool => $userId > 0));
 
-        $headLabIds = $this->userIdsByGroup('kepala_lab');
-
-        return array_values(array_unique(array_merge($userIds, $headLabIds)));
+        return array_values(array_unique($userIds));
     }
 
     protected function userIdsForAssetProposalReview(int $proposalId): array

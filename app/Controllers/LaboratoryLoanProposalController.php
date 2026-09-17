@@ -224,6 +224,11 @@ class LaboratoryLoanProposalController extends BaseController
 
         $this->proposalModel->update((int) $proposal['id'], ['status' => 'completed']);
         $this->statusHistoryModel->record((int) $proposal['id'], 'approved', 'completed', 'Peminjaman ditandai selesai.');
+        notification()->sendProposalCompletedToApplicant(
+            (int) $proposal['user_id'],
+            (string) $proposal['event_name'],
+            '/peminjaman/lab-loans/detail/' . $proposal['uuid']
+        );
 
         if ($db->transStatus() === false) {
             $db->transRollback();
@@ -361,7 +366,7 @@ class LaboratoryLoanProposalController extends BaseController
         $this->proposalModel->update($lockedProposal['id'], ['status' => 'submitted']);
         $this->statusHistoryModel->record((int) $lockedProposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
 
-        notification()->sendProposalSubmittedToReviewers(
+        notification()->sendProposalSubmittedToLaborans(
             (int) $lockedProposal['id'],
             (string) $lockedProposal['event_name'],
             '/peminjaman/lab-loans-approval'
@@ -660,23 +665,18 @@ class LaboratoryLoanProposalController extends BaseController
         $this->proposalModel->update((int) $proposal['id'], ['status' => $nextStatus]);
         $this->statusHistoryModel->record((int) $proposal['id'], $currentStatus, $nextStatus, $note);
 
-        if ($approve && $nextStatus === 'approved') {
-            notification()->sendProposalDecisionToApplicant(
-                (int) $proposal['user_id'],
-                (string) $proposal['event_name'],
-                true,
-                '/peminjaman/lab-loans/detail/' . $proposal['uuid'],
-                $note
-            );
-        }
+        notification()->sendProposalDecisionToApplicant(
+            (int) $proposal['user_id'],
+            (string) $proposal['event_name'],
+            $approve,
+            '/peminjaman/lab-loans/detail/' . $proposal['uuid'],
+            $note
+        );
 
-        if (! $approve && $nextStatus === 'rejected') {
-            notification()->sendProposalDecisionToApplicant(
-                (int) $proposal['user_id'],
+        if ($approve && $nextStatus === 'laboran_approved') {
+            notification()->sendApprovalNeededToHeadLab(
                 (string) $proposal['event_name'],
-                false,
-                '/peminjaman/lab-loans/detail/' . $proposal['uuid'],
-                $note
+                '/peminjaman/lab-loans-approval'
             );
         }
 
