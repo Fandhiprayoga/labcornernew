@@ -133,7 +133,7 @@ if (! function_exists('lab_availability_map')) {
             $map[$laboratoryId]['conflicts'][] = $conflict;
         }
 
-        return $map;
+        return $map;  
     }
 }
 
