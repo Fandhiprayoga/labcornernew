@@ -37,13 +37,15 @@ class AssetLoanProposalController extends BaseController
             ->join('asset_loan_proposal_items', 'asset_loan_proposal_items.proposal_id = asset_loan_proposals.id', 'left')
             ->join('assets', 'assets.id = asset_loan_proposal_items.asset_id', 'left');
         if (! $reviewer) $query->where('asset_loan_proposals.user_id', auth()->id());
+        if (activeGroupIs('laboran')) $query->where('asset_loan_proposals.status !=', 'draft');
         if ($search !== '') $query->groupStart()->like('asset_loan_proposals.identity_number', $search)->orLike('asset_loan_proposals.full_name', $search)->orLike('asset_loan_proposals.event_name', $search)->orLike('assets.asset_code', $search)->orLike('assets.name', $search)->groupEnd();
         if ($status !== '') $query->where('asset_loan_proposals.status', $status);
         $proposals = $query->groupBy('asset_loan_proposals.id')->orderBy('asset_loan_proposals.proposal_date', 'DESC')->orderBy('asset_loan_proposals.id', 'DESC')->paginate($perPage);
         return $this->renderView('asset_loan_proposals/index', [
             'title' => 'Peminjaman Asset', 'page_title' => 'Peminjaman Asset', 'proposals' => $proposals,
             'pager' => $this->proposalModel->pager, 'search' => $search, 'status' => $status,
-            'statusOptions' => self::STATUSES, 'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE,
+            'statusOptions' => activeGroupIs('laboran') ? array_values(array_diff(self::STATUSES, ['draft'])) : self::STATUSES,
+            'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE,
             'totalRows' => $this->proposalModel->pager->getTotal(),
         ]);
     }
