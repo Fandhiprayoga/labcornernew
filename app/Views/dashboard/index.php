@@ -2,6 +2,8 @@
 $currentUser = auth()->user();
 $groups = $currentUser->getGroups();
 $groupLabel = activeGroupTitle();
+$currentStudyProgram = $currentStudyProgram ?? null;
+$overview = $overview ?? null;
 $calendarMonthNames = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
 $requestedMonth = (int) service('request')->getGet('month');
 $requestedYear = (int) service('request')->getGet('year');
@@ -181,7 +183,7 @@ foreach ($loanEvents ?? [] as $loanEvent) {
   </div>
 </div>
 
-<?php if (activeGroupCan('admin.access')): ?>
+<?php if ($overview !== null): ?>
 <div class="page__section">
   <div class="grid grid-cols-12 gap-4">
     <div class="col-span-12 sm:col-span-6 xl:col-span-3">
@@ -198,8 +200,8 @@ foreach ($loanEvents ?? [] as $loanEvent) {
             </span>
           </div>
           <div class="stat mt-3">
-            <div class="stat__value"><?php $userModel = new \CodeIgniter\Shield\Models\UserModel(); echo $userModel->countAllResults(); ?></div>
-            <div class="stat__label text-eyebrow">Total Users</div>
+            <div class="stat__value"><?= $overview['laboratories'] ?></div>
+            <div class="stat__label text-eyebrow"><?= activeGroupIs('laboran') ? 'Lab Ditugaskan' : 'Total Laboratorium' ?></div>
           </div>
         </div>
       </div>
@@ -217,8 +219,8 @@ foreach ($loanEvents ?? [] as $loanEvent) {
             </span>
           </div>
           <div class="stat mt-3">
-            <div class="stat__value"><?= count(config('AuthGroups')->groups) ?></div>
-            <div class="stat__label text-eyebrow">Total Roles</div>
+            <div class="stat__value"><?= $overview['assets'] ?></div>
+            <div class="stat__label text-eyebrow">Total Aset</div>
           </div>
         </div>
       </div>
@@ -236,8 +238,8 @@ foreach ($loanEvents ?? [] as $loanEvent) {
             </span>
           </div>
           <div class="stat mt-3">
-            <div class="stat__value"><?= count(config('AuthGroups')->permissions) ?></div>
-            <div class="stat__label text-eyebrow">Total Permissions</div>
+            <div class="stat__value"><?= $overview['laboratoryLoans'] ?></div>
+            <div class="stat__label text-eyebrow">Peminjaman Lab Aktif</div>
           </div>
         </div>
       </div>
@@ -254,8 +256,8 @@ foreach ($loanEvents ?? [] as $loanEvent) {
             </span>
           </div>
           <div class="stat mt-3">
-            <div class="stat__value">Active</div>
-            <div class="stat__label text-eyebrow">Status Sistem</div>
+            <div class="stat__value"><?= $overview['assetLoans'] ?></div>
+            <div class="stat__label text-eyebrow">Peminjaman Aset Aktif</div>
           </div>
         </div>
       </div>
@@ -346,7 +348,7 @@ foreach ($loanEvents ?? [] as $loanEvent) {
         </div>
       </div>
     </div>
-    <?php if (in_array('laboran', $groups, true)): ?>
+    <?php if (activeGroupIs('laboran')): ?>
       <div class="col-span-12 lg:col-span-6">
         <div class="card">
           <div class="card__header">

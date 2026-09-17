@@ -64,12 +64,20 @@ class DashboardController extends BaseController
         $laboranAssignments = [];
         if (in_array('laboran', $userGroups, true)) {
             $laboranAssignments = (new LaboratoryLaboranModel())
-                ->select('laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name')
+                ->select('laboratory_laborans.laboratory_id, laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name')
                 ->join('laboratories', 'laboratories.id = laboratory_laborans.laboratory_id')
                 ->join('rooms', 'rooms.id = laboratories.room_id', 'left')
                 ->where('laboratory_laborans.user_id', $user->id)
                 ->orderBy('laboratories.name', 'ASC')
                 ->findAll();
+        }
+
+        $activeGroup = activeGroup();
+        $overview = null;
+        if ($activeGroup === 'laboran') {
+            $overview = $this->laboratoryOverview(array_map('intval', array_column($laboranAssignments, 'laboratory_id')));
+        } elseif (in_array($activeGroup, ['superadmin', 'kepala_lab'], true)) {
+            $overview = $this->laboratoryOverview();
         }
 
         $data = [
@@ -79,6 +87,7 @@ class DashboardController extends BaseController
             'userGroups'             => $userGroups,
             'currentStudyProgram'    => $currentStudyProgram,
             'laboranAssignments'     => $laboranAssignments,
+            'overview'               => $overview,
             'loanEvents'             => $loanEvents,
             'laboratories'           => $laboratories,
             'selectedLaboratoryUuid' => $selectedLaboratoryUuid,
@@ -86,6 +95,49 @@ class DashboardController extends BaseController
 
 
         return $this->renderView('dashboard/index', $data);
+    }
+
+    private function laboratoryOverview(?array $laboratoryIds = null): array
+    {
+        if ($laboratoryIds === []) {
+            return ['laboratories' => 0, 'assets' => 0, 'laboratoryLoans' => 0, 'assetLoans' => 0];
+        }
+
+        $db = db_connect();
+        $activeStatuses = ['submitted', 'laboran_approved', 'approved'];
+
+        $laboratoryQuery = $db->table('laboratories')
+            ->where('status', 'active')
+            ->where('deleted_at', null);
+        $assetQuery = $db->table('assets')->where('deleted_at', null);
+        $laboratoryLoanQuery = $db->table('laboratory_loan_proposal_items AS items')
+            ->select('items.proposal_id')
+            ->join('laboratory_loan_proposals AS proposals', 'proposals.id = items.proposal_id')
+            ->where('items.deleted_at', null)
+            ->where('proposals.deleted_at', null)
+            ->whereIn('proposals.status', $activeStatuses);
+        $assetLoanQuery = $db->table('asset_loan_proposal_items AS items')
+            ->select('items.proposal_id')
+            ->join('asset_loan_proposals AS proposals', 'proposals.id = items.proposal_id')
+            ->join('assets', 'assets.id = items.asset_id')
+            ->where('items.deleted_at', null)
+            ->where('proposals.deleted_at', null)
+            ->where('assets.deleted_at', null)
+            ->whereIn('proposals.status', $activeStatuses);
+
+        if ($laboratoryIds !== null) {
+            $laboratoryQuery->whereIn('id', $laboratoryIds);
+            $assetQuery->whereIn('laboratory_id', $laboratoryIds);
+            $laboratoryLoanQuery->whereIn('items.laboratory_id', $laboratoryIds);
+            $assetLoanQuery->whereIn('assets.laboratory_id', $laboratoryIds);
+        }
+
+        return [
+            'laboratories' => $laboratoryQuery->countAllResults(),
+            'assets' => $assetQuery->countAllResults(),
+            'laboratoryLoans' => count($laboratoryLoanQuery->groupBy('items.proposal_id')->get()->getResultArray()),
+            'assetLoans' => count($assetLoanQuery->groupBy('items.proposal_id')->get()->getResultArray()),
+        ];
     }
 }
 
