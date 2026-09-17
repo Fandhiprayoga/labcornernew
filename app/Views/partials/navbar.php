@@ -164,11 +164,6 @@ $badgeColors = [
         <div class="menu__popup w-48" id="topbarUser" data-stisla-menu role="menu" data-state="closed">
           <div class="menu__group" role="group">
             <h3 class="menu__group-label"><?= esc($currentUser->username ?? 'User') ?></h3>
-            <?php if (count($userGroups) === 1): ?>
-            <span class="menu__item disabled">
-              <span class="badge badge--<?= $badgeColors[$active] ?? 'secondary' ?>"><?= esc(activeGroupTitle()) ?></span>
-            </span>
-            <?php endif; ?>
             <a href="<?= base_url('profile') ?>" class="menu__item" role="menuitem">
               <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
                 <g fill="none" stroke="currentColor" stroke-width="1.5">
