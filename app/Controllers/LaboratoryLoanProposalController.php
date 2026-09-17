@@ -105,20 +105,6 @@ class LaboratoryLoanProposalController extends BaseController
         $isKepalaLab = activeGroupIs('kepala_lab');
         $laboratoryOptions = $this->filterLaboratoryOptions();
 
-        if ($isLaboran && $laboratoryUuid === '') {
-            $assignedLaboratoryIds = $this->assignedLaboratoryIds();
-            $defaultLaboratory = db_connect()->table('laboratories')
-                ->select('uuid')
-                ->whereIn('id', $assignedLaboratoryIds)
-                ->orderBy('name', 'ASC')
-                ->get()
-                ->getRowArray();
-
-            if ($defaultLaboratory) {
-                $laboratoryUuid = (string) $defaultLaboratory['uuid'];
-            }
-        }
-
         if ($tab === 'history') {
             $history = $this->statusHistoryModel->getApprovalHistory(
                 $perPage,
