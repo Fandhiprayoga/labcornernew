@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\LaboratoryLoanProposalItemModel;
 use App\Models\LaboratoryLoanProposalModel;
+use App\Models\LaboratoryLaboranModel;
 use App\Models\LaboratoryModel;
 use App\Models\StudyProgramModel;
 
@@ -12,6 +13,7 @@ class DashboardController extends BaseController
     public function index()
     {
         $user = auth()->user();
+        $userGroups = $user->getGroups();
 
         $studyProgramModel = new StudyProgramModel();
         $currentStudyProgram = $user->study_program_id
@@ -59,12 +61,24 @@ class DashboardController extends BaseController
             }
         }
 
+        $laboranAssignments = [];
+        if (in_array('laboran', $userGroups, true)) {
+            $laboranAssignments = (new LaboratoryLaboranModel())
+                ->select('laboratories.name AS laboratory_name, rooms.code AS room_code, rooms.name AS room_name')
+                ->join('laboratories', 'laboratories.id = laboratory_laborans.laboratory_id')
+                ->join('rooms', 'rooms.id = laboratories.room_id', 'left')
+                ->where('laboratory_laborans.user_id', $user->id)
+                ->orderBy('laboratories.name', 'ASC')
+                ->findAll();
+        }
+
         $data = [
             'title'                  => 'Dashboard',
             'page_title'             => 'Dashboard',
             'user'                   => $user,
-            'userGroups'             => $user->getGroups(),
+            'userGroups'             => $userGroups,
             'currentStudyProgram'    => $currentStudyProgram,
+            'laboranAssignments'     => $laboranAssignments,
             'loanEvents'             => $loanEvents,
             'laboratories'           => $laboratories,
             'selectedLaboratoryUuid' => $selectedLaboratoryUuid,

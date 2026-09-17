@@ -346,5 +346,39 @@ foreach ($loanEvents ?? [] as $loanEvent) {
         </div>
       </div>
     </div>
+    <?php if (in_array('laboran', $groups, true)): ?>
+      <div class="col-span-12 lg:col-span-6">
+        <div class="card">
+          <div class="card__header">
+            <span class="card__title">Detail Penugasan Laboran</span>
+          </div>
+          <div class="card__body">
+            <?php if (! empty($laboranAssignments)): ?>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Laboratorium</th>
+                    <th>Ruang</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($laboranAssignments as $assignment): ?>
+                    <tr>
+                      <td><?= esc($assignment['laboratory_name']) ?></td>
+                      <td>
+                        <strong><?= esc($assignment['room_code'] ?: '-') ?></strong>
+                        <div class="text-xs text-muted-foreground"><?= esc($assignment['room_name'] ?: '-') ?></div>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            <?php else: ?>
+              <?= view('partials/empty_table_state', ['message' => 'Belum ada laboratorium yang ditugaskan.']) ?>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
   </div>
 </div>
