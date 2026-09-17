@@ -23,12 +23,12 @@ $canApprove = activeGroupCan('loans.approve');
 </style>
 <div class="page__section">
 	<div class="card">
-		<div class="card__header"><span class="card__title">Proposal Peminjaman Asset</span>
-			<div class="card__action"><?php if (activeGroupCan('loans.create')): ?><a href="<?= base_url('peminjaman/asset-loans/create') ?>" class="button button--primary button--sm">+ Ajukan Proposal</a><?php endif; ?></div>
+		<div class="card__header"><span class="card__title">Pengajuan Peminjaman Asset</span>
+			<div class="card__action"><?php if (activeGroupCan('loans.create')): ?><a href="<?= base_url('peminjaman/asset-loans/create') ?>" class="button button--primary button--sm">+ Buat Pengajuan</a><?php endif; ?></div>
 		</div>
 		<div class="card__body" style="border-bottom:1px solid var(--color-border)">
 			<form method="get" action="<?= base_url('peminjaman/asset-loans') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem">
-				<div style="flex:1 1 260px"><label class="text-xs text-muted-foreground" for="q">Cari proposal</label><input class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Identitas, nama, kegiatan, kode atau nama asset..."></div>
+				<div style="flex:1 1 260px"><label class="text-xs text-muted-foreground" for="q">Cari pengajuan</label><input class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Identitas, nama, kegiatan, kode atau nama asset..."></div>
 				<div style="flex:0 0 180px"><label class="text-xs text-muted-foreground" for="status">Status</label><select class="select" id="status" name="status">
 						<option value="">Semua Status</option><?php foreach ($statusOptions as $option): ?><option value="<?= $option ?>" <?= $status === $option ? 'selected' : '' ?>><?= $statusLabels[$option] ?></option><?php endforeach; ?>
 					</select></div><button class="button button--primary button--sm">Filter</button>
@@ -57,15 +57,15 @@ $canApprove = activeGroupCan('loans.approve');
 								<td><span class="badge badge--soft badge--<?= $statusColors[$proposal['status']] ?>"><?= $statusLabels[$proposal['status']] ?></span></td>
 								<td class="text-end">
 									<div class="flex justify-end gap-1"><?php if ($proposal['status'] !== 'draft'): ?><a class="button button--info button--icon-only button--sm" title="Detail" href="<?= base_url(($canApprove && $proposal['status'] === 'submitted' ? 'peminjaman/asset-loans/detail-approval/' : 'peminjaman/asset-loans/detail/') . $proposal['uuid']) ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 0 0 0-15Zm0 3.25v.5m0 2.5v4.5" /></svg></a><?php endif; ?><?php if ($proposal['status'] === 'draft'): ?><a class="button button--warning button--icon-only button--sm" title="Edit" href="<?= base_url('peminjaman/asset-loans/edit/' . $proposal['uuid']) ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" /></svg></a><a class="button button--primary button--icon-only button--sm" title="Tambah Asset" href="<?= base_url('peminjaman/asset-loans/items/' . $proposal['uuid']) ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 5v14m-7-7h14" /></svg></a>
-											<form method="post" action="<?= base_url('peminjaman/asset-loans/delete/' . $proposal['uuid']) ?>" onsubmit="return confirm('Batalkan proposal ini?')"><?= csrf_field() ?><button class="button button--danger button--icon-only button--sm" title="Batalkan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?><?php if ($proposal['status'] === 'approved' && activeGroupCan('loans.complete')): ?><a href="<?= base_url('peminjaman/asset-loans/returns/' . $proposal['uuid']) ?>" class="button button--success button--icon-only button--sm" title="Pengembalian"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7V5.5A1.5 1.5 0 0 1 8.5 4h7A1.5 1.5 0 0 1 17 5.5v13A1.5 1.5 0 0 1 15.5 20h-7A1.5 1.5 0 0 1 7 18.5V17"/><path d="M3 12h12"/><path d="m13 9 3 3-3 3"/></svg></a><?php endif; ?>
+											<form method="post" action="<?= base_url('peminjaman/asset-loans/delete/' . $proposal['uuid']) ?>" onsubmit="return confirm('Batalkan pengajuan ini?')"><?= csrf_field() ?><button class="button button--danger button--icon-only button--sm" title="Batalkan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button></form><?php endif; ?><?php if ($proposal['status'] === 'approved' && activeGroupCan('loans.complete')): ?><a href="<?= base_url('peminjaman/asset-loans/returns/' . $proposal['uuid']) ?>" class="button button--success button--icon-only button--sm" title="Pengembalian"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7V5.5A1.5 1.5 0 0 1 8.5 4h7A1.5 1.5 0 0 1 17 5.5v13A1.5 1.5 0 0 1 15.5 20h-7A1.5 1.5 0 0 1 7 18.5V17"/><path d="M3 12h12"/><path d="m13 9 3 3-3 3"/></svg></a><?php endif; ?>
 									</div>
 								</td>
 							</tr><?php endforeach; ?><?php if (! $proposals): ?><tr>
-								<td colspan="5" class="text-center text-muted-foreground py-8">Belum ada proposal peminjaman asset.</td>
+								<td colspan="5" class="text-center text-muted-foreground py-8">Belum ada pengajuan peminjaman asset.</td>
 							</tr><?php endif; ?></tbody>
 				</table>
 			</div>
-		</div><?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border)">Total <?= $totalRows ?> proposal <?= $pager->links('default', 'app') ?></div><?php endif; ?>
+		</div><?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border)">Total <?= $totalRows ?> pengajuan <?= $pager->links('default', 'app') ?></div><?php endif; ?>
 	</div>
 </div>
 
@@ -79,8 +79,8 @@ $canApprove = activeGroupCan('loans.approve');
 			<div class="dialog__body text-center pt-6"><span class="icon-box icon-box--danger icon-box--circle icon-box--lg mb-3"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
 						<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M6 7h12m-9 0v10m6-10v10M8 7l.75-2h6.5L16 7m-9 0 .75 13h6.5L15 7" />
 					</svg></span>
-				<h3 class="dialog__title mb-1" id="assetDeleteConfirmLabel">Batalkan proposal?</h3>
-				<p class="text-muted-foreground" id="assetDeleteConfirmDesc">Proposal <strong id="assetDeleteConfirmName"></strong> akan dibatalkan dan dihapus.</p>
+				<h3 class="dialog__title mb-1" id="assetDeleteConfirmLabel">Batalkan pengajuan?</h3>
+				<p class="text-muted-foreground" id="assetDeleteConfirmDesc">Pengajuan <strong id="assetDeleteConfirmName"></strong> akan dibatalkan dan dihapus.</p>
 			</div>
 			<form id="assetDeleteForm" method="post"><?= csrf_field() ?><div class="dialog__footer justify-center"><button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button><button type="submit" class="button button--danger">Ya, Batalkan</button></div>
 			</form>

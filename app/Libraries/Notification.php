@@ -74,8 +74,8 @@ class Notification
             return;
         }
 
-        $this->sendToMany($userIds, 'Proposal peminjaman menunggu persetujuan',
-            "Proposal kegiatan {$eventName} menunggu persetujuan laboran.",
+        $this->sendToMany($userIds, 'Pengajuan peminjaman menunggu persetujuan',
+            "Pengajuan kegiatan {$eventName} menunggu persetujuan laboran.",
             ['url' => $url, 'type' => 'warning', 'module' => 'loan_proposal']
         );
     }
@@ -96,8 +96,8 @@ class Notification
             return;
         }
 
-        $this->sendToMany($userIds, 'Proposal peminjaman asset menunggu persetujuan',
-            "Proposal kegiatan {$eventName} menunggu persetujuan laboran dan kepala laboratorium.",
+        $this->sendToMany($userIds, 'Pengajuan peminjaman asset menunggu persetujuan',
+            "Pengajuan kegiatan {$eventName} menunggu persetujuan laboran dan kepala laboratorium.",
             ['url' => $url, 'type' => 'warning', 'module' => 'asset_loan_proposal']
         );
     }
@@ -107,8 +107,8 @@ class Notification
      */
     public function sendApprovalNeededToHeadLab(string $eventName, string $url): void
     {
-        $this->sendToRole('kepala_lab', 'Proposal menunggu persetujuan kepala lab',
-            "Proposal kegiatan {$eventName} telah disetujui laboran, menunggu keputusan kepala lab.",
+        $this->sendToRole('kepala_lab', 'Pengajuan menunggu persetujuan kepala lab',
+            "Pengajuan kegiatan {$eventName} telah disetujui laboran, menunggu keputusan kepala lab.",
             ['url' => $url, 'type' => 'info', 'module' => 'loan_proposal']
         );
     }
@@ -119,13 +119,13 @@ class Notification
     public function sendProposalDecisionToApplicant(int $userId, string $eventName, bool $approved, string $url, ?string $reason = null, string $module = 'loan_proposal'): void
     {
         $statusText = $approved ? 'disetujui' : 'ditolak';
-        $message    = "Proposal kegiatan {$eventName} {$statusText}.";
+        $message    = "Pengajuan kegiatan {$eventName} {$statusText}.";
 
         if ($reason !== null && trim($reason) !== '') {
             $message .= ' Alasan: ' . trim($reason);
         }
 
-        $this->send($userId, $approved ? 'Proposal Anda disetujui' : 'Proposal Anda ditolak', $message, [
+        $this->send($userId, $approved ? 'Pengajuan Anda disetujui' : 'Pengajuan Anda ditolak', $message, [
             'url' => $url,
             'type' => $approved ? 'success' : 'danger',
             'module' => $module,
@@ -134,7 +134,7 @@ class Notification
 
     public function sendProposalCompletedToApplicant(int $userId, string $eventName, string $url): void
     {
-        $this->send($userId, 'Proposal peminjaman selesai',
+        $this->send($userId, 'Pengajuan peminjaman selesai',
             "Peminjaman untuk kegiatan {$eventName} telah ditandai selesai.", [
                 'url' => $url,
                 'type' => 'success',
@@ -144,8 +144,8 @@ class Notification
 
     public function sendProposalCancelledToApplicant(int $userId, string $eventName, string $url, string $reason): void
     {
-        $this->send($userId, 'Proposal peminjaman dibatalkan',
-            "Proposal kegiatan {$eventName} dibatalkan. Alasan: " . trim($reason), [
+        $this->send($userId, 'Pengajuan peminjaman dibatalkan',
+            "Pengajuan kegiatan {$eventName} dibatalkan. Alasan: " . trim($reason), [
                 'url' => $url,
                 'type' => 'danger',
                 'module' => 'loan_proposal',

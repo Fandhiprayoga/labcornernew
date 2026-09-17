@@ -92,7 +92,7 @@ function isDropdownActive(array $paths): string
                 <div class="sidebar__submenu" id="nav-lab-loans">
                   <ul class="sidebar__list">
                     <li class="sidebar__item <?= isMenuActive('peminjaman/lab-loans') && ! $isLaboratoryApprovalPage ? 'active' : '' ?>">
-                      <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans') ?>"><span>Proposal</span></a>
+                      <a class="sidebar__button" href="<?= base_url('peminjaman/lab-loans') ?>"><span>Pengajuan</span></a>
                     </li>
                     <?php if ($canApproveSubmittedProposals): ?>
                     <li class="sidebar__item <?= $isLaboratoryApprovalPage ? 'active' : '' ?>">
@@ -126,7 +126,7 @@ function isDropdownActive(array $paths): string
               <div class="sidebar__submenu" id="nav-asset-loans">
                 <ul class="sidebar__list">
                   <li class="sidebar__item <?= isMenuActive('peminjaman/asset-loans') && ! $isAssetApprovalPage ? 'active' : '' ?>">
-                    <a class="sidebar__button" href="<?= base_url('peminjaman/asset-loans') ?>"><span>Proposal</span></a>
+                    <a class="sidebar__button" href="<?= base_url('peminjaman/asset-loans') ?>"><span>Pengajuan</span></a>
                   </li>
                   <?php if ($canApproveSubmittedProposals): ?>
                   <li class="sidebar__item <?= $isAssetApprovalPage ? 'active' : '' ?>">

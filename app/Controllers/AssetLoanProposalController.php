@@ -136,8 +136,8 @@ class AssetLoanProposalController extends BaseController
         if ($redirect = $this->profileCompletionRedirect()) return $redirect;
         if (! $this->validateSubmission()) return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         $this->proposalModel->insert($this->proposalData(date('Y-m-d H:i:s')));
-        $this->historyModel->record((int) $this->proposalModel->getInsertID(), null, 'draft', 'Proposal dibuat.');
-        return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal peminjaman asset berhasil disimpan.');
+          $this->historyModel->record((int) $this->proposalModel->getInsertID(), null, 'draft', 'Pengajuan dibuat.');
+          return redirect()->to('/peminjaman/asset-loans')->with('success', 'Pengajuan peminjaman asset berhasil disimpan.');
     }
 
     public function edit(string $uuid)
@@ -153,7 +153,7 @@ class AssetLoanProposalController extends BaseController
         if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
         if (! $this->validateSubmission()) return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         $this->proposalModel->update($proposal['id'], $this->proposalData($proposal['proposal_date']));
-        return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal peminjaman asset berhasil diperbarui.');
+          return redirect()->to('/peminjaman/asset-loans')->with('success', 'Pengajuan peminjaman asset berhasil diperbarui.');
     }
 
     public function delete(string $uuid)
@@ -161,7 +161,7 @@ class AssetLoanProposalController extends BaseController
         $proposal = $this->findAccessible($uuid);
         if (! $proposal || $proposal['status'] !== 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Proposal tidak ditemukan atau sudah diproses.');
         $this->proposalModel->delete($proposal['id']);
-        return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal peminjaman asset dibatalkan.');
+          return redirect()->to('/peminjaman/asset-loans')->with('success', 'Pengajuan peminjaman asset dibatalkan.');
     }
 
     public function items(string $uuid)
@@ -256,7 +256,7 @@ class AssetLoanProposalController extends BaseController
         if ($cart === []) {
             $db->transRollback();
 
-            return redirect()->to('/peminjaman/asset-loans/items/' . $proposal['uuid'])->with('error', 'Tambahkan minimal satu asset sebelum mengajukan proposal.');
+            return redirect()->to('/peminjaman/asset-loans/items/' . $proposal['uuid'])->with('error', 'Tambahkan minimal satu asset sebelum mengajukan pengajuan.');
         }
 
         $assetIds = array_values(array_unique(array_map(
@@ -285,12 +285,12 @@ class AssetLoanProposalController extends BaseController
         }
 
         $this->proposalModel->update($lockedProposal['id'], ['status' => 'submitted']);
-        $this->historyModel->record((int) $lockedProposal['id'], 'draft', 'submitted', 'Proposal diajukan untuk diproses.');
+        $this->historyModel->record((int) $lockedProposal['id'], 'draft', 'submitted', 'Pengajuan diajukan untuk diproses.');
 
         if ($db->transStatus() === false) {
             $db->transRollback();
 
-            return $redirect->with('error', 'Gagal mengajukan proposal. Silakan coba lagi.');
+            return $redirect->with('error', 'Gagal mengajukan pengajuan. Silakan coba lagi.');
         }
 
         $db->transCommit();
@@ -301,20 +301,20 @@ class AssetLoanProposalController extends BaseController
             '/peminjaman/asset-loans-approval'
         );
 
-        return $redirect->with('success', 'Proposal peminjaman asset berhasil diajukan.');
+        return $redirect->with('success', 'Pengajuan peminjaman asset berhasil diajukan.');
     }
 
     public function detail(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
-        if (! $proposal || $proposal['status'] === 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Detail tersedia setelah proposal diajukan.');
+        if (! $proposal || $proposal['status'] === 'draft') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Detail tersedia setelah pengajuan diajukan.');
         return $this->renderView('asset_loan_proposals/detail', ['title' => 'Detail Proposal Asset', 'page_title' => 'Detail Proposal Asset', 'proposal' => $proposal, 'items' => $this->itemModel->getCart((int) $proposal['id']), 'history' => $this->historyModel->getForProposal((int) $proposal['id']), 'approvalMode' => false]);
     }
 
     public function approvalDetail(string $uuid)
     {
         $proposal = $this->proposalModel->findByUuid($uuid);
-        if (! $proposal || ! activeGroupCan('loans.approve') || ! $this->canReviewProposal($proposal)) return redirect()->to('/peminjaman/asset-loans-approval')->with('error', 'Proposal tidak tersedia untuk approval.');
+        if (! $proposal || ! activeGroupCan('loans.approve') || ! $this->canReviewProposal($proposal)) return redirect()->to('/peminjaman/asset-loans-approval')->with('error', 'Pengajuan tidak tersedia untuk approval.');
         return $this->renderView('asset_loan_proposals/detail', ['title' => 'Approval Proposal Asset', 'page_title' => 'Approval Proposal Asset', 'proposal' => $proposal, 'items' => $this->itemModel->getCart((int) $proposal['id']), 'history' => $this->historyModel->getForProposal((int) $proposal['id']), 'approvalMode' => true]);
     }
 
@@ -324,7 +324,7 @@ class AssetLoanProposalController extends BaseController
     public function returnPage(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
-        if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Pengembalian hanya tersedia untuk proposal yang sudah disetujui.');
+        if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Pengembalian hanya tersedia untuk pengajuan yang sudah disetujui.');
 
         return $this->renderView('asset_loan_proposals/return', [
             'title' => 'Pengembalian Asset',
@@ -357,21 +357,21 @@ class AssetLoanProposalController extends BaseController
 
         if ($this->itemModel->hasAllReturned((int) $proposal['id'])) {
             $this->proposalModel->update($proposal['id'], ['status' => 'completed']);
-            $this->historyModel->record((int) $proposal['id'], 'approved', 'completed', 'Semua asset telah dikembalikan dan proposal ditandai selesai.');
-            return redirect()->to('/peminjaman/asset-loans')->with('success', 'Semua asset telah dikembalikan. Proposal ditandai selesai.');
+            $this->historyModel->record((int) $proposal['id'], 'approved', 'completed', 'Semua asset telah dikembalikan dan pengajuan ditandai selesai.');
+            return redirect()->to('/peminjaman/asset-loans')->with('success', 'Semua asset telah dikembalikan. Pengajuan ditandai selesai.');
         }
 
-        return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('success', 'Status pengembalian barang berhasil disimpan. Tunggu semua asset dikembalikan sebelum proposal dinyatakan selesai.');
+        return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('success', 'Status pengembalian barang berhasil disimpan. Tunggu semua asset dikembalikan sebelum pengajuan dinyatakan selesai.');
     }
 
     public function complete(string $uuid)
     {
         $proposal = $this->proposalModel->findByUuid($uuid);
-        if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Hanya proposal yang disetujui yang dapat diselesaikan.');
-        if (! $this->itemModel->hasAllReturned((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('error', 'Semua asset harus dikembalikan terlebih dahulu sebelum proposal dapat ditandai selesai.');
+        if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Hanya pengajuan yang disetujui yang dapat diselesaikan.');
+        if (! $this->itemModel->hasAllReturned((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('error', 'Semua asset harus dikembalikan terlebih dahulu sebelum pengajuan dapat ditandai selesai.');
         $this->proposalModel->update($proposal['id'], ['status' => 'completed']);
         $this->historyModel->record((int) $proposal['id'], 'approved', 'completed', 'Peminjaman ditandai selesai.');
-        return redirect()->to('/peminjaman/asset-loans')->with('success', 'Proposal ditandai selesai.');
+        return redirect()->to('/peminjaman/asset-loans')->with('success', 'Pengajuan ditandai selesai.');
     }
 
     private function processApproval(string $uuid, bool $approve)

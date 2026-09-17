@@ -24,7 +24,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
       <form method="post" action="<?= base_url('peminjaman/asset-loans/returns/' . $proposal['uuid']) ?>">
         <?= csrf_field() ?>
         <div class="flex flex-col gap-4">
-          <div class="text-sm text-muted-foreground">Centang asset yang sudah dikembalikan. Setelah semua aset selesai dikembalikan, proposal akan otomatis berubah menjadi selesai.</div>
+          <div class="text-sm text-muted-foreground">Centang asset yang sudah dikembalikan. Setelah semua aset selesai dikembalikan, pengajuan akan otomatis berubah menjadi selesai.</div>
           <div class="table-responsive">
             <table class="table">
               <thead>

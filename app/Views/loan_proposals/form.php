@@ -12,7 +12,7 @@ $minDateTime = date('Y-m-d\TH:i');
 ?>
 <div class="page__section">
   <div class="card">
-    <div class="card__header"><span class="card__title"><?= $isEdit ? 'Edit' : 'Ajukan' ?> Proposal Peminjaman</span></div>
+    <div class="card__header"><span class="card__title"><?= $isEdit ? 'Edit' : 'Ajukan' ?> Pengajuan Peminjaman</span></div>
     <div class="card__body">
       <form action="<?= base_url('peminjaman/lab-loans/' . ($isEdit ? 'update/' . $proposal['uuid'] : 'store')) ?>" method="post" class="flex flex-col gap-6">
         <?= csrf_field() ?>
@@ -38,7 +38,7 @@ $minDateTime = date('Y-m-d\TH:i');
               <input type="email" class="input w-full" id="email" name="email" value="<?= esc($value('email', $user->email ?? '')) ?>" required readonly>
             </div>
             <div class="field">
-              <label for="proposal_date" class="field__label">Tanggal Proposal <span class="text-danger">*</span></label>
+              <label for="proposal_date" class="field__label">Tanggal Pengajuan <span class="text-danger">*</span></label>
               <input type="datetime-local" class="input w-full" id="proposal_date" name="proposal_date" value="<?= esc($proposalDate) ?>" required readonly>
             </div>
           </div>
@@ -75,7 +75,7 @@ $minDateTime = date('Y-m-d\TH:i');
 
         <div class="flex justify-end gap-2" style="border-top:1px solid var(--color-border);padding-top:1rem;">
           <a href="<?= base_url('peminjaman/lab-loans') ?>" class="button button--outline button--neutral">Batal</a>
-          <button type="submit" class="button button--primary">Simpan Proposal</button>
+          <button type="submit" class="button button--primary">Simpan Pengajuan</button>
         </div>
       </form>
     </div>

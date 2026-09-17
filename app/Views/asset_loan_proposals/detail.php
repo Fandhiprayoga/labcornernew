@@ -27,12 +27,12 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
   <?php if ($approvalMode): ?><div class="proposal-approval__layout"><?php endif; ?>
   <div class="card">
     <div class="card__header">
-      <div><span class="card__title"><?= esc($proposal['event_name']) ?></span><div class="text-xs text-muted-foreground"><?= $approvalMode ? 'Detail Approval Proposal' : 'Detail Proposal Peminjaman' ?></div></div>
+      <div><span class="card__title"><?= esc($proposal['event_name']) ?></span><div class="text-xs text-muted-foreground"><?= $approvalMode ? 'Detail Approval Pengajuan' : 'Detail Pengajuan Peminjaman' ?></div></div>
       <div class="card__action"><span class="badge badge--soft badge--<?= esc($statusColors[$proposal['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$proposal['status']] ?? ucfirst($proposal['status'])) ?></span><a href="<?= base_url($approvalMode ? 'peminjaman/asset-loans-approval' : 'peminjaman/asset-loans') ?>" class="button button--outline button--neutral button--sm">Kembali</a></div>
     </div>
     <div class="card__body">
-      <div class="proposal-detail__tabs" role="tablist" aria-label="Detail proposal">
-        <button type="button" class="proposal-detail__tab" role="tab" aria-selected="true" aria-controls="proposal-info" data-tab="proposal-info">Detail Proposal</button>
+      <div class="proposal-detail__tabs" role="tablist" aria-label="Detail pengajuan">
+        <button type="button" class="proposal-detail__tab" role="tab" aria-selected="true" aria-controls="proposal-info" data-tab="proposal-info">Detail Pengajuan</button>
         <button type="button" class="proposal-detail__tab" role="tab" aria-selected="false" aria-controls="proposal-items" data-tab="proposal-items">Asset yang Dipinjam</button>
         <button type="button" class="proposal-detail__tab" role="tab" aria-selected="false" aria-controls="proposal-history" data-tab="proposal-history">History Perubahan Status</button>
       </div>
@@ -40,7 +40,7 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
         <div class="proposal-detail__summary">
           <div><div class="text-xs text-muted-foreground">Pemohon</div><strong><?= esc($proposal['full_name']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($proposal['identity_number']) ?></div></div>
           <div><div class="text-xs text-muted-foreground">Kontak</div><strong><?= esc($proposal['phone']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($proposal['email']) ?></div></div>
-          <div><div class="text-xs text-muted-foreground">Tanggal Proposal</div><strong><?= esc(date('d M Y', strtotime($proposal['proposal_date']))) ?></strong></div>
+          <div><div class="text-xs text-muted-foreground">Tanggal Pengajuan</div><strong><?= esc(date('d M Y', strtotime($proposal['proposal_date']))) ?></strong></div>
           <div><div class="text-xs text-muted-foreground">Waktu Kegiatan</div><strong><?= esc($fmt($proposal['event_start'])) ?></strong><div class="text-xs text-muted-foreground">sampai <?= esc($fmt($proposal['event_end'])) ?></div></div>
           <div><div class="text-xs text-muted-foreground">Lokasi Penggunaan</div><strong><?= esc($proposal['usage_location'] === 'inside_lab' ? 'Di dalam laboratorium' : 'Di luar laboratorium') ?></strong></div>
         </div>
@@ -63,8 +63,8 @@ $fmt = static fn (string $value): string => date('d M Y H:i', strtotime($value))
   </div>
   <?php if ($approvalMode): ?>
   <div class="card proposal-approval__decision"><div class="card__body">
-    <img class="proposal-approval__illustration" src="<?= esc(base_url('assets/img/approval-success.svg'), 'attr') ?>" alt="Ilustrasi persetujuan proposal">
-    <div><strong>Keputusan Approval</strong><div class="text-sm text-muted-foreground">Tinjau detail proposal sebelum mengambil keputusan.</div></div>
+    <img class="proposal-approval__illustration" src="<?= esc(base_url('assets/img/approval-success.svg'), 'attr') ?>" alt="Ilustrasi persetujuan pengajuan">
+    <div><strong>Keputusan Approval</strong><div class="text-sm text-muted-foreground">Tinjau detail pengajuan sebelum mengambil keputusan.</div></div>
     <div class="proposal-approval__actions"><button type="button" class="button button--danger" onclick="openApprovalDialog('rejectConfirm', '<?= esc(base_url('peminjaman/asset-loans-approval/' . $proposal['uuid'] . '/reject'), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')">Tolak</button><button type="button" class="button button--success" onclick="openApprovalDialog('approveConfirm', '<?= esc(base_url('peminjaman/asset-loans-approval/' . $proposal['uuid'] . '/approve'), 'js') ?>', '<?= esc($proposal['event_name'], 'js') ?>')">Setujui</button></div>
   </div></div>
   </div>
