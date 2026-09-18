@@ -9,7 +9,7 @@ class AssetLoanProposalItemModel extends Model
     protected $table = 'asset_loan_proposal_items';
     protected $primaryKey = 'id';
     protected $returnType = 'array';
-    protected $allowedFields = ['uuid', 'proposal_id', 'asset_id', 'notes', 'is_returned', 'returned_at', 'return_note'];
+    protected $allowedFields = ['uuid', 'proposal_id', 'asset_id', 'notes', 'is_taken', 'taken_at', 'is_returned', 'returned_at', 'return_note'];
     protected $useTimestamps = true;
     protected $useSoftDeletes = true;
     protected $beforeInsert = ['generateUuid'];
@@ -35,6 +35,12 @@ class AssetLoanProposalItemModel extends Model
     public function hasAllReturned(int $proposalId): bool
     {
         return $this->where('proposal_id', $proposalId)->where('is_returned', 0)->countAllResults() === 0;
+    }
+
+    public function hasAllTaken(int $proposalId): bool
+    {
+        return $this->where('proposal_id', $proposalId)->countAllResults() > 0
+            && $this->where('proposal_id', $proposalId)->where('is_taken', 0)->countAllResults() === 0;
     }
 
     public function markReturned(int $proposalId, int $assetId, ?string $note = null): void

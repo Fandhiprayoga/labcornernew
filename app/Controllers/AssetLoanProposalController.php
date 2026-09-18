@@ -37,7 +37,7 @@ class AssetLoanProposalController extends BaseController
         $perPage = in_array($perPage, self::PER_PAGE, true) ? $perPage : 10;
         $reviewer = activeGroupIs('superadmin', 'kepala_lab', 'laboran');
         $query = $this->proposalModel
-            ->select('asset_loan_proposals.*, GROUP_CONCAT(DISTINCT CONCAT(assets.asset_code, " - ", assets.name) ORDER BY assets.asset_code SEPARATOR ", ") AS asset_names')
+            ->select('asset_loan_proposals.*, GROUP_CONCAT(DISTINCT CONCAT(assets.asset_code, " - ", assets.name) ORDER BY assets.asset_code SEPARATOR ", ") AS asset_names, COUNT(DISTINCT asset_loan_proposal_items.id) AS total_items, SUM(CASE WHEN asset_loan_proposal_items.is_taken = 1 THEN 1 ELSE 0 END) AS taken_items')
             ->join('asset_loan_proposal_items', 'asset_loan_proposal_items.proposal_id = asset_loan_proposals.id', 'left')
             ->join('assets', 'assets.id = asset_loan_proposal_items.asset_id', 'left');
         if (! $reviewer) $query->where('asset_loan_proposals.user_id', auth()->id());
@@ -361,10 +361,61 @@ class AssetLoanProposalController extends BaseController
     public function approve(string $uuid) { return $this->processApproval($uuid, true); }
     public function reject(string $uuid) { return $this->processApproval($uuid, false); }
 
+    public function pickupPage(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Pengambilan hanya tersedia untuk pengajuan yang sudah disetujui.');
+        if (! activeGroupIs('laboran') || ! $this->isAssignedLaboran((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans')->with('error', 'Hanya laboran yang ditugaskan pada laboratorium asset pengajuan ini yang dapat mencatat pengambilan.');
+
+        return $this->renderView('asset_loan_proposals/pickup', [
+            'title' => 'Pengambilan Asset',
+            'page_title' => 'Pengambilan Asset',
+            'proposal' => $proposal,
+            'items' => $this->itemModel->getCart((int) $proposal['id']),
+            'allTaken' => $this->itemModel->hasAllTaken((int) $proposal['id']),
+        ]);
+    }
+
+    public function savePickupStatus(string $uuid)
+    {
+        $proposal = $this->findAccessible($uuid);
+        if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Pengambilan hanya tersedia untuk proposal yang sudah disetujui.');
+        if (! activeGroupIs('laboran') || ! $this->isAssignedLaboran((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans')->with('error', 'Hanya laboran yang ditugaskan pada laboratorium asset pengajuan ini yang dapat mencatat pengambilan.');
+
+        $items = $this->itemModel->where('proposal_id', $proposal['id'])->findAll();
+        $takenIds = array_map('intval', (array) ($this->request->getPost('taken') ?? []));
+        if ($takenIds === []) return redirect()->to('/peminjaman/asset-loans/pickup/' . $uuid)->with('error', 'Pilih minimal satu asset yang sudah diambil sebelum menyimpan status pengambilan.');
+
+        $takenMap = array_fill_keys($takenIds, true);
+
+        foreach ($items as $item) {
+            $isTaken = isset($takenMap[(int) $item['asset_id']]) ? 1 : 0;
+            $payload = [
+                'is_taken' => $isTaken,
+                'taken_at' => $isTaken ? (! empty($item['taken_at']) ? $item['taken_at'] : date('Y-m-d H:i:s')) : null,
+            ];
+
+            if (! $isTaken) {
+                $payload['is_returned'] = 0;
+                $payload['returned_at'] = null;
+                $payload['return_note'] = null;
+            }
+
+            $this->itemModel->update((int) $item['id'], $payload);
+        }
+
+        if ($this->itemModel->hasAllTaken((int) $proposal['id'])) {
+            return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('success', 'Semua asset telah dicatat diambil. Fitur pengembalian sudah tersedia.');
+        }
+
+        return redirect()->to('/peminjaman/asset-loans/pickup/' . $uuid)->with('success', 'Status pengambilan asset berhasil disimpan. Centang semua asset yang diambil sebelum membuka pengembalian.');
+    }
+
     public function returnPage(string $uuid)
     {
         $proposal = $this->findAccessible($uuid);
         if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Pengembalian hanya tersedia untuk pengajuan yang sudah disetujui.');
+        if (! $this->itemModel->hasAllTaken((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans/pickup/' . $uuid)->with('error', 'Catat pengambilan semua asset sebelum membuka pengembalian.');
 
         return $this->renderView('asset_loan_proposals/return', [
             'title' => 'Pengembalian Asset',
@@ -379,9 +430,12 @@ class AssetLoanProposalController extends BaseController
     {
         $proposal = $this->findAccessible($uuid);
         if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Pengembalian hanya tersedia untuk proposal yang sudah disetujui.');
+        if (! $this->itemModel->hasAllTaken((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans/pickup/' . $uuid)->with('error', 'Catat pengambilan semua asset sebelum menyimpan pengembalian.');
 
         $items = $this->itemModel->where('proposal_id', $proposal['id'])->findAll();
-        $returnedIds = array_map('intval', (array) $this->request->getPost('returned') ?? []);
+        $returnedIds = array_map('intval', (array) ($this->request->getPost('returned') ?? []));
+        if ($returnedIds === []) return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('error', 'Pilih minimal satu asset yang sudah dikembalikan sebelum menyimpan status pengembalian.');
+
         $returnedMap = array_fill_keys($returnedIds, true);
 
         foreach ($items as $item) {
@@ -408,6 +462,7 @@ class AssetLoanProposalController extends BaseController
     {
         $proposal = $this->proposalModel->findByUuid($uuid);
         if (! $proposal || $proposal['status'] !== 'approved') return redirect()->to('/peminjaman/asset-loans')->with('error', 'Hanya pengajuan yang disetujui yang dapat diselesaikan.');
+        if (! $this->itemModel->hasAllTaken((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans/pickup/' . $uuid)->with('error', 'Semua asset harus dicatat sudah diambil sebelum pengajuan dapat diselesaikan.');
         if (! $this->itemModel->hasAllReturned((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('error', 'Semua asset harus dikembalikan terlebih dahulu sebelum pengajuan dapat ditandai selesai.');
         $this->proposalModel->update($proposal['id'], ['status' => 'completed']);
         $this->historyModel->record((int) $proposal['id'], 'approved', 'completed', 'Peminjaman ditandai selesai.');
