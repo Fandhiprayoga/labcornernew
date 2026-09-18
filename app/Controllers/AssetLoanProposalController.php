@@ -29,9 +29,13 @@ class AssetLoanProposalController extends BaseController
 
     public function index()
     {
+        $tab = (string) $this->request->getGet('tab') === 'archive' ? 'archive' : 'active';
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
-        $status = in_array($status, self::STATUSES, true) ? $status : '';
+        $tabStatuses = $tab === 'archive'
+            ? ['rejected', 'cancelled', 'completed']
+            : array_values(array_diff(self::STATUSES, ['rejected', 'cancelled', 'completed']));
+        $status = in_array($status, $tabStatuses, true) ? $status : '';
         $laboratoryUuid = trim((string) $this->request->getGet('laboratory_uuid'));
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::PER_PAGE, true) ? $perPage : 10;
@@ -47,15 +51,16 @@ class AssetLoanProposalController extends BaseController
         }
         if ($laboratoryUuid !== '') $query->join('laboratories', 'laboratories.id = assets.laboratory_id', 'left')->where('laboratories.uuid', $laboratoryUuid);
         if ($search !== '') $query->groupStart()->like('asset_loan_proposals.identity_number', $search)->orLike('asset_loan_proposals.full_name', $search)->orLike('asset_loan_proposals.event_name', $search)->orLike('assets.asset_code', $search)->orLike('assets.name', $search)->groupEnd();
+        $query->whereIn('asset_loan_proposals.status', $tabStatuses);
         if ($status !== '') $query->where('asset_loan_proposals.status', $status);
         $proposals = $query->groupBy('asset_loan_proposals.id')->orderBy('asset_loan_proposals.proposal_date', 'DESC')->orderBy('asset_loan_proposals.id', 'DESC')->paginate($perPage);
         return $this->renderView('asset_loan_proposals/index', [
             'title' => 'Peminjaman Asset', 'page_title' => 'Peminjaman Asset', 'proposals' => $proposals,
             'pager' => $this->proposalModel->pager, 'search' => $search, 'status' => $status,
-            'statusOptions' => activeGroupIs('laboran') ? array_values(array_diff(self::STATUSES, ['draft'])) : self::STATUSES,
+            'statusOptions' => activeGroupIs('laboran') ? array_values(array_diff($tabStatuses, ['draft'])) : $tabStatuses,
             'laboratoryUuid' => $laboratoryUuid, 'laboratoryOptions' => $this->assignedLaboratoryOptions(),
             'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE,
-            'totalRows' => $this->proposalModel->pager->getTotal(),
+            'totalRows' => $this->proposalModel->pager->getTotal(), 'tab' => $tab,
         ]);
     }
 

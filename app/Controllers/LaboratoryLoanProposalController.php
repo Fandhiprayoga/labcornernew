@@ -26,9 +26,13 @@ class LaboratoryLoanProposalController extends BaseController
 
     public function index()
     {
+        $tab = (string) $this->request->getGet('tab') === 'archive' ? 'archive' : 'active';
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
-        $status = in_array($status, self::STATUS_OPTIONS, true) ? $status : '';
+        $tabStatuses = $tab === 'archive'
+            ? ['rejected', 'cancelled', 'completed']
+            : array_values(array_diff(self::STATUS_OPTIONS, ['rejected', 'cancelled', 'completed']));
+        $status = in_array($status, $tabStatuses, true) ? $status : '';
         $laboratoryUuid = trim((string) $this->request->getGet('laboratory_uuid'));
         $perPage = (int) $this->request->getGet('perPage');
         $perPage = in_array($perPage, self::PER_PAGE_OPTIONS, true) ? $perPage : 10;
@@ -56,6 +60,7 @@ class LaboratoryLoanProposalController extends BaseController
         if ($search !== '') {
             $query->groupStart()->like('identity_number', $search)->orLike('full_name', $search)->orLike('event_name', $search)->orLike('laboratories.name', $search)->orLike('status', $search)->groupEnd();
         }
+        $query->whereIn('laboratory_loan_proposals.status', $tabStatuses);
         if ($status !== '') {
             $query->where('laboratory_loan_proposals.status', $status);
         }
@@ -64,11 +69,11 @@ class LaboratoryLoanProposalController extends BaseController
         return $this->renderView('loan_proposals/index', [
             'title' => 'Peminjaman Laboratorium', 'page_title' => 'Peminjaman Laboratorium',
             'proposals' => $proposals, 'pager' => $this->proposalModel->pager, 'search' => $search,
-            'status' => $status, 'statusOptions' => self::STATUS_OPTIONS,
+            'status' => $status, 'statusOptions' => $tabStatuses,
             'laboratoryUuid' => $laboratoryUuid, 'laboratoryOptions' => $laboratoryOptions,
             'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE_OPTIONS,
             'currentPage' => $this->proposalModel->pager->getCurrentPage(), 'totalRows' => $this->proposalModel->pager->getTotal(),
-            'canReview' => $canReview,
+            'canReview' => $canReview, 'tab' => $tab,
         ]);
     }
 

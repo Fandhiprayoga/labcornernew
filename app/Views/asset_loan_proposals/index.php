@@ -21,14 +21,38 @@ $isLaboran = activeGroupIs('laboran');
 		margin: 0 auto .5rem;
 		background: url("<?= base_url('assets/img/no-results.svg') ?>") center/contain no-repeat;
 	}
+
+	.asset-loan-tabs {
+		display: flex;
+		gap: .25rem;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.asset-loan-tabs__link {
+		padding: .75rem 1rem;
+		border-bottom: 2px solid transparent;
+		color: var(--color-muted-foreground);
+		font-size: .875rem;
+		font-weight: 600;
+	}
+
+	.asset-loan-tabs__link[data-active="true"] {
+		border-bottom-color: var(--color-primary);
+		color: var(--color-primary);
+	}
 </style>
 <div class="page__section">
 	<div class="card">
 		<div class="card__header"><span class="card__title">Pengajuan Peminjaman Asset</span>
 			<div class="card__action"><?php if (activeGroupCan('loans.create')): ?><a href="<?= base_url('peminjaman/asset-loans/create') ?>" class="button button--primary button--sm">+ Buat Pengajuan</a><?php endif; ?></div>
 		</div>
+		<nav class="asset-loan-tabs" aria-label="Kategori pengajuan peminjaman asset">
+			<a class="asset-loan-tabs__link" data-active="<?= $tab === 'active' ? 'true' : 'false' ?>" href="<?= base_url('peminjaman/asset-loans?tab=active') ?>">Pengajuan Aktif</a>
+			<a class="asset-loan-tabs__link" data-active="<?= $tab === 'archive' ? 'true' : 'false' ?>" href="<?= base_url('peminjaman/asset-loans?tab=archive') ?>">Arsip Pengajuan</a>
+		</nav>
 		<div class="card__body" style="border-bottom:1px solid var(--color-border)">
 			<form method="get" action="<?= base_url('peminjaman/asset-loans') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem">
+				<input type="hidden" name="tab" value="<?= esc($tab) ?>">
 				<div style="flex:1 1 260px"><label class="text-xs text-muted-foreground" for="q">Cari pengajuan</label><input class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Identitas, nama, kegiatan, kode atau nama asset..."></div>
 				<div style="flex:0 0 180px"><label class="text-xs text-muted-foreground" for="status">Status</label><select class="select" id="status" name="status">
 						<option value="">Semua Status</option><?php foreach ($statusOptions as $option): ?><option value="<?= $option ?>" <?= $status === $option ? 'selected' : '' ?>><?= $statusLabels[$option] ?></option><?php endforeach; ?>
@@ -36,7 +60,7 @@ $isLaboran = activeGroupIs('laboran');
 				<div style="flex:0 0 220px"><label class="text-xs text-muted-foreground" for="laboratory_uuid">Laboratorium</label><select class="select" id="laboratory_uuid" name="laboratory_uuid">
 						<option value="">Semua Laboratorium</option><?php foreach ($laboratoryOptions as $lab): ?><option value="<?= esc($lab['uuid']) ?>" <?= $laboratoryUuid === $lab['uuid'] ? 'selected' : '' ?>><?= esc($lab['name']) ?></option><?php endforeach; ?>
 					</select></div>
-				<div style="display:flex;gap:.5rem;"><button type="submit" class="button button--primary button--sm">Filter</button><?php if ($search !== '' || $status !== '' || $laboratoryUuid !== ''): ?><a href="<?= base_url('peminjaman/asset-loans') ?>" class="button button--outline button--sm">Reset</a><?php endif; ?></div>
+				<div style="display:flex;gap:.5rem;"><button type="submit" class="button button--primary button--sm">Filter</button><?php if ($search !== '' || $status !== '' || $laboratoryUuid !== ''): ?><a href="<?= base_url('peminjaman/asset-loans?tab=' . $tab) ?>" class="button button--outline button--sm">Reset</a><?php endif; ?></div>
 			</form>
 		</div>
 		<div class="card__body p-0">

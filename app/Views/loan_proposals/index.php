@@ -9,8 +9,14 @@
 /** @var string[] $statusOptions */
 /** @var string $laboratoryUuid */
 /** @var array $laboratoryOptions */
+/** @var string $tab */
 $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran', 'laboran_approved' => 'Menunggu Approval Kepala Lab', 'rejected' => 'Ditolak', 'approved' => 'Disetujui', 'cancelled' => 'Dibatalkan', 'completed' => 'Selesai'];
 ?>
+<style>
+  .loan-proposal-tabs { display:flex; gap:.25rem; border-bottom:1px solid var(--color-border); }
+  .loan-proposal-tabs__link { padding:.75rem 1rem; border-bottom:2px solid transparent; color:var(--color-muted-foreground); font-size:.875rem; font-weight:600; }
+  .loan-proposal-tabs__link[data-active="true"] { border-bottom-color:var(--color-primary); color:var(--color-primary); }
+</style>
 <div class="page__section">
   <div class="card">
     <div class="card__header">
@@ -24,8 +30,13 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
         <?php endif; ?>
       </div>
     </div>
+    <nav class="loan-proposal-tabs" aria-label="Kategori pengajuan peminjaman laboratorium">
+      <a class="loan-proposal-tabs__link" data-active="<?= $tab === 'active' ? 'true' : 'false' ?>" href="<?= base_url('peminjaman/lab-loans?tab=active') ?>">Pengajuan Aktif</a>
+      <a class="loan-proposal-tabs__link" data-active="<?= $tab === 'archive' ? 'true' : 'false' ?>" href="<?= base_url('peminjaman/lab-loans?tab=archive') ?>">Arsip Pengajuan</a>
+    </nav>
     <div class="card__body" style="border-bottom:1px solid var(--color-border);">
       <form method="get" action="<?= base_url('peminjaman/lab-loans') ?>" style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:.75rem;">
+        <input type="hidden" name="tab" value="<?= esc($tab) ?>">
         <div style="flex:1 1 260px;min-width:220px;">
           <label class="text-xs text-muted-foreground" for="q">Cari pengajuan</label>
           <input type="search" class="input" id="q" name="q" value="<?= esc($search) ?>" placeholder="Nomor identitas, nama, event, atau laboratorium...">
@@ -55,7 +66,7 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
         <div style="display:flex;gap:.5rem;">
           <button type="submit" class="button button--primary button--sm">Filter</button>
           <?php if ($search !== '' || $status !== '' || $laboratoryUuid !== ''): ?>
-          <a href="<?= base_url('peminjaman/lab-loans') ?>" class="button button--outline button--sm">Reset</a>
+          <a href="<?= base_url('peminjaman/lab-loans?tab=' . $tab) ?>" class="button button--outline button--sm">Reset</a>
           <?php endif; ?>
         </div>
       </form>
@@ -91,7 +102,7 @@ $statusLabels = ['draft' => 'Draft', 'submitted' => 'Menunggu Approval Laboran',
         </table>
       </div>
     </div>
-    <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> pengajuan</span><?= $pager->only(['q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
+    <?php if ($totalRows > 0): ?><div class="card__body" style="border-top:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;"><span class="text-xs text-muted-foreground">Total <?= $totalRows ?> pengajuan</span><?= $pager->only(['tab', 'q', 'status', 'perPage'])->links('default', 'app') ?></div><?php endif; ?>
   </div>
 </div>
 
