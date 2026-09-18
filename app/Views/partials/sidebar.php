@@ -6,6 +6,7 @@ $canApproveSubmittedProposals = activeGroupIs('superadmin', 'kepala_lab', 'labor
 $isLaboratoryApprovalPage = str_contains($currentUrl, 'peminjaman/lab-loans-approval') || in_array($currentStatus, ['submitted', 'laboran_approved'], true);
 $isLaboratoryReportPage = str_contains($currentUrl, 'peminjaman/lab-report');
 $isAssetApprovalPage = str_contains($currentUrl, 'peminjaman/asset-loans-approval');
+$isAssetReportPage = str_contains($currentUrl, 'peminjaman/asset-report');
 
 function isMenuActive(string $path): string
 {
@@ -110,7 +111,7 @@ function isDropdownActive(array $paths): string
             <?php endif; ?>
 
             <!-- Asset Loan Management -->
-            <li class="sidebar__item" data-state="<?= isDropdownActive(['peminjaman/asset-loans']) ? 'open' : 'closed' ?>">
+            <li class="sidebar__item" data-state="<?= isDropdownActive(['peminjaman/asset-loans', 'peminjaman/asset-report']) ? 'open' : 'closed' ?>">
               <a class="sidebar__button" href="<?= base_url('peminjaman/asset-loans') ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true">
                   <path fill="currentColor" d="M4 7h16v12H4z" opacity=".35" />
@@ -119,7 +120,7 @@ function isDropdownActive(array $paths): string
                 <span>Asset</span>
               </a>
               <button type="button" class="sidebar__item-action" data-stisla-sidebar-submenu-toggle
-                aria-expanded="<?= isDropdownActive(['peminjaman/asset-loans']) ? 'true' : 'false' ?>"
+                aria-expanded="<?= isDropdownActive(['peminjaman/asset-loans', 'peminjaman/asset-report']) ? 'true' : 'false' ?>"
                 aria-controls="nav-asset-loans" aria-label="Toggle Peminjaman Asset submenu">
                 <span class="sidebar__caret"></span>
               </button>
@@ -131,6 +132,11 @@ function isDropdownActive(array $paths): string
                   <?php if ($canApproveSubmittedProposals): ?>
                   <li class="sidebar__item <?= $isAssetApprovalPage ? 'active' : '' ?>">
                     <a class="sidebar__button" href="<?= base_url('peminjaman/asset-loans-approval') ?>"><span>Persetujuan</span></a>
+                  </li>
+                  <?php endif; ?>
+                  <?php if (activeGroupCan('reports.view')): ?>
+                  <li class="sidebar__item <?= $isAssetReportPage ? 'active' : '' ?>">
+                    <a class="sidebar__button" href="<?= base_url('peminjaman/asset-report') ?>"><span>Laporan</span></a>
                   </li>
                   <?php endif; ?>
                 </ul>
