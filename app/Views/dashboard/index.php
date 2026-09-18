@@ -186,6 +186,71 @@ foreach ($loanEvents ?? [] as $loanEvent) {
 <?php if ($overview !== null): ?>
 <div class="page__section">
   <div class="grid grid-cols-12 gap-4">
+    <?php if (activeGroupIs('user')): ?>
+      <div class="col-span-12 sm:col-span-6 xl:col-span-3">
+        <a class="card card--stat block" href="<?= site_url('peminjaman/lab-loans') ?>">
+          <div class="card__body">
+            <div class="flex justify-between items-center">
+              <span class="icon-box icon-box--warning icon-box--lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l2.5 2.5M20 12a8 8 0 1 1-16 0a8 8 0 0 1 16 0Z" /></svg>
+              </span>
+            </div>
+            <div class="stat mt-3">
+              <div class="stat__value"><?= $overview['laboratoryPending'] ?></div>
+              <div class="stat__label text-eyebrow">Lab Menunggu Persetujuan</div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-span-12 sm:col-span-6 xl:col-span-3">
+        <a class="card card--stat block" href="<?= site_url('peminjaman/lab-loans?status=approved') ?>">
+          <div class="card__body">
+            <div class="flex justify-between items-center">
+              <span class="icon-box icon-box--primary icon-box--lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 3v3m10-3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" /></svg>
+              </span>
+            </div>
+            <div class="stat mt-3">
+              <div class="stat__value"><?= $overview['laboratoryActive'] ?></div>
+              <div class="stat__label text-eyebrow">Peminjaman Lab Disetujui</div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-span-12 sm:col-span-6 xl:col-span-3">
+        <a class="card card--stat block" href="<?= site_url('peminjaman/asset-loans') ?>">
+          <div class="card__body">
+            <div class="flex justify-between items-center">
+              <span class="icon-box icon-box--warning icon-box--lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 17V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10M3 19h18M9 9h6" /></svg>
+              </span>
+            </div>
+            <div class="stat mt-3">
+              <div class="stat__value"><?= $overview['assetPending'] ?></div>
+              <div class="stat__label text-eyebrow">Aset Menunggu Persetujuan</div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-span-12 sm:col-span-6 xl:col-span-3">
+        <a class="card card--stat block" href="<?= site_url('peminjaman/asset-loans?status=approved') ?>">
+          <div class="card__body">
+            <div class="flex justify-between items-center">
+              <span class="icon-box icon-box--success icon-box--lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m5 13l4 4L19 7" /></svg>
+              </span>
+            </div>
+            <div class="stat mt-3">
+              <div class="stat__value"><?= $overview['assetActive'] ?></div>
+              <div class="stat__label text-eyebrow">Peminjaman Aset Disetujui</div>
+            </div>
+          </div>
+        </a>
+      </div>
+    <?php else: ?>
     <div class="col-span-12 sm:col-span-6 xl:col-span-3">
       <div class="card card--stat">
         <div class="card__body">
@@ -262,6 +327,7 @@ foreach ($loanEvents ?? [] as $loanEvent) {
         </div>
       </div>
     </div>
+    <?php endif; ?>
   </div>
 </div>
 <?php endif; ?>

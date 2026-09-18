@@ -78,6 +78,8 @@ class DashboardController extends BaseController
             $overview = $this->laboratoryOverview(array_map('intval', array_column($laboranAssignments, 'laboratory_id')));
         } elseif (in_array($activeGroup, ['superadmin', 'kepala_lab'], true)) {
             $overview = $this->laboratoryOverview();
+        } elseif ($activeGroup === 'user') {
+            $overview = $this->userLoanOverview((int) $user->id);
         }
 
         $data = [
@@ -137,6 +139,28 @@ class DashboardController extends BaseController
             'assets' => $assetQuery->countAllResults(),
             'laboratoryLoans' => count($laboratoryLoanQuery->groupBy('items.proposal_id')->get()->getResultArray()),
             'assetLoans' => count($assetLoanQuery->groupBy('items.proposal_id')->get()->getResultArray()),
+        ];
+    }
+
+    private function userLoanOverview(int $userId): array
+    {
+        $db = db_connect();
+        $pendingStatuses = ['submitted', 'laboran_approved'];
+        $activeStatuses = ['approved'];
+
+        $countProposals = static function (string $table, array $statuses) use ($db, $userId): int {
+            return $db->table($table)
+                ->where('user_id', $userId)
+                ->where('deleted_at', null)
+                ->whereIn('status', $statuses)
+                ->countAllResults();
+        };
+
+        return [
+            'laboratoryPending' => $countProposals('laboratory_loan_proposals', $pendingStatuses),
+            'laboratoryActive' => $countProposals('laboratory_loan_proposals', $activeStatuses),
+            'assetPending' => $countProposals('asset_loan_proposals', $pendingStatuses),
+            'assetActive' => $countProposals('asset_loan_proposals', $activeStatuses),
         ];
     }
 }
