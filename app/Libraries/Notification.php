@@ -86,18 +86,19 @@ class Notification
     }
 
     /**
-     * Notifikasi proposal peminjaman asset yang diajukan, dikirim ke laboran terkait dan kepala lab.
+     * Notifikasi proposal peminjaman asset yang diajukan, dikirim ke laboran terkait saja.
+     * Kepala lab baru diberi tahu setelah laboran menyetujui (lihat sendApprovalNeededToHeadLab).
      */
     public function sendAssetProposalSubmittedToReviewers(int $proposalId, string $eventName, string $url): void
     {
-        $userIds = $this->userIdsForAssetProposalReview($proposalId);
+        $userIds = $this->userIdsForAssignedAssetLaborans($proposalId);
 
         if (empty($userIds)) {
             return;
         }
 
         $this->sendToMany($userIds, 'Pengajuan peminjaman asset menunggu persetujuan',
-            "Pengajuan kegiatan {$eventName} menunggu persetujuan laboran dan kepala laboratorium.",
+            "Pengajuan kegiatan {$eventName} menunggu persetujuan laboran.",
             ['url' => $url, 'type' => 'warning', 'module' => 'asset_loan_proposal']
         );
     }
@@ -105,11 +106,11 @@ class Notification
     /**
      * Notifikasi persetujuan yang dibutuhkan oleh kepala lab setelah laboran menyetujui.
      */
-    public function sendApprovalNeededToHeadLab(string $eventName, string $url): void
+    public function sendApprovalNeededToHeadLab(string $eventName, string $url, string $module = 'loan_proposal'): void
     {
         $this->sendToRole('kepala_lab', 'Pengajuan menunggu persetujuan kepala lab',
             "Pengajuan kegiatan {$eventName} telah disetujui laboran, menunggu keputusan kepala lab.",
-            ['url' => $url, 'type' => 'info', 'module' => 'loan_proposal']
+            ['url' => $url, 'type' => 'info', 'module' => $module]
         );
     }
 
@@ -132,13 +133,13 @@ class Notification
         ]);
     }
 
-    public function sendProposalCompletedToApplicant(int $userId, string $eventName, string $url): void
+    public function sendProposalCompletedToApplicant(int $userId, string $eventName, string $url, string $module = 'loan_proposal'): void
     {
         $this->send($userId, 'Pengajuan peminjaman selesai',
             "Peminjaman untuk kegiatan {$eventName} telah ditandai selesai.", [
                 'url' => $url,
                 'type' => 'success',
-                'module' => 'loan_proposal',
+                'module' => $module,
             ]);
     }
 
@@ -281,7 +282,7 @@ class Notification
         return array_values(array_unique($userIds));
     }
 
-    protected function userIdsForAssetProposalReview(int $proposalId): array
+    protected function userIdsForAssignedAssetLaborans(int $proposalId): array
     {
         $db = db_connect();
 
@@ -300,15 +301,12 @@ class Notification
         );
 
         if (! $result || ! method_exists($result, 'getResultArray')) {
-            return $this->userIdsByGroup('kepala_lab');
+            return [];
         }
 
         $rows = $result->getResultArray();
         $userIds = array_map(static fn (array $row): int => (int) ($row['user_id'] ?? 0), $rows);
-        $userIds = array_values(array_filter($userIds, static fn (int $userId): bool => $userId > 0));
 
-        $headLabIds = $this->userIdsByGroup('kepala_lab');
-
-        return array_values(array_unique(array_merge($userIds, $headLabIds)));
+        return array_values(array_unique(array_filter($userIds, static fn (int $userId): bool => $userId > 0)));
     }
 }

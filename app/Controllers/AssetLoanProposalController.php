@@ -466,6 +466,12 @@ class AssetLoanProposalController extends BaseController
         if (! $this->itemModel->hasAllReturned((int) $proposal['id'])) return redirect()->to('/peminjaman/asset-loans/returns/' . $uuid)->with('error', 'Semua asset harus dikembalikan terlebih dahulu sebelum pengajuan dapat ditandai selesai.');
         $this->proposalModel->update($proposal['id'], ['status' => 'completed']);
         $this->historyModel->record((int) $proposal['id'], 'approved', 'completed', 'Peminjaman ditandai selesai.');
+        notification()->sendProposalCompletedToApplicant(
+            (int) $proposal['user_id'],
+            (string) $proposal['event_name'],
+            '/peminjaman/asset-loans/detail/' . $proposal['uuid'],
+            'asset_loan_proposal'
+        );
         return redirect()->to('/peminjaman/asset-loans')->with('success', 'Pengajuan ditandai selesai.');
     }
 
@@ -565,13 +571,19 @@ class AssetLoanProposalController extends BaseController
         }
         $db->transCommit();
 
-        if ($next === 'approved' || $next === 'rejected') {
-            notification()->sendProposalDecisionToApplicant(
-                (int) $lockedProposal['user_id'],
+        notification()->sendProposalDecisionToApplicant(
+            (int) $lockedProposal['user_id'],
+            (string) $lockedProposal['event_name'],
+            $approve,
+            '/peminjaman/asset-loans/detail/' . $lockedProposal['uuid'],
+            $note,
+            'asset_loan_proposal'
+        );
+
+        if ($next === 'laboran_approved') {
+            notification()->sendApprovalNeededToHeadLab(
                 (string) $lockedProposal['event_name'],
-                $next === 'approved',
-                '/peminjaman/asset-loans/detail/' . $lockedProposal['uuid'],
-                $note,
+                '/peminjaman/asset-loans-approval',
                 'asset_loan_proposal'
             );
         }
