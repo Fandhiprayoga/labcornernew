@@ -183,6 +183,13 @@ class AuthGroups extends ShieldAuthGroups
             'loans.access',
             'loans.list',
             'loans.approve',
+            'bhp.access',
+            'bhp.list',
+            'bhp.review',
+            'bhp.disburse',
+            'bhp.verify',
+            'bhp.periods',
+            'bhp.export',
         ],
         'laboran' => [
             'admin.access',

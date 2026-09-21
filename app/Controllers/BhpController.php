@@ -288,7 +288,26 @@ class BhpController extends BaseController
 
     public function periods()
     {
-        return $this->renderView('bhp/periods', ['title' => 'Periode Pengajuan BHP', 'page_title' => 'Periode Pengajuan BHP', 'periods' => $this->periodModel->orderBy('tanggal_mulai', 'DESC')->findAll()]);
+        $tab = (string) $this->request->getGet('tab') === 'archive' ? 'archive' : 'active';
+        $now = date('Y-m-d H:i:s');
+        $query = $this->periodModel->orderBy('tanggal_mulai', 'DESC');
+        if ($tab === 'archive') {
+            $query->where('tanggal_selesai <', $now);
+        } else {
+            $query->where('tanggal_mulai <=', $now)->where('tanggal_selesai >=', $now);
+        }
+
+        return $this->renderView('bhp/periods', [
+            'title' => 'Periode Pengajuan BHP',
+            'page_title' => 'Periode Pengajuan BHP',
+            'periods' => $query->findAll(),
+            'tab' => $tab,
+        ]);
+    }
+
+    public function createPeriod()
+    {
+        return $this->renderView('bhp/period_form', ['title' => 'Buat Periode Pengajuan BHP', 'page_title' => 'Buat Periode Pengajuan BHP']);
     }
 
     public function storePeriod()
