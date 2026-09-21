@@ -46,6 +46,30 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
     $routes->post('notifications/mark-all-read', 'NotificationController::markAllRead');
     $routes->post('notifications/delete/(:num)', 'NotificationController::delete/$1');
 
+    // BHP submissions
+    $routes->group('bhp', ['filter' => 'permission:bhp.access'], static function ($routes) {
+        $routes->get('/', 'BhpController::index', ['filter' => 'permission:bhp.list']);
+        $routes->get('create', 'BhpController::create', ['filter' => 'permission:bhp.create']);
+        $routes->post('store', 'BhpController::store', ['filter' => 'permission:bhp.create']);
+        $routes->get('edit/(:uuid)', 'BhpController::edit/$1', ['filter' => 'permission:bhp.edit']);
+        $routes->post('update/(:uuid)', 'BhpController::update/$1', ['filter' => 'permission:bhp.edit']);
+        $routes->post('submit/(:uuid)', 'BhpController::submit/$1', ['filter' => 'permission:bhp.edit']);
+        $routes->get('detail/(:uuid)', 'BhpController::detail/$1', ['filter' => 'permission:bhp.list']);
+        $routes->post('evidence/(:uuid)', 'BhpController::evidence/$1', ['filter' => 'permission:bhp.evidence']);
+        $routes->get('evidence/(:uuid)/(:uuid)', 'BhpController::downloadEvidence/$1/$2', ['filter' => 'permission:bhp.list']);
+        $routes->post('disburse/(:uuid)', 'BhpController::disburse/$1', ['filter' => 'permission:bhp.disburse']);
+        $routes->post('verify/(:uuid)', 'BhpController::verify/$1', ['filter' => 'permission:bhp.verify']);
+        $routes->post('reject-evidence/(:uuid)', 'BhpController::rejectEvidence/$1', ['filter' => 'permission:bhp.verify']);
+        $routes->get('periods', 'BhpController::periods', ['filter' => 'permission:bhp.periods']);
+        $routes->post('periods/store', 'BhpController::storePeriod', ['filter' => 'permission:bhp.periods']);
+    });
+    $routes->get('bhp-approval', 'BhpController::approvalIndex', ['filter' => 'permission:bhp.review']);
+    $routes->post('bhp-approval/(:uuid)/approve', 'BhpController::approve/$1', ['filter' => 'permission:bhp.review']);
+    $routes->post('bhp-approval/(:uuid)/revise', 'BhpController::revise/$1', ['filter' => 'permission:bhp.review']);
+    $routes->post('bhp-approval/(:uuid)/reject', 'BhpController::reject/$1', ['filter' => 'permission:bhp.review']);
+    $routes->get('bhp-report', 'BhpReportController::index', ['filter' => 'permission:bhp.export']);
+    $routes->get('bhp-report/export/csv', 'BhpReportController::exportCsv', ['filter' => 'permission:bhp.export']);
+
     // Laboratory loan proposals
     $routes->group('peminjaman/lab-loans', ['filter' => 'permission:loans.access'], static function ($routes) {
         $routes->get('/', 'LaboratoryLoanProposalController::index', ['filter' => 'permission:loans.list']);

@@ -70,6 +70,28 @@ function isDropdownActive(array $paths): string
         </ul>
       </div>
 
+      <?php if (activeGroupCan('bhp.access')): ?>
+        <div class="sidebar__group">
+          <span class="sidebar__group-title">BHP</span>
+          <ul class="sidebar__list">
+            <li class="sidebar__item <?= isMenuActive('bhp') && ! str_contains($currentUrl, 'bhp-approval') && ! str_contains($currentUrl, 'bhp/periods') ? 'active' : '' ?>">
+              <a class="sidebar__button" href="<?= base_url('bhp') ?>">
+                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 3h9l3 3v15H6z" opacity=".35"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 11h6m-6 3h6m-6 3h4M15 3v4h4"/></svg><span>Pengajuan</span>
+              </a>
+            </li>
+            <?php if (activeGroupCan('bhp.review')): ?>
+            <li class="sidebar__item <?= isMenuActive('bhp-approval') ? 'active' : '' ?>"><a class="sidebar__button" href="<?= base_url('bhp-approval') ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5h16v14H4z" opacity=".35"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="m8 12 2.5 2.5L16 9"/></svg><span>Review</span></a></li>
+            <?php endif; ?>
+            <?php if (activeGroupCan('bhp.periods')): ?>
+            <li class="sidebar__item <?= isMenuActive('bhp/periods') ? 'active' : '' ?>"><a class="sidebar__button" href="<?= base_url('bhp/periods') ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><rect width="16" height="15" x="4" y="5" fill="currentColor" opacity=".35" rx="2"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M8 3v4m8-4v4M4 10h16"/></svg><span>Periode</span></a></li>
+            <?php endif; ?>
+            <?php if (activeGroupCan('bhp.export')): ?>
+            <li class="sidebar__item <?= isMenuActive('bhp-report') ? 'active' : '' ?>"><a class="sidebar__button" href="<?= base_url('bhp-report') ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4h16v16H4z" opacity=".35"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M8 16v-4m4 4V8m4 8v-6"/></svg><span>Laporan</span></a></li>
+            <?php endif; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
+
       <!-- Peminjaman Menu -->
       <?php if (activeGroupCan('loans.access')): ?>
         <div class="sidebar__group">
