@@ -53,6 +53,7 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
         $routes->post('store', 'BhpController::store', ['filter' => 'permission:bhp.create']);
         $routes->get('edit/(:uuid)', 'BhpController::edit/$1', ['filter' => 'permission:bhp.edit']);
         $routes->post('update/(:uuid)', 'BhpController::update/$1', ['filter' => 'permission:bhp.edit']);
+        $routes->post('item/(:uuid)/override', 'BhpController::overrideItem/$1', ['filter' => 'permission:bhp.override']);
         $routes->post('submit/(:uuid)', 'BhpController::submit/$1', ['filter' => 'permission:bhp.edit']);
         $routes->get('detail/(:uuid)', 'BhpController::detail/$1', ['filter' => 'permission:bhp.list']);
         $routes->post('evidence/(:uuid)', 'BhpController::evidence/$1', ['filter' => 'permission:bhp.evidence']);

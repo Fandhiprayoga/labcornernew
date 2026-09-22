@@ -161,6 +161,7 @@ class AuthGroups extends ShieldAuthGroups
             'bhp.disburse',
             'bhp.verify',
             'bhp.periods',
+            'bhp.override',
             'bhp.export',
             'loans.*',
         ],

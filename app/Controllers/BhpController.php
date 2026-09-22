@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\BhpAuditLogModel;
 use App\Models\BhpEvidenceModel;
 use App\Models\BhpItemModel;
+use App\Models\BhpItemOverrideModel;
 use App\Models\BhpPeriodModel;
 use App\Models\BhpRequestModel;
 use App\Models\LaboratoryModel;
@@ -17,6 +18,7 @@ class BhpController extends BaseController
 
     protected BhpRequestModel $requestModel;
     protected BhpItemModel $itemModel;
+    protected BhpItemOverrideModel $itemOverrideModel;
     protected BhpPeriodModel $periodModel;
     protected BhpEvidenceModel $evidenceModel;
     protected BhpAuditLogModel $auditModel;
@@ -27,6 +29,7 @@ class BhpController extends BaseController
     {
         $this->requestModel = new BhpRequestModel();
         $this->itemModel = new BhpItemModel();
+        $this->itemOverrideModel = new BhpItemOverrideModel();
         $this->periodModel = new BhpPeriodModel();
         $this->evidenceModel = new BhpEvidenceModel();
         $this->auditModel = new BhpAuditLogModel();
@@ -208,6 +211,65 @@ class BhpController extends BaseController
         return redirect()->to('/bhp')->with('success', 'Pengajuan BHP berhasil dikirim.');
     }
 
+    public function overrideItem(string $itemUuid)
+    {
+        if (! activeGroupIs('superadmin', 'kepala_lab')) {
+            return redirect()->to('/bhp')->with('error', 'Hanya kepala lab yang dapat melakukan override item.');
+        }
+
+        $item = $this->itemModel->where('uuid', $itemUuid)->first();
+        $reason = trim((string) $this->request->getPost('reason'));
+        if (! $item || $reason === '') {
+            return redirect()->back()->with('error', 'Item tidak ditemukan atau alasan override wajib diisi.');
+        }
+
+        $requestData = $this->requestModel->find((int) $item['pengajuan_id']);
+        if (! $requestData || in_array($requestData['status'], ['FUND_DISBURSED', 'EVIDEN_SUBMITTED', 'COMPLETED'], true)) {
+            return redirect()->back()->with('error', 'Item tidak dapat diubah pada status kantong saat ini.');
+        }
+
+        $rules = [
+            'nama_barang' => 'required|max_length[255]',
+            'spesifikasi' => 'permit_empty',
+            'qty' => 'required|is_natural_no_zero',
+            'satuan' => 'required|max_length[50]',
+            'harga_satuan' => 'required|numeric|greater_than_equal_to[0]',
+            'vendor' => 'required|max_length[150]',
+            'link_toko_online' => 'required|valid_url',
+        ];
+        $posted = $this->request->getPost();
+        if (! $this->validateData($posted, $rules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $before = $this->itemSnapshot($item);
+        $after = [
+            'nama_barang' => trim((string) $posted['nama_barang']),
+            'spesifikasi' => trim((string) ($posted['spesifikasi'] ?? '')),
+            'qty' => (int) $posted['qty'],
+            'satuan' => (string) $posted['satuan'],
+            'harga_satuan' => (float) $posted['harga_satuan'],
+            'total_harga' => (int) $posted['qty'] * (float) $posted['harga_satuan'],
+            'vendor' => trim((string) $posted['vendor']),
+            'link_toko_online' => trim((string) $posted['link_toko_online']),
+        ];
+
+        $db = db_connect();
+        $db->transStart();
+        $this->itemModel->update($item['id'], $after);
+        $this->itemOverrideModel->insert([
+            'item_id' => $item['id'], 'pengajuan_id' => $item['pengajuan_id'], 'changed_by' => auth()->id(),
+            'before_data' => json_encode($before, JSON_UNESCAPED_UNICODE), 'after_data' => json_encode($after, JSON_UNESCAPED_UNICODE),
+            'reason' => $reason, 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+        $this->recalculateTotal((int) $item['pengajuan_id']);
+        $db->transComplete();
+
+        return $db->transStatus()
+            ? redirect()->to('/bhp/detail/' . $requestData['uuid'])->with('success', 'Item berhasil di-override dan perubahannya tercatat.')
+            : redirect()->back()->with('error', 'Override item gagal disimpan.');
+    }
+
     public function approvalIndex()
     {
         $search = trim((string) $this->request->getGet('q'));
@@ -298,7 +360,10 @@ class BhpController extends BaseController
             ->join('users', 'users.id = pengajuan_bhp_item.laboran_id', 'left')
             ->join('laboratories', 'laboratories.id = pengajuan_bhp_item.laboratory_id', 'left')
             ->where('pengajuan_id', $data['id'])->findAll();
-        return $this->renderView('bhp/detail', ['title' => 'Detail Pengajuan BHP', 'page_title' => $data['kode_pengajuan'], 'requestData' => $data, 'items' => $items, 'evidences' => $this->evidenceModel->where('pengajuan_id', $data['id'])->findAll(), 'history' => (new \App\Models\BhpStatusHistoryModel())->where('pengajuan_id', $data['id'])->orderBy('id', 'DESC')->findAll()]);
+        $overrides = $this->itemOverrideModel->select('pengajuan_bhp_item_override.*, users.username AS changed_by_name')
+            ->join('users', 'users.id = pengajuan_bhp_item_override.changed_by')
+            ->where('pengajuan_id', $data['id'])->orderBy('created_at', 'DESC')->findAll();
+        return $this->renderView('bhp/detail', ['title' => 'Detail Pengajuan BHP', 'page_title' => $data['kode_pengajuan'], 'requestData' => $data, 'items' => $items, 'overrides' => $overrides, 'evidences' => $this->evidenceModel->where('pengajuan_id', $data['id'])->findAll(), 'history' => (new \App\Models\BhpStatusHistoryModel())->where('pengajuan_id', $data['id'])->orderBy('id', 'DESC')->findAll()]);
     }
 
     public function downloadEvidence(string $uuid, string $evidenceUuid)
@@ -407,6 +472,15 @@ class BhpController extends BaseController
     {
         $row = $this->itemModel->selectSum('total_harga')->where('pengajuan_id', $requestId)->first();
         $this->requestModel->update($requestId, ['grand_total_estimasi' => (float) ($row['total_harga'] ?? 0)]);
+    }
+
+    private function itemSnapshot(array $item): array
+    {
+        return [
+            'nama_barang' => $item['nama_barang'], 'spesifikasi' => $item['spesifikasi'], 'qty' => (int) $item['qty'],
+            'satuan' => $item['satuan'], 'harga_satuan' => (float) $item['harga_satuan'], 'total_harga' => (float) $item['total_harga'],
+            'vendor' => $item['vendor'], 'link_toko_online' => $item['link_toko_online'],
+        ];
     }
 
     private function availableLaboratories(): array
