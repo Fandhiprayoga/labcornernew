@@ -38,15 +38,16 @@ class BhpController extends BaseController
     {
         $query = $this->requestModel
             ->select('pengajuan_bhp.*, users.username, laboratories.name AS laboratory_name, study_programs.name AS study_program_name, periode_pengajuan.nama_periode')
-            ->join('users', 'users.id = pengajuan_bhp.laboran_id')
-            ->join('laboratories', 'laboratories.id = pengajuan_bhp.laboratory_id')
+            ->join('users', 'users.id = pengajuan_bhp.laboran_id', 'left')
+            ->join('laboratories', 'laboratories.id = pengajuan_bhp.laboratory_id', 'left')
             ->join('study_programs', 'study_programs.id = pengajuan_bhp.study_program_id', 'left')
             ->join('periode_pengajuan', 'periode_pengajuan.id = pengajuan_bhp.periode_id');
 
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
         if (in_array(activeGroup(), ['laboran', 'user'], true)) {
-            $query->where('pengajuan_bhp.laboran_id', auth()->id());
+            $query->join('laboratory_study_programs pocket_programs', 'pocket_programs.study_program_id = pengajuan_bhp.study_program_id', 'inner')
+                ->join('laboratory_laborans pocket_assignments', 'pocket_assignments.laboratory_id = pocket_programs.laboratory_id AND pocket_assignments.user_id = ' . (int) auth()->id(), 'inner')->distinct();
         }
         if ($status !== '' && in_array($status, self::STATUSES, true)) {
             $query->where('pengajuan_bhp.status', $status);
@@ -61,6 +62,7 @@ class BhpController extends BaseController
             'requests' => $requests, 'pager' => $this->requestModel->pager,
             'search' => $search, 'status' => $status, 'statuses' => self::STATUSES,
             'periods' => $this->periodModel->orderBy('tanggal_mulai', 'DESC')->findAll(),
+            'availablePrograms' => $this->availableBhpPrograms(),
         ]);
     }
 
@@ -70,12 +72,18 @@ class BhpController extends BaseController
         if (! $period && ! activeGroupIs('superadmin')) {
             return redirect()->to('/bhp')->with('error', 'Jendela pengajuan sedang ditutup.');
         }
+        $pocket = $this->request->getGet('pocket_uuid')
+            ? $this->requestModel->findByUuid((string) $this->request->getGet('pocket_uuid'))
+            : $this->requestModel->where(['periode_id' => (int) $this->request->getGet('periode_id'), 'study_program_id' => (int) $this->request->getGet('study_program_id')])->first();
+        if (! $pocket) return redirect()->to('/bhp')->with('error', 'Kantong program studi tidak ditemukan.');
+        if (! $this->canAccessPocket($pocket)) return redirect()->to('/bhp')->with('error', 'Kantong program studi tidak tersedia untuk Anda.');
         return $this->renderView('bhp/form', [
-            'title' => 'Buat Pengajuan BHP', 'page_title' => 'Buat Pengajuan BHP', 'requestData' => null,
-            'period' => $period, 'laboratories' => $this->availableLaboratories(),
+            'title' => 'Tambah Item BHP', 'page_title' => 'Tambah Item BHP', 'requestData' => null,
+            'pocket' => $pocket, 'period' => $this->periodModel->find($pocket['periode_id']), 'laboratories' => $this->availableLaboratories(),
             'periods' => activeGroupIs('superadmin') ? $this->periodModel->orderBy('tanggal_mulai', 'DESC')->findAll() : ($period ? [$period] : []),
             'studyPrograms' => $this->studyProgramModel->orderBy('name')->findAll(),
-            'laboratoryStudyPrograms' => $this->laboratoryStudyPrograms(), 'units' => self::UNITS,
+            'laboratoryStudyPrograms' => $this->laboratoryStudyPrograms(), 'studyProgramLaboratories' => $this->studyProgramLaboratories(), 'units' => self::UNITS,
+            'selectedStudyProgramId' => (int) $pocket['study_program_id'], 'selectedPeriodId' => (int) $pocket['periode_id'],
         ]);
     }
 
@@ -88,13 +96,6 @@ class BhpController extends BaseController
         if (! $this->validateData($data, $this->rules())) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
-        $laboratory = $this->laboratoryModel->find((int) $data['laboratory_id']);
-        if (! $laboratory || (! activeGroupIs('superadmin', 'kepala_lab') && ! $this->isAssignedLaboratory((int) $data['laboratory_id']))) {
-            return redirect()->back()->withInput()->with('error', 'Laboratorium tidak tersedia untuk grup aktif Anda.');
-        }
-        if (! $this->laboratoryHasStudyProgram((int) $data['laboratory_id'], (int) $data['study_program_id'])) {
-            return redirect()->back()->withInput()->with('error', 'Program studi tidak terdaftar pada laboratorium yang dipilih.');
-        }
         $period = $this->periodModel->find((int) $data['periode_id']);
         if (! $period || (! activeGroupIs('superadmin') && ! $this->periodModel->active())) {
             return redirect()->back()->withInput()->with('error', 'Periode pengajuan tidak aktif.');
@@ -103,22 +104,35 @@ class BhpController extends BaseController
         if (empty($items)) {
             return redirect()->back()->withInput()->with('error', 'Tambahkan minimal satu item BHP.');
         }
-        $db = db_connect();
-        $db->transStart();
-        $this->requestModel->insert([
-            'kode_pengajuan' => $this->nextCode($laboratory['name'], $period['id']),
-            'periode_id' => $period['id'], 'laboran_id' => auth()->id(), 'laboratory_id' => $laboratory['id'],
-            'study_program_id' => $data['study_program_id'] ?: null, 'nama_lab_snapshot' => $laboratory['name'],
-            'prodi_snapshot' => $this->studyProgramName((int) $data['study_program_id']), 'grand_total_estimasi' => 0, 'status' => 'DRAFT',
-        ]);
-        $requestId = (int) $this->requestModel->getInsertID();
-        $total = 0;
         foreach ($items as $item) {
-            $total += $item['total_harga'];
+            if (! $this->validItemLaboratory((int) $item['laboratory_id'], (int) $data['study_program_id'])) {
+                return redirect()->back()->withInput()->with('error', 'Setiap item harus memakai laboratorium yang ditugaskan kepada Anda dan berada di bawah program studi yang dipilih.');
+            }
+        }
+        $firstLaboratory = $this->laboratoryModel->find((int) $items[0]['laboratory_id']);
+        $db = db_connect();
+        $request = $this->requestModel->where(['periode_id' => $period['id'], 'study_program_id' => $data['study_program_id']])->first();
+        if ($request && ! in_array($request['status'], ['DRAFT', 'NEED_REVISION'], true)) {
+            return redirect()->back()->withInput()->with('error', 'Kantong sudah dikunci dan tidak menerima item baru.');
+        }
+        $db->transStart();
+        if (! $request) {
+            $this->requestModel->insert([
+                'kode_pengajuan' => $this->pocketCode($period['id'], (int) $data['study_program_id']),
+                'periode_id' => $period['id'], 'laboran_id' => null, 'laboratory_id' => null,
+                'study_program_id' => $data['study_program_id'], 'nama_lab_snapshot' => 'Multi laboratorium',
+                'prodi_snapshot' => $this->studyProgramName((int) $data['study_program_id']), 'grand_total_estimasi' => 0, 'status' => 'DRAFT',
+            ]);
+            $requestId = (int) $this->requestModel->getInsertID();
+        } else {
+            $requestId = (int) $request['id'];
+        }
+        foreach ($items as $item) {
             $item['pengajuan_id'] = $requestId;
+            $item['laboran_id'] = auth()->id();
             $this->itemModel->insert($item);
         }
-        $this->requestModel->update($requestId, ['grand_total_estimasi' => $total]);
+        $this->recalculateTotal($requestId);
         $db->transComplete();
         if (! $db->transStatus()) {
             return redirect()->back()->withInput()->with('error', 'Pengajuan BHP gagal disimpan.');
@@ -137,8 +151,8 @@ class BhpController extends BaseController
             'period' => $this->periodModel->find($requestData['periode_id']), 'laboratories' => $this->availableLaboratories(),
             'periods' => [$this->periodModel->find($requestData['periode_id'])],
             'studyPrograms' => $this->studyProgramModel->orderBy('name')->findAll(),
-            'laboratoryStudyPrograms' => $this->laboratoryStudyPrograms(), 'units' => self::UNITS,
-            'items' => $this->itemModel->where('pengajuan_id', $requestData['id'])->findAll(),
+            'laboratoryStudyPrograms' => $this->laboratoryStudyPrograms(), 'studyProgramLaboratories' => $this->studyProgramLaboratories(), 'units' => self::UNITS,
+            'items' => $this->editableItems($requestData),
         ]);
     }
 
@@ -152,25 +166,23 @@ class BhpController extends BaseController
         if (! $this->validateData($data, $this->rules())) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
-        $laboratory = $this->laboratoryModel->find($data['laboratory_id']);
-        if (! $laboratory || (! activeGroupIs('superadmin', 'kepala_lab') && ! $this->isAssignedLaboratory($data['laboratory_id']))) {
-            return redirect()->back()->withInput()->with('error', 'Laboratorium tidak tersedia untuk grup aktif Anda.');
-        }
-        if (! $this->laboratoryHasStudyProgram((int) $data['laboratory_id'], (int) $data['study_program_id'])) {
-            return redirect()->back()->withInput()->with('error', 'Program studi tidak terdaftar pada laboratorium yang dipilih.');
-        }
         $items = $this->postedItems();
         if (empty($items)) return redirect()->back()->withInput()->with('error', 'Tambahkan minimal satu item BHP.');
+        foreach ($items as $item) {
+            if (! $this->validItemLaboratory((int) $item['laboratory_id'], (int) $requestData['study_program_id'])) {
+                return redirect()->back()->withInput()->with('error', 'Setiap item harus memakai laboratorium yang ditugaskan kepada Anda dan berada di bawah program studi kantong.');
+            }
+        }
         $db = db_connect();
         $db->transStart();
-        $this->itemModel->where('pengajuan_id', $requestData['id'])->delete(null, true);
-        $total = 0;
+        $this->itemModel->where(['pengajuan_id' => $requestData['id'], 'laboran_id' => auth()->id()])->delete(null, true);
         foreach ($items as $item) {
-            $total += $item['total_harga'];
             $item['pengajuan_id'] = $requestData['id'];
+            $item['laboran_id'] = auth()->id();
             $this->itemModel->insert($item);
         }
-        $this->requestModel->update($requestData['id'], ['laboratory_id' => $laboratory['id'], 'study_program_id' => $data['study_program_id'] ?: null, 'nama_lab_snapshot' => $laboratory['name'], 'prodi_snapshot' => $this->studyProgramName($data['study_program_id']), 'grand_total_estimasi' => $total, 'catatan_revisi' => null]);
+        $this->requestModel->update($requestData['id'], ['catatan_revisi' => null]);
+        $this->recalculateTotal((int) $requestData['id']);
         $db->transComplete();
         return $db->transStatus() ? redirect()->to('/bhp/detail/' . $uuid)->with('success', 'Pengajuan BHP berhasil diperbarui.') : redirect()->back()->withInput()->with('error', 'Pengajuan BHP gagal diperbarui.');
     }
@@ -200,12 +212,13 @@ class BhpController extends BaseController
     {
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
-        $query = $this->requestModel->select('pengajuan_bhp.*, laboratories.name AS laboratory_name')
-            ->join('laboratories', 'laboratories.id = pengajuan_bhp.laboratory_id')
+        $query = $this->requestModel->select('pengajuan_bhp.*, laboratories.name AS laboratory_name, study_programs.name AS study_program_name')
+            ->join('laboratories', 'laboratories.id = pengajuan_bhp.laboratory_id', 'left')
+            ->join('study_programs', 'study_programs.id = pengajuan_bhp.study_program_id', 'left')
             ->whereIn('pengajuan_bhp.status', ['PENDING_REVIEW', 'EVIDEN_SUBMITTED']);
         if (in_array($status, ['PENDING_REVIEW', 'EVIDEN_SUBMITTED'], true)) $query->where('pengajuan_bhp.status', $status);
         else $status = '';
-        if ($search !== '') $query->groupStart()->like('pengajuan_bhp.kode_pengajuan', $search)->orLike('laboratories.name', $search)->orLike('pengajuan_bhp.nama_lab_snapshot', $search)->groupEnd();
+        if ($search !== '') $query->groupStart()->like('pengajuan_bhp.kode_pengajuan', $search)->orLike('laboratories.name', $search)->orLike('study_programs.name', $search)->orLike('pengajuan_bhp.nama_lab_snapshot', $search)->groupEnd();
         $requests = $query->orderBy('pengajuan_bhp.created_at', 'ASC')->paginate(15);
         return $this->renderView('bhp/approval', ['title' => 'Review Pengajuan BHP', 'page_title' => 'Review Pengajuan BHP', 'requests' => $requests, 'pager' => $this->requestModel->pager, 'search' => $search, 'status' => $status]);
     }
@@ -281,7 +294,11 @@ class BhpController extends BaseController
     {
         $data = $this->accessible($uuid);
         if (! $data) return redirect()->to('/bhp')->with('error', 'Pengajuan tidak ditemukan.');
-        return $this->renderView('bhp/detail', ['title' => 'Detail Pengajuan BHP', 'page_title' => $data['kode_pengajuan'], 'requestData' => $data, 'items' => $this->itemModel->where('pengajuan_id', $data['id'])->findAll(), 'evidences' => $this->evidenceModel->where('pengajuan_id', $data['id'])->findAll(), 'history' => (new \App\Models\BhpStatusHistoryModel())->where('pengajuan_id', $data['id'])->orderBy('id', 'DESC')->findAll()]);
+        $items = $this->itemModel->select('pengajuan_bhp_item.*, users.username AS laboran_name, laboratories.name AS laboratory_name')
+            ->join('users', 'users.id = pengajuan_bhp_item.laboran_id', 'left')
+            ->join('laboratories', 'laboratories.id = pengajuan_bhp_item.laboratory_id', 'left')
+            ->where('pengajuan_id', $data['id'])->findAll();
+        return $this->renderView('bhp/detail', ['title' => 'Detail Pengajuan BHP', 'page_title' => $data['kode_pengajuan'], 'requestData' => $data, 'items' => $items, 'evidences' => $this->evidenceModel->where('pengajuan_id', $data['id'])->findAll(), 'history' => (new \App\Models\BhpStatusHistoryModel())->where('pengajuan_id', $data['id'])->orderBy('id', 'DESC')->findAll()]);
     }
 
     public function downloadEvidence(string $uuid, string $evidenceUuid)
@@ -302,7 +319,7 @@ class BhpController extends BaseController
         if ($tab === 'archive') {
             $query->where('tanggal_selesai <', $now);
         } else {
-            $query->where('tanggal_mulai <=', $now)->where('tanggal_selesai >=', $now);
+            $query->where('tanggal_selesai >=', $now);
         }
 
         return $this->renderView('bhp/periods', [
@@ -325,7 +342,19 @@ class BhpController extends BaseController
         if (strtotime($data['tanggal_selesai']) <= strtotime($data['tanggal_mulai'])) return redirect()->back()->withInput()->with('error', 'Tanggal selesai harus setelah tanggal mulai.');
         $overlap = $this->periodModel->where('tanggal_mulai <', date('Y-m-d H:i:s', strtotime($data['tanggal_selesai'])))->where('tanggal_selesai >', date('Y-m-d H:i:s', strtotime($data['tanggal_mulai'])))->first();
         if ($overlap) return redirect()->back()->withInput()->with('error', 'Periode tidak boleh overlap secara global.');
+        $db = db_connect();
+        $db->transStart();
         $this->periodModel->insert(['nama_periode' => $data['nama_periode'], 'tanggal_mulai' => date('Y-m-d H:i:s', strtotime($data['tanggal_mulai'])), 'tanggal_selesai' => date('Y-m-d H:i:s', strtotime($data['tanggal_selesai'])), 'created_by' => auth()->id()]);
+        $periodId = (int) $this->periodModel->getInsertID();
+        foreach ($this->studyProgramModel->where('status', 'active')->findAll() as $program) {
+            $this->requestModel->insert([
+                'kode_pengajuan' => $this->pocketCode($periodId, (int) $program['id']),
+                'periode_id' => $periodId, 'study_program_id' => $program['id'], 'laboran_id' => null, 'laboratory_id' => null,
+                'nama_lab_snapshot' => 'Multi laboratorium', 'prodi_snapshot' => $program['name'], 'grand_total_estimasi' => 0, 'status' => 'DRAFT',
+            ]);
+        }
+        $db->transComplete();
+        if (! $db->transStatus()) return redirect()->back()->withInput()->with('error', 'Periode dan kantong BHP gagal dibuat.');
         return redirect()->to('/bhp/periods')->with('success', 'Periode berhasil dibuat.');
     }
 
@@ -353,14 +382,45 @@ class BhpController extends BaseController
     {
         $data = $this->requestModel->findByUuid($uuid);
         if (! $data) return null;
-        if (activeGroupIs('laboran', 'user') && (int) $data['laboran_id'] !== (int) auth()->id()) return null;
+        if (activeGroupIs('laboran', 'user') && ! $this->canAccessPocket($data)) return null;
         return $data;
+    }
+
+    private function canAccessPocket(array $pocket): bool
+    {
+        if (! activeGroupIs('laboran', 'user')) return true;
+        return db_connect()->table('laboratory_laborans assignments')
+            ->join('laboratory_study_programs programs', 'programs.laboratory_id = assignments.laboratory_id')
+            ->where('assignments.user_id', auth()->id())
+            ->where('programs.study_program_id', $pocket['study_program_id'])
+            ->countAllResults() > 0;
+    }
+
+    private function editableItems(array $requestData): array
+    {
+        $query = $this->itemModel->where('pengajuan_id', $requestData['id']);
+        if (activeGroupIs('laboran', 'user')) $query->where('laboran_id', auth()->id());
+        return $query->findAll();
+    }
+
+    private function recalculateTotal(int $requestId): void
+    {
+        $row = $this->itemModel->selectSum('total_harga')->where('pengajuan_id', $requestId)->first();
+        $this->requestModel->update($requestId, ['grand_total_estimasi' => (float) ($row['total_harga'] ?? 0)]);
     }
 
     private function availableLaboratories(): array
     {
         if (! activeGroupIs('laboran')) return $this->laboratoryModel->where('status', 'active')->orderBy('name')->findAll();
         return $this->laboratoryModel->select('laboratories.*')->join('laboratory_laborans', 'laboratory_laborans.laboratory_id = laboratories.id')->where('laboratory_laborans.user_id', auth()->id())->where('laboratories.status', 'active')->orderBy('name')->findAll();
+    }
+
+    private function availableBhpPrograms(): array
+    {
+        $programs = $this->studyProgramModel->where('status', 'active')->orderBy('name')->findAll();
+        if (! activeGroupIs('laboran', 'user')) return $programs;
+        $availableIds = array_map('intval', array_keys($this->studyProgramLaboratories()));
+        return array_values(array_filter($programs, static fn (array $program): bool => in_array((int) $program['id'], $availableIds, true)));
     }
 
     private function isAssignedLaboratory(int $id): bool
@@ -376,12 +436,12 @@ class BhpController extends BaseController
 
     private function requestData(): array
     {
-        return ['periode_id' => (int) $this->request->getPost('periode_id'), 'laboratory_id' => (int) $this->request->getPost('laboratory_id'), 'study_program_id' => (int) $this->request->getPost('study_program_id')];
+        return ['periode_id' => (int) $this->request->getPost('periode_id'), 'study_program_id' => (int) $this->request->getPost('study_program_id')];
     }
 
     private function rules(): array
     {
-        return ['periode_id' => 'required|is_natural_no_zero', 'laboratory_id' => 'required|is_natural_no_zero', 'study_program_id' => 'required|is_natural_no_zero'];
+        return ['periode_id' => 'required|is_natural_no_zero', 'study_program_id' => 'required|is_natural_no_zero'];
     }
 
     private function laboratoryStudyPrograms(): array
@@ -400,21 +460,45 @@ class BhpController extends BaseController
         return $mapped;
     }
 
+    private function studyProgramLaboratories(): array
+    {
+        $rows = db_connect()->table('laboratory_study_programs')
+            ->select('laboratory_study_programs.study_program_id, laboratories.id, laboratories.name')
+            ->join('laboratories', 'laboratories.id = laboratory_study_programs.laboratory_id')
+            ->where('laboratories.status', 'active')
+            ->orderBy('laboratories.name', 'ASC')->get()->getResultArray();
+        $mapped = [];
+        foreach ($rows as $row) {
+            if (activeGroupIs('laboran') && ! $this->isAssignedLaboratory((int) $row['id'])) continue;
+            $mapped[(string) $row['study_program_id']][] = ['id' => (int) $row['id'], 'name' => $row['name']];
+        }
+        return $mapped;
+    }
+
     private function laboratoryHasStudyProgram(int $laboratoryId, int $studyProgramId): bool
     {
         return db_connect()->table('laboratory_study_programs')->where(['laboratory_id' => $laboratoryId, 'study_program_id' => $studyProgramId])->countAllResults() > 0;
     }
 
+    private function validItemLaboratory(int $laboratoryId, int $studyProgramId): bool
+    {
+        $laboratory = $this->laboratoryModel->where('status', 'active')->find($laboratoryId);
+        return $laboratory !== null
+            && (! activeGroupIs('laboran', 'user') || $this->isAssignedLaboratory($laboratoryId))
+            && $this->laboratoryHasStudyProgram($laboratoryId, $studyProgramId);
+    }
+
     private function postedItems(): array
     {
         $names = $this->request->getPost('nama_barang') ?? [];
+        $laboratories = $this->request->getPost('item_laboratory_id') ?? [];
         $items = [];
         foreach ($names as $i => $name) {
             $name = trim((string) $name);
             $qty = (int) ($this->request->getPost('qty')[$i] ?? 0);
             $price = (float) ($this->request->getPost('harga_satuan')[$i] ?? 0);
             if ($name === '' || $qty < 1 || $price < 0) continue;
-            $items[] = ['nama_barang' => $name, 'spesifikasi' => trim((string) (($this->request->getPost('spesifikasi')[$i] ?? ''))), 'qty' => $qty, 'satuan' => (string) (($this->request->getPost('satuan')[$i] ?? 'Unit')), 'harga_satuan' => $price, 'total_harga' => $qty * $price, 'vendor' => trim((string) (($this->request->getPost('vendor')[$i] ?? ''))), 'link_toko_online' => trim((string) (($this->request->getPost('link_toko_online')[$i] ?? '')))];
+            $items[] = ['laboratory_id' => (int) ($laboratories[$i] ?? 0), 'nama_barang' => $name, 'spesifikasi' => trim((string) (($this->request->getPost('spesifikasi')[$i] ?? ''))), 'qty' => $qty, 'satuan' => (string) (($this->request->getPost('satuan')[$i] ?? 'Unit')), 'harga_satuan' => $price, 'total_harga' => $qty * $price, 'vendor' => trim((string) (($this->request->getPost('vendor')[$i] ?? ''))), 'link_toko_online' => trim((string) (($this->request->getPost('link_toko_online')[$i] ?? '')))];
         }
         return $items;
     }
@@ -424,6 +508,11 @@ class BhpController extends BaseController
         $prefix = 'BHP/' . strtoupper(preg_replace('/[^A-Za-z0-9]+/', '-', $lab)) . '/' . date('Y/m');
         $count = $this->requestModel->like('kode_pengajuan', $prefix . '/', 'after')->where('periode_id', $periodId)->countAllResults() + 1;
         return $prefix . '/' . str_pad((string) $count, 3, '0', STR_PAD_LEFT);
+    }
+
+    private function pocketCode(int $periodId, int $studyProgramId): string
+    {
+        return 'BHP/KANTONG/' . $periodId . '/' . $studyProgramId;
     }
 
     private function studyProgramName(int $id): ?string

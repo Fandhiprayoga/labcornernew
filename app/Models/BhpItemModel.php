@@ -9,7 +9,7 @@ class BhpItemModel extends Model
     protected $table = 'pengajuan_bhp_item';
     protected $primaryKey = 'id';
     protected $returnType = 'array';
-    protected $allowedFields = ['uuid', 'pengajuan_id', 'nama_barang', 'spesifikasi', 'qty', 'satuan', 'harga_satuan', 'total_harga', 'vendor', 'link_toko_online'];
+    protected $allowedFields = ['uuid', 'pengajuan_id', 'laboran_id', 'laboratory_id', 'nama_barang', 'spesifikasi', 'qty', 'satuan', 'harga_satuan', 'total_harga', 'vendor', 'link_toko_online'];
     protected $useTimestamps = true;
     protected $useSoftDeletes = true;
     protected $beforeInsert = ['generateUuid'];

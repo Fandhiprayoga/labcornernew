@@ -22,11 +22,11 @@
                     </thead>
                     <tbody><?php if (empty($periods)): ?><tr>
                                 <td colspan="4"><?= view('partials/empty_table_state', ['message' => $tab === 'active' ? 'Belum ada periode aktif.' : 'Belum ada arsip periode.']) ?></td>
-                            </tr><?php endif; ?><?php foreach ($periods as $period): $active = time() >= strtotime($period['tanggal_mulai']) && time() <= strtotime($period['tanggal_selesai']); ?><tr>
+                            </tr><?php endif; ?><?php foreach ($periods as $period): $now = time(); $active = $now >= strtotime($period['tanggal_mulai']) && $now <= strtotime($period['tanggal_selesai']); $upcoming = $now < strtotime($period['tanggal_mulai']); ?><tr>
                                 <td><?= esc($period['nama_periode']) ?></td>
                                 <td><?= esc($period['tanggal_mulai']) ?></td>
                                 <td><?= esc($period['tanggal_selesai']) ?></td>
-                                <td><span class="badge badge--soft badge--<?= $active ? 'success' : 'secondary' ?>"><?= $active ? 'Aktif' : 'Tidak Aktif' ?></span></td>
+                                <td><span class="badge badge--soft badge--<?= $active ? 'success' : ($upcoming ? 'info' : 'secondary') ?>"><?= $active ? 'Aktif' : ($upcoming ? 'Akan Aktif' : 'Tidak Aktif') ?></span></td>
                             </tr><?php endforeach; ?></tbody>
                 </table>
             </div>
