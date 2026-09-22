@@ -48,12 +48,16 @@ class BhpController extends BaseController
 
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
+        $periodId = (int) $this->request->getGet('periode_id');
         if (in_array(activeGroup(), ['laboran', 'user'], true)) {
             $query->join('laboratory_study_programs pocket_programs', 'pocket_programs.study_program_id = pengajuan_bhp.study_program_id', 'inner')
                 ->join('laboratory_laborans pocket_assignments', 'pocket_assignments.laboratory_id = pocket_programs.laboratory_id AND pocket_assignments.user_id = ' . (int) auth()->id(), 'inner')->distinct();
         }
         if ($status !== '' && in_array($status, self::STATUSES, true)) {
             $query->where('pengajuan_bhp.status', $status);
+        }
+        if ($periodId > 0) {
+            $query->where('pengajuan_bhp.periode_id', $periodId);
         }
         if ($search !== '') {
             $query->groupStart()->like('pengajuan_bhp.kode_pengajuan', $search)->orLike('laboratories.name', $search)->orLike('users.username', $search)->orLike('pengajuan_bhp.status', $search)->groupEnd();
@@ -63,7 +67,7 @@ class BhpController extends BaseController
         return $this->renderView('bhp/index', [
             'title' => 'Pengajuan BHP', 'page_title' => 'Pengajuan Bahan Habis Pakai',
             'requests' => $requests, 'pager' => $this->requestModel->pager,
-            'search' => $search, 'status' => $status, 'statuses' => self::STATUSES,
+            'search' => $search, 'status' => $status, 'periodId' => $periodId, 'statuses' => self::STATUSES,
             'periods' => $this->periodModel->orderBy('tanggal_mulai', 'DESC')->findAll(),
             'availablePrograms' => $this->availableBhpPrograms(),
         ]);
