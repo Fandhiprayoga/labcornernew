@@ -74,7 +74,8 @@ class BhpController extends BaseController
             'title' => 'Buat Pengajuan BHP', 'page_title' => 'Buat Pengajuan BHP', 'requestData' => null,
             'period' => $period, 'laboratories' => $this->availableLaboratories(),
             'periods' => activeGroupIs('superadmin') ? $this->periodModel->orderBy('tanggal_mulai', 'DESC')->findAll() : ($period ? [$period] : []),
-            'studyPrograms' => $this->studyProgramModel->orderBy('name')->findAll(), 'units' => self::UNITS,
+            'studyPrograms' => $this->studyProgramModel->orderBy('name')->findAll(),
+            'laboratoryStudyPrograms' => $this->laboratoryStudyPrograms(), 'units' => self::UNITS,
         ]);
     }
 
@@ -90,6 +91,9 @@ class BhpController extends BaseController
         $laboratory = $this->laboratoryModel->find((int) $data['laboratory_id']);
         if (! $laboratory || (! activeGroupIs('superadmin', 'kepala_lab') && ! $this->isAssignedLaboratory((int) $data['laboratory_id']))) {
             return redirect()->back()->withInput()->with('error', 'Laboratorium tidak tersedia untuk grup aktif Anda.');
+        }
+        if (! $this->laboratoryHasStudyProgram((int) $data['laboratory_id'], (int) $data['study_program_id'])) {
+            return redirect()->back()->withInput()->with('error', 'Program studi tidak terdaftar pada laboratorium yang dipilih.');
         }
         $period = $this->periodModel->find((int) $data['periode_id']);
         if (! $period || (! activeGroupIs('superadmin') && ! $this->periodModel->active())) {
@@ -132,7 +136,8 @@ class BhpController extends BaseController
             'title' => 'Edit Pengajuan BHP', 'page_title' => 'Edit Pengajuan BHP', 'requestData' => $requestData,
             'period' => $this->periodModel->find($requestData['periode_id']), 'laboratories' => $this->availableLaboratories(),
             'periods' => [$this->periodModel->find($requestData['periode_id'])],
-            'studyPrograms' => $this->studyProgramModel->orderBy('name')->findAll(), 'units' => self::UNITS,
+            'studyPrograms' => $this->studyProgramModel->orderBy('name')->findAll(),
+            'laboratoryStudyPrograms' => $this->laboratoryStudyPrograms(), 'units' => self::UNITS,
             'items' => $this->itemModel->where('pengajuan_id', $requestData['id'])->findAll(),
         ]);
     }
@@ -150,6 +155,9 @@ class BhpController extends BaseController
         $laboratory = $this->laboratoryModel->find($data['laboratory_id']);
         if (! $laboratory || (! activeGroupIs('superadmin', 'kepala_lab') && ! $this->isAssignedLaboratory($data['laboratory_id']))) {
             return redirect()->back()->withInput()->with('error', 'Laboratorium tidak tersedia untuk grup aktif Anda.');
+        }
+        if (! $this->laboratoryHasStudyProgram((int) $data['laboratory_id'], (int) $data['study_program_id'])) {
+            return redirect()->back()->withInput()->with('error', 'Program studi tidak terdaftar pada laboratorium yang dipilih.');
         }
         $items = $this->postedItems();
         if (empty($items)) return redirect()->back()->withInput()->with('error', 'Tambahkan minimal satu item BHP.');
@@ -373,7 +381,28 @@ class BhpController extends BaseController
 
     private function rules(): array
     {
-        return ['periode_id' => 'required|is_natural_no_zero', 'laboratory_id' => 'required|is_natural_no_zero', 'study_program_id' => 'permit_empty|is_natural'];
+        return ['periode_id' => 'required|is_natural_no_zero', 'laboratory_id' => 'required|is_natural_no_zero', 'study_program_id' => 'required|is_natural_no_zero'];
+    }
+
+    private function laboratoryStudyPrograms(): array
+    {
+        $rows = db_connect()->table('laboratory_study_programs')
+            ->select('laboratory_study_programs.laboratory_id, study_programs.id, study_programs.code, study_programs.name')
+            ->join('study_programs', 'study_programs.id = laboratory_study_programs.study_program_id')
+            ->where('study_programs.status', 'active')
+            ->where('study_programs.deleted_at IS NULL', null, false)
+            ->orderBy('study_programs.name', 'ASC')
+            ->get()->getResultArray();
+        $mapped = [];
+        foreach ($rows as $row) {
+            $mapped[(string) $row['laboratory_id']][] = ['id' => (int) $row['id'], 'code' => $row['code'], 'name' => $row['name']];
+        }
+        return $mapped;
+    }
+
+    private function laboratoryHasStudyProgram(int $laboratoryId, int $studyProgramId): bool
+    {
+        return db_connect()->table('laboratory_study_programs')->where(['laboratory_id' => $laboratoryId, 'study_program_id' => $studyProgramId])->countAllResults() > 0;
     }
 
     private function postedItems(): array
