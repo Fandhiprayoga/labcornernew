@@ -15,6 +15,7 @@ class BhpController extends BaseController
 {
     private const STATUSES = ['DRAFT', 'PENDING_REVIEW', 'NEED_REVISION', 'APPROVED_BY_KALAB', 'FUND_DISBURSED', 'EVIDEN_SUBMITTED', 'COMPLETED', 'REJECTED'];
     private const UNITS = ['Pcs', 'Box', 'Roll', 'Liter', 'Rim', 'Bottle', 'Pack', 'Unit', 'Custom'];
+    private const PERIODS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
     protected BhpRequestModel $requestModel;
     protected BhpItemModel $itemModel;
@@ -387,6 +388,10 @@ class BhpController extends BaseController
     public function periods()
     {
         $tab = (string) $this->request->getGet('tab') === 'archive' ? 'archive' : 'active';
+        $perPage = (int) $this->request->getGet('perPage');
+        if (! in_array($perPage, self::PERIODS_PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PERIODS_PER_PAGE_OPTIONS[0];
+        }
         $now = date('Y-m-d H:i:s');
         $query = $this->periodModel->orderBy('tanggal_mulai', 'DESC');
         if ($tab === 'archive') {
@@ -395,10 +400,18 @@ class BhpController extends BaseController
             $query->where('tanggal_selesai >=', $now);
         }
 
+        $periods = $query->paginate($perPage);
+        $pager = $this->periodModel->pager;
+
         return $this->renderView('bhp/periods', [
             'title' => 'Periode Pengajuan BHP',
             'page_title' => 'Periode Pengajuan BHP',
-            'periods' => $query->findAll(),
+            'periods' => $periods,
+            'pager' => $pager,
+            'perPage' => $perPage,
+            'perPageOptions' => self::PERIODS_PER_PAGE_OPTIONS,
+            'currentPage' => $pager->getCurrentPage(),
+            'totalRows' => $pager->getTotal(),
             'tab' => $tab,
         ]);
     }
