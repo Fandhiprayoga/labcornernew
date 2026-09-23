@@ -44,7 +44,7 @@
                                 <td><?= esc($period['tanggal_mulai']) ?></td>
                                 <td><?= esc($period['tanggal_selesai']) ?></td>
                                 <td><span class="badge badge--soft badge--<?= $active ? 'success' : ($upcoming ? 'info' : 'secondary') ?>"><?= $active ? 'Aktif' : ($upcoming ? 'Akan Aktif' : 'Tidak Aktif') ?></span></td>
-                                <td><?= $canEdit ? '<a class="button button--outline button--neutral button--sm" href="' . base_url('bhp/periods/edit/' . $period['id']) . '">Edit</a>' : '<span class="text-muted-foreground text-xs">-</span>' ?></td>
+                                <td class="text-end"><div class="flex justify-end gap-1"><?= $canEdit ? '<a href="' . base_url('bhp/periods/edit/' . $period['id']) . '" class="button button--warning button--icon-only button--sm" title="Edit" aria-label="Edit periode"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" /></svg></a>' : '<span class="text-muted-foreground text-xs">-</span>' ?></div></td>
                             </tr><?php endforeach; ?></tbody>
                 </table>
             </div>
