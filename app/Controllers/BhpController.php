@@ -447,7 +447,7 @@ class BhpController extends BaseController
             ]);
         }
         $db->transComplete();
-        if (! $db->transStatus()) return redirect()->back()->withInput()->with('error', 'Periode dan kantong BHP gagal dibuat.');
+        if (! $db->transStatus()) return redirect()->back()->withInput()->with('error', 'Periode dan pengajuan BHP gagal dibuat.');
         return redirect()->to('/bhp/periods')->with('success', 'Periode berhasil dibuat.');
     }
 
@@ -653,7 +653,7 @@ class BhpController extends BaseController
 
     private function pocketCode(int $periodId, int $studyProgramId): string
     {
-        return 'BHP/KANTONG/' . $periodId . '/' . $studyProgramId;
+        return 'BHP/PENGAJUAN/' . $periodId . '/' . $studyProgramId;
     }
 
     private function studyProgramName(int $id): ?string
