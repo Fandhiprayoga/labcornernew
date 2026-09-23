@@ -15,7 +15,7 @@ class BhpController extends BaseController
 {
     private const STATUSES = ['DRAFT', 'PENDING_REVIEW', 'NEED_REVISION', 'APPROVED_BY_KALAB', 'FUND_DISBURSED', 'EVIDEN_SUBMITTED', 'COMPLETED', 'REJECTED'];
     private const UNITS = ['Pcs', 'Box', 'Roll', 'Liter', 'Rim', 'Bottle', 'Pack', 'Unit', 'Custom'];
-    private const PERIODS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
+    private const PER_PAGE_OPTIONS = [10, 25, 50, 100];
 
     protected BhpRequestModel $requestModel;
     protected BhpItemModel $itemModel;
@@ -50,6 +50,10 @@ class BhpController extends BaseController
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
         $periodId = (int) $this->request->getGet('periode_id');
+        $perPage = (int) $this->request->getGet('perPage');
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PER_PAGE_OPTIONS[0];
+        }
         if (in_array(activeGroup(), ['laboran', 'user'], true)) {
             $query->join('laboratory_study_programs pocket_programs', 'pocket_programs.study_program_id = pengajuan_bhp.study_program_id', 'inner')
                 ->join('laboratory_laborans pocket_assignments', 'pocket_assignments.laboratory_id = pocket_programs.laboratory_id AND pocket_assignments.user_id = ' . (int) auth()->id(), 'inner')->distinct();
@@ -64,13 +68,16 @@ class BhpController extends BaseController
             $query->groupStart()->like('pengajuan_bhp.kode_pengajuan', $search)->orLike('laboratories.name', $search)->orLike('users.username', $search)->orLike('pengajuan_bhp.status', $search)->groupEnd();
         }
 
-        $requests = $query->orderBy('pengajuan_bhp.created_at', 'DESC')->paginate(15);
+        $requests = $query->orderBy('pengajuan_bhp.created_at', 'DESC')->paginate($perPage);
+        $pager = $this->requestModel->pager;
         return $this->renderView('bhp/index', [
             'title' => 'Pengajuan BHP', 'page_title' => 'Pengajuan Bahan Habis Pakai',
-            'requests' => $requests, 'pager' => $this->requestModel->pager,
+            'requests' => $requests, 'pager' => $pager,
             'search' => $search, 'status' => $status, 'periodId' => $periodId, 'statuses' => self::STATUSES,
             'periods' => $this->periodModel->orderBy('tanggal_mulai', 'DESC')->findAll(),
             'availablePrograms' => $this->availableBhpPrograms(),
+            'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE_OPTIONS,
+            'currentPage' => $pager->getCurrentPage(), 'totalRows' => $pager->getTotal(),
         ]);
     }
 
@@ -389,8 +396,8 @@ class BhpController extends BaseController
     {
         $tab = (string) $this->request->getGet('tab') === 'archive' ? 'archive' : 'active';
         $perPage = (int) $this->request->getGet('perPage');
-        if (! in_array($perPage, self::PERIODS_PER_PAGE_OPTIONS, true)) {
-            $perPage = self::PERIODS_PER_PAGE_OPTIONS[0];
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PER_PAGE_OPTIONS[0];
         }
         $now = date('Y-m-d H:i:s');
         $query = $this->periodModel->orderBy('tanggal_mulai', 'DESC');
@@ -409,7 +416,7 @@ class BhpController extends BaseController
             'periods' => $periods,
             'pager' => $pager,
             'perPage' => $perPage,
-            'perPageOptions' => self::PERIODS_PER_PAGE_OPTIONS,
+            'perPageOptions' => self::PER_PAGE_OPTIONS,
             'currentPage' => $pager->getCurrentPage(),
             'totalRows' => $pager->getTotal(),
             'tab' => $tab,
