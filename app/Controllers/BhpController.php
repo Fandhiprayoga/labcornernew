@@ -82,8 +82,8 @@ class BhpController extends BaseController
         $pocket = $this->request->getGet('pocket_uuid')
             ? $this->requestModel->findByUuid((string) $this->request->getGet('pocket_uuid'))
             : $this->requestModel->where(['periode_id' => (int) $this->request->getGet('periode_id'), 'study_program_id' => (int) $this->request->getGet('study_program_id')])->first();
-        if (! $pocket) return redirect()->to('/bhp')->with('error', 'Kantong program studi tidak ditemukan.');
-        if (! $this->canAccessPocket($pocket)) return redirect()->to('/bhp')->with('error', 'Kantong program studi tidak tersedia untuk Anda.');
+        if (! $pocket) return redirect()->to('/bhp')->with('error', 'Pengajuan program studi tidak ditemukan.');
+        if (! $this->canAccessPocket($pocket)) return redirect()->to('/bhp')->with('error', 'Pengajuan program studi tidak tersedia untuk Anda.');
         return $this->renderView('bhp/form', [
             'title' => 'Tambah Item BHP', 'page_title' => 'Tambah Item BHP', 'requestData' => null,
             'pocket' => $pocket, 'period' => $this->periodModel->find($pocket['periode_id']), 'laboratories' => $this->availableLaboratories(),
@@ -120,7 +120,7 @@ class BhpController extends BaseController
         $db = db_connect();
         $request = $this->requestModel->where(['periode_id' => $period['id'], 'study_program_id' => $data['study_program_id']])->first();
         if ($request && ! in_array($request['status'], ['DRAFT', 'NEED_REVISION'], true)) {
-            return redirect()->back()->withInput()->with('error', 'Kantong sudah dikunci dan tidak menerima item baru.');
+            return redirect()->back()->withInput()->with('error', 'Pengajuan sudah dikunci dan tidak menerima item baru.');
         }
         $db->transStart();
         if (! $request) {
@@ -196,9 +196,13 @@ class BhpController extends BaseController
 
     public function submit(string $uuid)
     {
+        if (! activeGroupIs('superadmin', 'kepala_lab')) {
+            return redirect()->to('/bhp')->with('error', 'Pengajuan BHP tidak dikirim per laboran. Kepala lab menilai pengajuan secara kolektif.');
+        }
+
         $requestData = $this->accessible($uuid);
         if (! $requestData || ! in_array($requestData['status'], ['DRAFT', 'NEED_REVISION'], true)) {
-            return redirect()->to('/bhp')->with('error', 'Hanya draft atau pengajuan revisi yang dapat dikirim.');
+            return redirect()->to('/bhp')->with('error', 'Hanya pengajuan draft atau revisi yang dapat diajukan untuk review.');
         }
         $period = $this->periodModel->find($requestData['periode_id']);
         if (! activeGroupIs('superadmin') && (! $period || ! $this->periodIsActive($period))) {
@@ -208,11 +212,11 @@ class BhpController extends BaseController
         if (empty($items)) {
             return redirect()->to('/bhp')->with('error', 'Pengajuan harus memiliki minimal satu item.');
         }
-        $this->transition($requestData, 'PENDING_REVIEW', 'Pengajuan dikirim untuk ditinjau.');
+        $this->transition($requestData, 'PENDING_REVIEW', 'Pengajuan siap ditinjau oleh kepala lab.');
         if (activeGroupIs('superadmin') && ! $this->periodIsActive($period)) {
             $this->auditModel->insert(['admin_id' => auth()->id(), 'action_type' => 'OVERRIDE_WINDOW', 'target_entity_id' => $requestData['id'], 'notes' => 'Submit di luar periode aktif.']);
         }
-        return redirect()->to('/bhp')->with('success', 'Pengajuan BHP berhasil dikirim.');
+        return redirect()->to('/bhp/detail/' . $uuid)->with('success', 'Pengajuan BHP berhasil diajukan untuk review.');
     }
 
     public function overrideItem(string $itemUuid)
@@ -229,7 +233,7 @@ class BhpController extends BaseController
 
         $requestData = $this->requestModel->find((int) $item['pengajuan_id']);
         if (! $requestData || in_array($requestData['status'], ['FUND_DISBURSED', 'EVIDEN_SUBMITTED', 'COMPLETED'], true)) {
-            return redirect()->back()->with('error', 'Item tidak dapat diubah pada status kantong saat ini.');
+            return redirect()->back()->with('error', 'Item tidak dapat diubah pada status pengajuan saat ini.');
         }
 
         $rules = [
@@ -404,6 +408,26 @@ class BhpController extends BaseController
         return $this->renderView('bhp/period_form', ['title' => 'Buat Periode Pengajuan BHP', 'page_title' => 'Buat Periode Pengajuan BHP']);
     }
 
+    public function editPeriod(int $id)
+    {
+        $period = $this->periodModel->find($id);
+        if (! $period) {
+            return redirect()->to('/bhp/periods')->with('error', 'Periode tidak ditemukan.');
+        }
+
+        $now = date('Y-m-d H:i:s');
+        if ($period['tanggal_selesai'] < $now) {
+            return redirect()->to('/bhp/periods')->with('error', 'Periode yang sudah berakhir tidak dapat diedit.');
+        }
+
+        return $this->renderView('bhp/period_form', [
+            'title' => 'Edit Periode Pengajuan BHP',
+            'page_title' => 'Edit Periode Pengajuan BHP',
+            'period' => $period,
+            'mode' => 'edit',
+        ]);
+    }
+
     public function storePeriod()
     {
         $data = $this->request->getPost();
@@ -425,6 +449,45 @@ class BhpController extends BaseController
         $db->transComplete();
         if (! $db->transStatus()) return redirect()->back()->withInput()->with('error', 'Periode dan kantong BHP gagal dibuat.');
         return redirect()->to('/bhp/periods')->with('success', 'Periode berhasil dibuat.');
+    }
+
+    public function updatePeriod(int $id)
+    {
+        $period = $this->periodModel->find($id);
+        if (! $period) {
+            return redirect()->to('/bhp/periods')->with('error', 'Periode tidak ditemukan.');
+        }
+
+        $now = date('Y-m-d H:i:s');
+        if ($period['tanggal_selesai'] < $now) {
+            return redirect()->to('/bhp/periods')->with('error', 'Periode yang sudah berakhir tidak dapat diedit.');
+        }
+
+        $data = $this->request->getPost();
+        if (! $this->validateData($data, ['nama_periode' => 'required|max_length[100]', 'tanggal_mulai' => 'required|valid_date[Y-m-d\\TH:i]', 'tanggal_selesai' => 'required|valid_date[Y-m-d\\TH:i]'])) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        if (strtotime($data['tanggal_selesai']) <= strtotime($data['tanggal_mulai'])) {
+            return redirect()->back()->withInput()->with('error', 'Tanggal selesai harus setelah tanggal mulai.');
+        }
+
+        $overlap = $this->periodModel
+            ->where('id !=', $id)
+            ->where('tanggal_mulai <', date('Y-m-d H:i:s', strtotime($data['tanggal_selesai'])))
+            ->where('tanggal_selesai >', date('Y-m-d H:i:s', strtotime($data['tanggal_mulai'])))
+            ->first();
+        if ($overlap) {
+            return redirect()->back()->withInput()->with('error', 'Periode tidak boleh overlap dengan periode lain.');
+        }
+
+        $this->periodModel->update($id, [
+            'nama_periode' => $data['nama_periode'],
+            'tanggal_mulai' => date('Y-m-d H:i:s', strtotime($data['tanggal_mulai'])),
+            'tanggal_selesai' => date('Y-m-d H:i:s', strtotime($data['tanggal_selesai'])),
+        ]);
+
+        return redirect()->to('/bhp/periods')->with('success', 'Periode berhasil diperbarui.');
     }
 
     private function review(string $uuid, string $status, string $note, bool $required = false)

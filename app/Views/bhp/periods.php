@@ -18,15 +18,17 @@
                             <th>Mulai</th>
                             <th>Selesai</th>
                             <th>Status</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody><?php if (empty($periods)): ?><tr>
-                                <td colspan="4"><?= view('partials/empty_table_state', ['message' => $tab === 'active' ? 'Belum ada periode aktif.' : 'Belum ada arsip periode.']) ?></td>
-                            </tr><?php endif; ?><?php foreach ($periods as $period): $now = time(); $active = $now >= strtotime($period['tanggal_mulai']) && $now <= strtotime($period['tanggal_selesai']); $upcoming = $now < strtotime($period['tanggal_mulai']); ?><tr>
+                                <td colspan="5"><?= view('partials/empty_table_state', ['message' => $tab === 'active' ? 'Belum ada periode aktif.' : 'Belum ada arsip periode.']) ?></td>
+                            </tr><?php endif; ?><?php foreach ($periods as $period): $now = time(); $active = $now >= strtotime($period['tanggal_mulai']) && $now <= strtotime($period['tanggal_selesai']); $upcoming = $now < strtotime($period['tanggal_mulai']); $canEdit = $active || $upcoming; ?><tr>
                                 <td><?= esc($period['nama_periode']) ?></td>
                                 <td><?= esc($period['tanggal_mulai']) ?></td>
                                 <td><?= esc($period['tanggal_selesai']) ?></td>
                                 <td><span class="badge badge--soft badge--<?= $active ? 'success' : ($upcoming ? 'info' : 'secondary') ?>"><?= $active ? 'Aktif' : ($upcoming ? 'Akan Aktif' : 'Tidak Aktif') ?></span></td>
+                                <td><?= $canEdit ? '<a class="button button--outline button--neutral button--sm" href="' . base_url('bhp/periods/edit/' . $period['id']) . '">Edit</a>' : '<span class="text-muted-foreground text-xs">-</span>' ?></td>
                             </tr><?php endforeach; ?></tbody>
                 </table>
             </div>

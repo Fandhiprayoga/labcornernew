@@ -64,6 +64,8 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
         $routes->get('periods', 'BhpController::periods', ['filter' => 'permission:bhp.periods']);
         $routes->get('periods/create', 'BhpController::createPeriod', ['filter' => 'permission:bhp.periods']);
         $routes->post('periods/store', 'BhpController::storePeriod', ['filter' => 'permission:bhp.periods']);
+        $routes->get('periods/edit/(:num)', 'BhpController::editPeriod/$1', ['filter' => 'permission:bhp.periods']);
+        $routes->post('periods/update/(:num)', 'BhpController::updatePeriod/$1', ['filter' => 'permission:bhp.periods']);
     });
     $routes->get('bhp-approval', 'BhpController::approvalIndex', ['filter' => 'permission:bhp.review']);
     $routes->post('bhp-approval/(:uuid)/approve', 'BhpController::approve/$1', ['filter' => 'permission:bhp.review']);
