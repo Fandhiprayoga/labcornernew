@@ -392,7 +392,11 @@ class BhpController extends BaseController
         $overrides = $this->itemOverrideModel->select('pengajuan_bhp_item_override.*, users.username AS changed_by_name')
             ->join('users', 'users.id = pengajuan_bhp_item_override.changed_by')
             ->where('pengajuan_id', $data['id'])->orderBy('created_at', 'DESC')->findAll();
-        return $this->renderView('bhp/detail', ['title' => 'Detail Pengajuan BHP', 'page_title' => 'Detail pengajuan', 'requestData' => $data, 'items' => $items, 'overrides' => $overrides, 'evidences' => $this->evidenceModel->where('pengajuan_id', $data['id'])->findAll(), 'history' => (new \App\Models\BhpStatusHistoryModel())->where('pengajuan_id', $data['id'])->orderBy('id', 'DESC')->findAll()]);
+        $history = (new \App\Models\BhpStatusHistoryModel())
+            ->select('pengajuan_bhp_status_history.*, users.username AS changed_by_name')
+            ->join('users', 'users.id = pengajuan_bhp_status_history.changed_by', 'left')
+            ->where('pengajuan_id', $data['id'])->orderBy('pengajuan_bhp_status_history.id', 'DESC')->findAll();
+        return $this->renderView('bhp/detail', ['title' => 'Detail Pengajuan BHP', 'page_title' => 'Detail pengajuan', 'requestData' => $data, 'items' => $items, 'overrides' => $overrides, 'evidences' => $this->evidenceModel->where('pengajuan_id', $data['id'])->findAll(), 'history' => $history]);
     }
 
     public function downloadEvidence(string $uuid, string $evidenceUuid)
