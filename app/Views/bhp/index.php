@@ -28,20 +28,31 @@ $statusColors = ['DRAFT' => 'secondary', 'PENDING_REVIEW' => 'warning', 'NEED_RE
       <?php if (empty($requests)): ?><tr><td colspan="6"><?= view('partials/empty_table_state', ['message' => 'Belum ada pengajuan BHP.']) ?></td></tr><?php endif; ?>
       <?php foreach ($requests as $row): ?>
         <?php $editableItemCount = (int) ($row['editable_item_count'] ?? 0); ?>
+        <?php $periodStart = ! empty($row['periode_tanggal_mulai']) ? strtotime($row['periode_tanggal_mulai']) : false; ?>
+        <?php $periodEnd = ! empty($row['periode_tanggal_selesai']) ? strtotime($row['periode_tanggal_selesai']) : false; ?>
+        <?php $periodIsOpen = $periodStart !== false && $periodEnd !== false && time() >= $periodStart && time() <= $periodEnd; ?>
+        <?php $periodAllowsModification = activeGroupIs('superadmin') || $periodIsOpen; ?>
+        <?php $periodRange = $periodStart !== false && $periodEnd !== false ? date('d M Y H:i', $periodStart) . ' - ' . date('d M Y H:i', $periodEnd) : '-'; ?>
         <tr>
           <td><strong><?= esc($row['kode_pengajuan']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($row['uuid']) ?></div></td>
           <td><?= esc($row['study_program_name'] ?? $row['prodi_snapshot'] ?? '-') ?></td>
-          <td><?= esc($row['nama_periode']) ?></td>
+          <td><?= esc($row['nama_periode']) ?><div class="text-xs text-muted-foreground"><?= esc($periodRange) ?></div></td>
           <td>Rp <?= number_format((float) $row['grand_total_estimasi'], 0, ',', '.') ?></td>
           <td><span class="badge badge--soft badge--<?= esc($statusColors[$row['status']] ?? 'secondary') ?>"><?= esc($statusLabels[$row['status']] ?? $row['status']) ?></span></td>
           <td class="text-end">
             <div class="flex justify-end gap-1">
               <?php if (activeGroupCan('bhp.create') && in_array($row['status'], ['DRAFT', 'NEED_REVISION'], true)): ?>
-                <a class="button button--primary button--icon-only button--sm" href="<?= base_url('bhp/create?pocket_uuid=' . $row['uuid']) ?>" title="Tambah item" aria-label="Tambah item"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg></a>
+                <?php if ($periodAllowsModification): ?>
+                  <a class="button button--primary button--icon-only button--sm" href="<?= base_url('bhp/create?pocket_uuid=' . $row['uuid']) ?>" title="Tambah item" aria-label="Tambah item"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg></a>
+                <?php else: ?>
+                  <button type="button" class="button button--primary button--icon-only button--sm" title="Periode pengajuan sudah ditutup" aria-label="Periode pengajuan sudah ditutup" disabled><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg></button>
+                <?php endif; ?>
               <?php endif; ?>
               <a class="button button--info button--icon-only button--sm" href="<?= base_url('bhp/detail/' . $row['uuid']) ?>" title="Detail" aria-label="Lihat detail pengajuan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.5 12s3.5-6 9.5-6 9.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.5" /></svg></a>
               <?php if (in_array($row['status'], ['DRAFT', 'NEED_REVISION'], true) && activeGroupCan('bhp.edit')): ?>
-                <?php if ($editableItemCount > 0): ?>
+                <?php if (! $periodAllowsModification): ?>
+                  <button type="button" class="button button--warning button--icon-only button--sm" title="Periode pengajuan sudah ditutup" aria-label="Periode pengajuan sudah ditutup" disabled><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" /></svg></button>
+                <?php elseif ($editableItemCount > 0): ?>
                   <a class="button button--warning button--icon-only button--sm" href="<?= base_url('bhp/edit/' . $row['uuid']) ?>" title="Edit" aria-label="Edit pengajuan"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" /></svg></a>
                 <?php else: ?>
                   <button type="button" class="button button--warning button--icon-only button--sm" title="Belum ada item untuk diedit" aria-label="Belum ada item untuk diedit" disabled><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" /></svg></button>

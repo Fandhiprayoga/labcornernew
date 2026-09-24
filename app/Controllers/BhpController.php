@@ -46,7 +46,7 @@ class BhpController extends BaseController
         }
 
         $query = $this->requestModel
-            ->select('pengajuan_bhp.*, users.username, laboratories.name AS laboratory_name, study_programs.name AS study_program_name, periode_pengajuan.nama_periode, (' . $editableItemCountSql . ') AS editable_item_count', false)
+            ->select('pengajuan_bhp.*, users.username, laboratories.name AS laboratory_name, study_programs.name AS study_program_name, periode_pengajuan.nama_periode, periode_pengajuan.tanggal_mulai AS periode_tanggal_mulai, periode_pengajuan.tanggal_selesai AS periode_tanggal_selesai, (' . $editableItemCountSql . ') AS editable_item_count', false)
             ->join('users', 'users.id = pengajuan_bhp.laboran_id', 'left')
             ->join('laboratories', 'laboratories.id = pengajuan_bhp.laboratory_id', 'left')
             ->join('study_programs', 'study_programs.id = pengajuan_bhp.study_program_id', 'left')
@@ -166,10 +166,14 @@ class BhpController extends BaseController
         if (! $requestData || ! in_array($requestData['status'], ['DRAFT', 'NEED_REVISION'], true)) {
             return redirect()->to('/bhp')->with('error', 'Pengajuan tidak dapat diedit.');
         }
+        $period = $this->periodModel->find($requestData['periode_id']);
+        if (! activeGroupIs('superadmin') && ! $this->periodIsActive($period)) {
+            return redirect()->to('/bhp')->with('error', 'Jendela pengajuan sedang ditutup.');
+        }
         return $this->renderView('bhp/form', [
             'title' => 'Edit Pengajuan BHP', 'page_title' => 'Edit Pengajuan BHP', 'requestData' => $requestData,
-            'period' => $this->periodModel->find($requestData['periode_id']), 'laboratories' => $this->availableLaboratories(),
-            'periods' => [$this->periodModel->find($requestData['periode_id'])],
+            'period' => $period, 'laboratories' => $this->availableLaboratories(),
+            'periods' => [$period],
             'studyPrograms' => $this->studyProgramModel->orderBy('name')->findAll(),
             'laboratoryStudyPrograms' => $this->laboratoryStudyPrograms(), 'studyProgramLaboratories' => $this->studyProgramLaboratories(), 'units' => self::UNITS,
             'items' => $this->editableItems($requestData),
@@ -181,6 +185,10 @@ class BhpController extends BaseController
         $requestData = $this->accessible($uuid);
         if (! $requestData || ! in_array($requestData['status'], ['DRAFT', 'NEED_REVISION'], true)) {
             return redirect()->to('/bhp')->with('error', 'Pengajuan tidak dapat diedit.');
+        }
+        $period = $this->periodModel->find($requestData['periode_id']);
+        if (! activeGroupIs('superadmin') && ! $this->periodIsActive($period)) {
+            return redirect()->to('/bhp')->with('error', 'Jendela pengajuan sedang ditutup.');
         }
         $data = $this->requestData();
         if (! $this->validateData($data, $this->rules())) {
