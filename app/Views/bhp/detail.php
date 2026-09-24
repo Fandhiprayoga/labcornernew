@@ -10,7 +10,52 @@ $canReview = activeGroupIs('superadmin', 'kepala_lab');
 <div class="page__section flex flex-col gap-4"><div class="card"><div class="card__header"><div><span class="card__title"><?= esc($requestData['kode_pengajuan']) ?></span><div class="text-xs text-muted-foreground"><?= esc($requestData['nama_lab_snapshot']) ?> / <?= esc($requestData['prodi_snapshot'] ?: '-') ?></div></div><div class="card__action"><span class="badge badge--soft badge--info"><?= esc($labels[$requestData['status']] ?? $requestData['status']) ?></span><a class="button button--outline button--sm" href="<?= base_url('bhp') ?>">Kembali</a></div></div><div class="card__body">
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div><small>Estimasi</small><strong>Rp <?= number_format((float) $requestData['grand_total_estimasi'], 0, ',', '.') ?></strong></div><div><small>Nominal Cair</small><strong>Rp <?= number_format((float) $requestData['nominal_cair'], 0, ',', '.') ?></strong></div><div><small>Realisasi</small><strong>Rp <?= number_format((float) $requestData['realisasi_biaya'], 0, ',', '.') ?></strong><?php if ((float) $requestData['realisasi_biaya'] > (float) $requestData['grand_total_estimasi']): ?><span class="badge badge--soft badge--warning">Melebihi estimasi</span><?php endif; ?></div></div>
 <?php if ($requestData['catatan_revisi']): ?><p class="text-warning">Catatan revisi: <?= esc($requestData['catatan_revisi']) ?></p><?php endif; ?><?php if ($requestData['alasan_penolakan']): ?><p class="text-danger">Alasan penolakan: <?= esc($requestData['alasan_penolakan']) ?></p><?php endif; ?>
-<h3>Item Pengajuan</h3><div class="table-responsive"><table class="table"><thead><tr><th>Laboran</th><th>Laboratorium</th><th>Barang</th><th>Spesifikasi</th><th>Qty</th><th>Harga</th><th>Total</th><th>Vendor</th><?php if ($canReview && activeGroupCan('bhp.override')): ?><th>Override</th><?php endif; ?></tr></thead><tbody><?php if (empty($items)): ?><tr><td colspan="<?= $canReview && activeGroupCan('bhp.override') ? 9 : 8 ?>"><?= view('partials/empty_table_state', ['message' => 'Belum ada item pengajuan.']) ?></td></tr><?php endif; ?><?php foreach ($items as $item): ?><tr><td><?= esc($item['laboran_name'] ?? '-') ?></td><td><?= esc($item['laboratory_name'] ?? '-') ?></td><td><?= esc($item['nama_barang']) ?></td><td><?= esc($item['spesifikasi'] ?: '-') ?></td><td><?= esc($item['qty'] . ' ' . $item['satuan']) ?></td><td>Rp <?= number_format((float) $item['harga_satuan'], 0, ',', '.') ?></td><td>Rp <?= number_format((float) $item['total_harga'], 0, ',', '.') ?></td><td><?= esc($item['vendor']) ?></td><?php if ($canReview && activeGroupCan('bhp.override')): ?><td><details><summary class="button button--warning button--sm">Override</summary><form method="post" action="<?= base_url('bhp/item/' . $item['uuid'] . '/override') ?>" class="flex flex-col gap-2" style="min-width:20rem;margin-top:.5rem"><?= csrf_field() ?><input class="input" name="nama_barang" value="<?= esc($item['nama_barang']) ?>" required><input class="input" name="spesifikasi" value="<?= esc($item['spesifikasi']) ?>"><input class="input" type="number" min="1" name="qty" value="<?= esc($item['qty']) ?>" required><input class="input" name="satuan" value="<?= esc($item['satuan']) ?>" required><input class="input" type="number" min="0" step="0.01" name="harga_satuan" value="<?= esc($item['harga_satuan']) ?>" required><input class="input" name="vendor" value="<?= esc($item['vendor']) ?>" required><input class="input" type="url" name="link_toko_online" value="<?= esc($item['link_toko_online']) ?>" required><textarea class="input" name="reason" placeholder="Alasan override wajib diisi" required></textarea><button class="button button--primary button--sm">Simpan Override</button></form></details></td><?php endif; ?></tr><?php endforeach; ?></tbody></table></div>
+<h3>Item Pengajuan</h3>
+<div class="table-responsive">
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Laboran</th>
+				<th>Laboratorium</th>
+				<th>Barang</th>
+				<th>Spesifikasi</th>
+				<th>Qty</th>
+				<th>Harga</th>
+				<th>Total</th>
+				<th>Vendor</th>
+				<th>Link Toko</th>
+				<?php if ($canReview && activeGroupCan('bhp.override')): ?><th>Override</th><?php endif; ?>
+			</tr>
+		</thead>
+		<tbody>
+			<?php if (empty($items)): ?>
+				<tr><td colspan="<?= $canReview && activeGroupCan('bhp.override') ? 10 : 9 ?>"><?= view('partials/empty_table_state', ['message' => 'Belum ada item pengajuan.']) ?></td></tr>
+			<?php endif; ?>
+			<?php foreach ($items as $item): ?>
+				<tr>
+					<td><?= esc($item['laboran_name'] ?? '-') ?></td>
+					<td><?= esc($item['laboratory_name'] ?? '-') ?></td>
+					<td><?= esc($item['nama_barang']) ?></td>
+					<td><?= esc($item['spesifikasi'] ?: '-') ?></td>
+					<td><?= esc($item['qty'] . ' ' . $item['satuan']) ?></td>
+					<td>Rp <?= number_format((float) $item['harga_satuan'], 0, ',', '.') ?></td>
+					<td>Rp <?= number_format((float) $item['total_harga'], 0, ',', '.') ?></td>
+					<td><?= esc($item['vendor']) ?></td>
+					<td>
+						<?php if (! empty($item['link_toko_online'])): ?>
+							<a href="<?= esc($item['link_toko_online'], 'attr') ?>" target="_blank" rel="noopener noreferrer"><?= esc($item['link_toko_online']) ?></a>
+						<?php else: ?>
+							<span class="text-muted-foreground">-</span>
+						<?php endif; ?>
+					</td>
+					<?php if ($canReview && activeGroupCan('bhp.override')): ?>
+						<td><details><summary class="button button--warning button--sm">Override</summary><form method="post" action="<?= base_url('bhp/item/' . $item['uuid'] . '/override') ?>" class="flex flex-col gap-2" style="min-width:20rem;margin-top:.5rem"><?= csrf_field() ?><input class="input" name="nama_barang" value="<?= esc($item['nama_barang']) ?>" required><input class="input" name="spesifikasi" value="<?= esc($item['spesifikasi']) ?>"><input class="input" type="number" min="1" name="qty" value="<?= esc($item['qty']) ?>" required><input class="input" name="satuan" value="<?= esc($item['satuan']) ?>" required><input class="input" type="number" min="0" step="0.01" name="harga_satuan" value="<?= esc($item['harga_satuan']) ?>" required><input class="input" name="vendor" value="<?= esc($item['vendor']) ?>" required><input class="input" type="url" name="link_toko_online" value="<?= esc($item['link_toko_online']) ?>" required><textarea class="input" name="reason" placeholder="Alasan override wajib diisi" required></textarea><button class="button button--primary button--sm">Simpan Override</button></form></details></td>
+					<?php endif; ?>
+				</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
+</div>
 <?php if (! empty($overrides)): ?><h3>Riwayat Override Item</h3><div class="table-responsive"><table class="table"><thead><tr><th>Waktu</th><th>Oleh</th><th>Perubahan</th><th>Alasan</th></tr></thead><tbody><?php foreach ($overrides as $override): $before = json_decode($override['before_data'], true) ?: []; $after = json_decode($override['after_data'], true) ?: []; ?><tr><td><?= esc($override['created_at']) ?></td><td><?= esc($override['changed_by_name']) ?></td><td><?= esc(($before['nama_barang'] ?? '-') . ' (' . ($before['qty'] ?? '-') . ') menjadi ' . ($after['nama_barang'] ?? '-') . ' (' . ($after['qty'] ?? '-') . ')') ?></td><td><?= esc($override['reason']) ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
 <div class="flex gap-2" style="flex-wrap:wrap;margin-top:1rem"><?php if ($canReview && ($requestData['status'] === 'DRAFT' || $requestData['status'] === 'NEED_REVISION')): ?><form method="post" action="<?= base_url('bhp/submit/' . $requestData['uuid']) ?>"><?= csrf_field() ?><button class="button button--primary">Ajukan ke Review</button></form><?php endif; ?><?php if ($canReview && $requestData['status'] === 'APPROVED_BY_KALAB'): ?><form method="post" action="<?= base_url('bhp/disburse/' . $requestData['uuid']) ?>" class="flex gap-2"><?= csrf_field() ?><input class="input" type="date" name="tanggal_cair" required><input class="input" type="number" min="0" step="0.01" name="nominal_cair" placeholder="Nominal cair" required><button class="button button--primary">Tandai Anggaran Cair</button></form><?php endif; ?></div>
 <?php if ($requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence')): ?><hr><h3>Upload Eviden Belanja</h3><form method="post" enctype="multipart/form-data" action="<?= base_url('bhp/evidence/' . $requestData['uuid']) ?>" class="grid grid-cols-1 md:grid-cols-2 gap-4"><?= csrf_field() ?><input class="input" type="date" name="tanggal_belanja" required><input class="input" type="number" min="0" step="0.01" name="realisasi_biaya" placeholder="Total realisasi" required><input class="input" type="file" name="foto_barang[]" accept="image/jpeg,image/png" multiple required><input class="input" type="file" name="dokumen_nota_kwitansi" accept="application/pdf,image/jpeg,image/png" required><textarea class="input" name="catatan_pembelian" placeholder="Catatan pembelian"></textarea><button class="button button--primary">Kirim Eviden</button></form><?php endif; ?>
