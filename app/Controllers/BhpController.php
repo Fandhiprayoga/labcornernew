@@ -40,8 +40,13 @@ class BhpController extends BaseController
 
     public function index()
     {
+        $editableItemCountSql = 'SELECT COUNT(*) FROM pengajuan_bhp_item WHERE pengajuan_bhp_item.pengajuan_id = pengajuan_bhp.id AND pengajuan_bhp_item.deleted_at IS NULL';
+        if (activeGroupIs('laboran', 'user')) {
+            $editableItemCountSql .= ' AND pengajuan_bhp_item.laboran_id = ' . (int) auth()->id();
+        }
+
         $query = $this->requestModel
-            ->select('pengajuan_bhp.*, users.username, laboratories.name AS laboratory_name, study_programs.name AS study_program_name, periode_pengajuan.nama_periode')
+            ->select('pengajuan_bhp.*, users.username, laboratories.name AS laboratory_name, study_programs.name AS study_program_name, periode_pengajuan.nama_periode, (' . $editableItemCountSql . ') AS editable_item_count', false)
             ->join('users', 'users.id = pengajuan_bhp.laboran_id', 'left')
             ->join('laboratories', 'laboratories.id = pengajuan_bhp.laboratory_id', 'left')
             ->join('study_programs', 'study_programs.id = pengajuan_bhp.study_program_id', 'left')
@@ -199,7 +204,7 @@ class BhpController extends BaseController
         $this->requestModel->update($requestData['id'], ['catatan_revisi' => null]);
         $this->recalculateTotal((int) $requestData['id']);
         $db->transComplete();
-        return $db->transStatus() ? redirect()->to('/bhp/detail/' . $uuid)->with('success', 'Pengajuan BHP berhasil diperbarui.') : redirect()->back()->withInput()->with('error', 'Pengajuan BHP gagal diperbarui.');
+        return $db->transStatus() ? redirect()->to('/bhp/edit/' . $uuid)->with('success', 'Pengajuan BHP berhasil diperbarui.') : redirect()->back()->withInput()->with('error', 'Pengajuan BHP gagal diperbarui.');
     }
 
     public function submit(string $uuid)
