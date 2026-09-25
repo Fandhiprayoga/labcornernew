@@ -7,6 +7,7 @@
 /** @var array $laboranSubmissions */
 $labels = ['DRAFT' => 'Draft', 'PENDING_REVIEW' => 'Menunggu Review', 'NEED_REVISION' => 'Perlu Revisi', 'APPROVED_BY_KALAB' => 'Disetujui', 'FUND_DISBURSED' => 'Anggaran Cair', 'EVIDEN_SUBMITTED' => 'Eviden Dikirim', 'COMPLETED' => 'Selesai', 'REJECTED' => 'Ditolak'];
 $canReview = activeGroupIs('superadmin', 'kepala_lab');
+$canDisburse = activeGroupIs('kepala_lab') && activeGroupCan('bhp.disburse') && $requestData['status'] === 'APPROVED_BY_KALAB';
 $laboranSummaries = [];
 $laboranOptions = [];
 $laboratoryOptions = [];
@@ -52,7 +53,7 @@ ksort($laboratoryOptions);
 <div class="bhp-detail__overview">
 	<div class="bhp-detail__metrics">
 		<div class="bhp-detail__metric"><span class="bhp-detail__metric-label">Estimasi</span><strong class="bhp-detail__metric-value">Rp <?= number_format((float) $requestData['grand_total_estimasi'], 0, ',', '.') ?></strong><div class="bhp-detail__metric-note">Total estimasi semua item</div></div>
-		<div class="bhp-detail__metric"><span class="bhp-detail__metric-label">Nominal Cair</span><strong class="bhp-detail__metric-value">Rp <?= number_format((float) $requestData['nominal_cair'], 0, ',', '.') ?></strong><div class="bhp-detail__metric-note">Dana yang sudah dicairkan</div></div>
+		<div class="bhp-detail__metric"><span class="bhp-detail__metric-label">Nominal Cair</span><strong class="bhp-detail__metric-value">Rp <?= number_format((float) $requestData['nominal_cair'], 0, ',', '.') ?></strong><div class="bhp-detail__metric-note">Dana yang sudah dicairkan</div><?php if ($canDisburse): ?><button type="button" class="button button--primary button--sm" style="margin-top:.75rem" data-bhp-disburse-open>Tandai Anggaran Cair</button><?php endif; ?></div>
 		<div class="bhp-detail__metric"><span class="bhp-detail__metric-label">Realisasi</span><strong class="bhp-detail__metric-value">Rp <?= number_format((float) $requestData['realisasi_biaya'], 0, ',', '.') ?></strong><div class="bhp-detail__metric-note"><?php if ((float) $requestData['realisasi_biaya'] > (float) $requestData['grand_total_estimasi']): ?><span class="badge badge--soft badge--warning">Melebihi estimasi</span><?php else: ?>Total belanja aktual<?php endif; ?></div></div>
 	</div>
 	<div class="bhp-detail__submitters">
@@ -144,7 +145,6 @@ ksort($laboratoryOptions);
 	</table>
 </div>
 <?php if (! empty($overrides)): ?><div class="table-responsive" style="margin-top:1rem"><table class="table"><thead><tr><th>Waktu</th><th>Oleh</th><th>Perubahan</th><th>Alasan</th></tr></thead><tbody><?php foreach ($overrides as $override): $before = json_decode($override['before_data'], true) ?: []; $after = json_decode($override['after_data'], true) ?: []; ?><tr><td><?= esc($override['created_at']) ?></td><td><?= esc($override['changed_by_name']) ?></td><td><?= esc(($before['nama_barang'] ?? '-') . ' (' . ($before['qty'] ?? '-') . ') menjadi ' . ($after['nama_barang'] ?? '-') . ' (' . ($after['qty'] ?? '-') . ')') ?></td><td><?= esc($override['reason']) ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
-<div class="flex gap-2" style="flex-wrap:wrap;margin-top:1rem"><?php if ($canReview && $requestData['status'] === 'APPROVED_BY_KALAB'): ?><form method="post" action="<?= base_url('bhp/disburse/' . $requestData['uuid']) ?>" class="flex gap-2"><?= csrf_field() ?><input class="input" type="date" name="tanggal_cair" required><input class="input" type="number" min="0" step="0.01" name="nominal_cair" placeholder="Nominal cair" required><button class="button button--primary">Tandai Anggaran Cair</button></form><?php endif; ?></div>
 </section>
 <section class="bhp-detail__panel" id="bhp-detail-evidence" role="tabpanel" hidden>
 <?php if ($requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence')): ?><form method="post" enctype="multipart/form-data" action="<?= base_url('bhp/evidence/' . $requestData['uuid']) ?>" class="grid grid-cols-1 md:grid-cols-2 gap-4"><?= csrf_field() ?><input class="input" type="date" name="tanggal_belanja" required><input class="input" type="number" min="0" step="0.01" name="realisasi_biaya" placeholder="Total realisasi" required><input class="input" type="file" name="foto_barang[]" accept="image/jpeg,image/png" multiple required><input class="input" type="file" name="dokumen_nota_kwitansi" accept="application/pdf,image/jpeg,image/png" required><textarea class="input" name="catatan_pembelian" placeholder="Catatan pembelian"></textarea><button class="button button--primary">Kirim Eviden</button></form><?php endif; ?>
@@ -173,8 +173,41 @@ ksort($laboratoryOptions);
 	<?php endif; ?>
 </section>
 </div></div></div>
+<?php if ($canDisburse): ?>
+<div class="dialog dialog--sm" id="bhpDisburseConfirm" data-stisla-dialog data-state="closed" role="dialog" aria-modal="true" aria-labelledby="bhpDisburseConfirmLabel" aria-hidden="true" tabindex="-1">
+	<div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+	<div class="dialog__panel">
+		<div class="dialog__content">
+			<div class="dialog__header">
+				<h3 class="dialog__title" id="bhpDisburseConfirmLabel">Tandai Anggaran Cair</h3>
+				<button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">&times;</button>
+			</div>
+			<form id="bhpDisburseForm" method="post" action="<?= base_url('bhp/disburse/' . $requestData['uuid']) ?>">
+				<?= csrf_field() ?>
+				<div class="dialog__body">
+					<p class="text-muted-foreground text-sm mb-4">Masukkan nominal anggaran cair untuk pengajuan <strong><?= esc($requestData['kode_pengajuan']) ?></strong>.</p>
+					<div class="field mb-3">
+						<label class="field__label" for="bhp_disburse_nominal">Nominal Anggaran Cair <span class="text-danger">*</span></label>
+						<input class="input" type="number" min="0" step="0.01" id="bhp_disburse_nominal" name="nominal_cair" value="<?= esc((string) ((float) ($requestData['nominal_cair'] ?: $requestData['grand_total_estimasi']))) ?>" required>
+					</div>
+					<div class="field">
+						<label class="field__label" for="bhp_disburse_date">Tanggal Cair <span class="text-danger">*</span></label>
+						<input class="input" type="date" id="bhp_disburse_date" name="tanggal_cair" value="<?= esc(date('Y-m-d')) ?>" required>
+					</div>
+				</div>
+				<div class="dialog__footer">
+					<button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button>
+					<button type="submit" class="button button--primary">Tandai Cair</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+<?php endif; ?>
 <script>
 	(() => {
+		const disburseDialog = document.getElementById('bhpDisburseConfirm');
+		const disburseOpen = document.querySelector('[data-bhp-disburse-open]');
 		const tabs = document.querySelectorAll('[data-bhp-detail-tab]');
 		const panels = document.querySelectorAll('.bhp-detail__panel');
 		const itemFilterLaboran = document.querySelector('[data-bhp-item-filter="laboran"]');
@@ -212,5 +245,29 @@ ksort($laboratoryOptions);
 			if (itemFilterLaboratory) itemFilterLaboratory.value = '';
 			applyItemFilters();
 		});
+
+		if (disburseOpen && disburseDialog) {
+			disburseOpen.addEventListener('click', () => {
+				disburseDialog.dataset.state = 'open';
+				disburseDialog.setAttribute('aria-hidden', 'false');
+				window.requestAnimationFrame(() => {
+					const nominalInput = disburseDialog.querySelector('#bhp_disburse_nominal');
+					if (nominalInput) nominalInput.focus();
+				});
+			});
+
+			disburseDialog.querySelectorAll('[data-stisla-dialog-dismiss]').forEach((element) => {
+				element.addEventListener('click', () => {
+					disburseDialog.dataset.state = 'closed';
+					disburseDialog.setAttribute('aria-hidden', 'true');
+				});
+			});
+
+			const disburseForm = document.getElementById('bhpDisburseForm');
+			if (disburseForm) disburseForm.addEventListener('submit', () => {
+				const submitButton = disburseForm.querySelector('button[type="submit"]');
+				if (submitButton) submitButton.disabled = true;
+			});
+		}
 	})();
 </script>
