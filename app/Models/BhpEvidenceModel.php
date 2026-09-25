@@ -9,7 +9,7 @@ class BhpEvidenceModel extends Model
     protected $table = 'pengajuan_bhp_eviden';
     protected $primaryKey = 'id';
     protected $returnType = 'array';
-    protected $allowedFields = ['uuid', 'pengajuan_id', 'tipe_file', 'file_path', 'original_name', 'uploaded_by', 'uploaded_at'];
+    protected $allowedFields = ['uuid', 'pengajuan_id', 'item_id', 'tipe_file', 'file_path', 'original_name', 'uploaded_by', 'uploaded_at'];
     protected $useTimestamps = false;
     protected $beforeInsert = ['generateUuid'];
 

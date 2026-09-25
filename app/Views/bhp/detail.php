@@ -12,6 +12,16 @@ $laboranSummaries = [];
 $laboranOptions = [];
 $laboratoryOptions = [];
 $readyLaboranIds = array_map('intval', array_column($laboranSubmissions ?? [], 'laboran_id'));
+$evidencesByItem = [];
+$generalEvidences = [];
+foreach ($evidences as $evidence) {
+	$itemId = (int) ($evidence['item_id'] ?? 0);
+	if ($itemId > 0) {
+		$evidencesByItem[$itemId][] = $evidence;
+		continue;
+	}
+	$generalEvidences[] = $evidence;
+}
 foreach ($items as $item) {
 	$laboranId = (int) ($item['laboran_id'] ?? 0);
 	$laboranName = $item['laboran_name'] ?? 'Tidak diketahui';
@@ -147,9 +157,50 @@ ksort($laboratoryOptions);
 <?php if (! empty($overrides)): ?><div class="table-responsive" style="margin-top:1rem"><table class="table"><thead><tr><th>Waktu</th><th>Oleh</th><th>Perubahan</th><th>Alasan</th></tr></thead><tbody><?php foreach ($overrides as $override): $before = json_decode($override['before_data'], true) ?: []; $after = json_decode($override['after_data'], true) ?: []; ?><tr><td><?= esc($override['created_at']) ?></td><td><?= esc($override['changed_by_name']) ?></td><td><?= esc(($before['nama_barang'] ?? '-') . ' (' . ($before['qty'] ?? '-') . ') menjadi ' . ($after['nama_barang'] ?? '-') . ' (' . ($after['qty'] ?? '-') . ')') ?></td><td><?= esc($override['reason']) ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
 </section>
 <section class="bhp-detail__panel" id="bhp-detail-evidence" role="tabpanel" hidden>
-<?php if ($requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence')): ?><form method="post" enctype="multipart/form-data" action="<?= base_url('bhp/evidence/' . $requestData['uuid']) ?>" class="grid grid-cols-1 md:grid-cols-2 gap-4"><?= csrf_field() ?><input class="input" type="date" name="tanggal_belanja" required><input class="input" type="number" min="0" step="0.01" name="realisasi_biaya" placeholder="Total realisasi" required><input class="input" type="file" name="foto_barang[]" accept="image/jpeg,image/png" multiple required><input class="input" type="file" name="dokumen_nota_kwitansi" accept="application/pdf,image/jpeg,image/png" required><textarea class="input" name="catatan_pembelian" placeholder="Catatan pembelian"></textarea><button class="button button--primary">Kirim Eviden</button></form><?php endif; ?>
+<div class="table-responsive">
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Barang</th>
+				<th>Laboratorium</th>
+				<th>Qty</th>
+				<th>Total Estimasi</th>
+				<th>Eviden</th>
+				<?php if ($requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence')): ?><th class="text-end">Aksi</th><?php endif; ?>
+			</tr>
+		</thead>
+		<tbody>
+			<?php if (empty($items)): ?>
+				<tr><td colspan="<?= $requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence') ? 6 : 5 ?>"><?= view('partials/empty_table_state', ['message' => 'Belum ada item pengajuan.']) ?></td></tr>
+			<?php endif; ?>
+			<?php foreach ($items as $item): ?>
+				<?php $itemEvidences = $evidencesByItem[(int) $item['id']] ?? []; ?>
+				<tr>
+					<td><strong><?= esc($item['nama_barang']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($item['spesifikasi'] ?: '-') ?></div></td>
+					<td><?= esc($item['laboratory_name'] ?? '-') ?></td>
+					<td><?= esc($item['qty'] . ' ' . $item['satuan']) ?></td>
+					<td>Rp <?= number_format((float) $item['total_harga'], 0, ',', '.') ?></td>
+					<td>
+						<?php if (empty($itemEvidences)): ?>
+							<span class="badge badge--soft badge--warning">Belum ada eviden</span>
+						<?php else: ?>
+							<ul style="margin:0;padding-left:1rem">
+								<?php foreach ($itemEvidences as $evidence): ?>
+									<li><?= esc($evidence['tipe_file']) ?>: <a href="<?= base_url('bhp/evidence/' . $requestData['uuid'] . '/' . $evidence['uuid']) ?>"><?= esc($evidence['original_name']) ?></a></li>
+								<?php endforeach; ?>
+							</ul>
+						<?php endif; ?>
+					</td>
+					<?php if ($requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence')): ?>
+					<td class="text-end"><button type="button" class="button button--primary button--icon-only button--sm" title="Input Eviden" aria-label="Input eviden <?= esc($item['nama_barang'], 'attr') ?>" data-bhp-evidence-open data-item-uuid="<?= esc($item['uuid'], 'attr') ?>" data-item-name="<?= esc($item['nama_barang'], 'attr') ?>"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 5v14m-7-7h14" /></svg></button></td>
+					<?php endif; ?>
+				</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
+</div>
+<?php if (! empty($generalEvidences)): ?><div style="margin-top:1rem"><strong>Eviden umum</strong><ul><?php foreach ($generalEvidences as $evidence): ?><li><?= esc($evidence['tipe_file']) ?>: <a href="<?= base_url('bhp/evidence/' . $requestData['uuid'] . '/' . $evidence['uuid']) ?>"><?= esc($evidence['original_name']) ?></a></li><?php endforeach; ?></ul></div><?php endif; ?>
 <?php if ($requestData['status'] === 'EVIDEN_SUBMITTED' && $canReview): ?><div class="flex gap-2" style="margin-top:1rem"><form method="post" action="<?= base_url('bhp/verify/' . $requestData['uuid']) ?>"><?= csrf_field() ?><input class="input" name="note" placeholder="Catatan verifikasi"><button class="button button--success">Validasi & Tutup</button></form><form method="post" action="<?= base_url('bhp/reject-evidence/' . $requestData['uuid']) ?>"><?= csrf_field() ?><input class="input" name="note" placeholder="Feedback wajib" required><button class="button button--danger">Kembalikan</button></form></div><?php endif; ?>
-<div style="margin-top:1rem"><?php if (empty($evidences)): ?><?= view('partials/empty_table_state', ['message' => 'Belum ada file eviden.']) ?><?php else: ?><ul><?php foreach ($evidences as $evidence): ?><li><?= esc($evidence['tipe_file']) ?>: <a href="<?= base_url('bhp/evidence/' . $requestData['uuid'] . '/' . $evidence['uuid']) ?>"><?= esc($evidence['original_name']) ?></a></li><?php endforeach; ?></ul><?php endif; ?></div>
 </section>
 <section class="bhp-detail__panel" id="bhp-detail-history" role="tabpanel" hidden>
 	<?php if (empty($history)): ?>
@@ -204,10 +255,43 @@ ksort($laboratoryOptions);
 	</div>
 </div>
 <?php endif; ?>
+<?php if ($requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence')): ?>
+<div class="dialog" id="bhpEvidenceConfirm" data-stisla-dialog data-state="closed" role="dialog" aria-modal="true" aria-labelledby="bhpEvidenceConfirmLabel" aria-hidden="true" tabindex="-1">
+	<div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+	<div class="dialog__panel">
+		<div class="dialog__content">
+			<div class="dialog__header">
+				<h3 class="dialog__title" id="bhpEvidenceConfirmLabel">Input Eviden Item</h3>
+				<button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">&times;</button>
+			</div>
+			<form id="bhpEvidenceForm" method="post" enctype="multipart/form-data" action="<?= base_url('bhp/evidence/' . $requestData['uuid']) ?>">
+				<?= csrf_field() ?>
+				<input type="hidden" name="item_uuid" id="bhp_evidence_item_uuid">
+				<div class="dialog__body">
+					<p class="text-muted-foreground text-sm mb-4">Unggah eviden untuk item <strong data-slot="bhp-evidence-item-name"></strong>.</p>
+					<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;">
+						<div class="field"><label class="field__label" for="bhp_evidence_date">Tanggal Belanja <span class="text-danger">*</span></label><input class="input" type="date" id="bhp_evidence_date" name="tanggal_belanja" value="<?= esc(date('Y-m-d')) ?>" required></div>
+						<div class="field"><label class="field__label" for="bhp_evidence_realization">Total Realisasi <span class="text-danger">*</span></label><input class="input" type="number" min="0" step="0.01" id="bhp_evidence_realization" name="realisasi_biaya" required></div>
+						<div class="field"><label class="field__label" for="bhp_evidence_photos">Foto Barang <span class="text-danger">*</span></label><input class="input" type="file" id="bhp_evidence_photos" name="foto_barang[]" accept="image/jpeg,image/png" multiple required></div>
+						<div class="field"><label class="field__label" for="bhp_evidence_receipt">Nota/Kwitansi <span class="text-danger">*</span></label><input class="input" type="file" id="bhp_evidence_receipt" name="dokumen_nota_kwitansi" accept="application/pdf,image/jpeg,image/png" required></div>
+					</div>
+					<div class="field" style="margin-top:1rem;"><label class="field__label" for="bhp_evidence_note">Catatan Pembelian</label><textarea class="input" id="bhp_evidence_note" name="catatan_pembelian" rows="3" placeholder="Catatan pembelian"></textarea></div>
+				</div>
+				<div class="dialog__footer">
+					<button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button>
+					<button type="submit" class="button button--primary">Kirim Eviden</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+<?php endif; ?>
 <script>
 	(() => {
 		const disburseDialog = document.getElementById('bhpDisburseConfirm');
 		const disburseOpen = document.querySelector('[data-bhp-disburse-open]');
+		const evidenceDialog = document.getElementById('bhpEvidenceConfirm');
+		const evidenceForm = document.getElementById('bhpEvidenceForm');
 		const tabs = document.querySelectorAll('[data-bhp-detail-tab]');
 		const panels = document.querySelectorAll('.bhp-detail__panel');
 		const itemFilterLaboran = document.querySelector('[data-bhp-item-filter="laboran"]');
@@ -266,6 +350,37 @@ ksort($laboratoryOptions);
 			const disburseForm = document.getElementById('bhpDisburseForm');
 			if (disburseForm) disburseForm.addEventListener('submit', () => {
 				const submitButton = disburseForm.querySelector('button[type="submit"]');
+				if (submitButton) submitButton.disabled = true;
+			});
+		}
+
+		if (evidenceDialog && evidenceForm) {
+			document.querySelectorAll('[data-bhp-evidence-open]').forEach((button) => {
+				button.addEventListener('click', () => {
+					const itemUuid = document.getElementById('bhp_evidence_item_uuid');
+					const itemSlot = evidenceDialog.querySelector('[data-slot="bhp-evidence-item-name"]');
+					if (itemUuid) itemUuid.value = button.dataset.itemUuid || '';
+					if (itemSlot) itemSlot.textContent = button.dataset.itemName || 'ini';
+					evidenceForm.reset();
+					if (itemUuid) itemUuid.value = button.dataset.itemUuid || '';
+					evidenceDialog.dataset.state = 'open';
+					evidenceDialog.setAttribute('aria-hidden', 'false');
+					window.requestAnimationFrame(() => {
+						const dateInput = document.getElementById('bhp_evidence_date');
+						if (dateInput) dateInput.focus();
+					});
+				});
+			});
+
+			evidenceDialog.querySelectorAll('[data-stisla-dialog-dismiss]').forEach((element) => {
+				element.addEventListener('click', () => {
+					evidenceDialog.dataset.state = 'closed';
+					evidenceDialog.setAttribute('aria-hidden', 'true');
+				});
+			});
+
+			evidenceForm.addEventListener('submit', () => {
+				const submitButton = evidenceForm.querySelector('button[type="submit"]');
 				if (submitButton) submitButton.disabled = true;
 			});
 		}

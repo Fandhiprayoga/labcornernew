@@ -393,18 +393,30 @@ class BhpController extends BaseController
     {
         $data = $this->accessible($uuid);
         if (! $data || ! in_array($data['status'], ['FUND_DISBURSED'], true)) return redirect()->to('/bhp')->with('error', 'Eviden hanya dapat diunggah setelah dana cair.');
+        $itemUuid = trim((string) $this->request->getPost('item_uuid'));
+        $item = $itemUuid !== '' ? $this->itemModel->where(['uuid' => $itemUuid, 'pengajuan_id' => $data['id']])->first() : null;
+        if (! $item) return redirect()->back()->with('error', 'Item pengajuan tidak valid.');
         $rules = ['tanggal_belanja' => 'required|valid_date[Y-m-d]', 'realisasi_biaya' => 'required|numeric|greater_than_equal_to[0]', 'dokumen_nota_kwitansi' => 'uploaded[dokumen_nota_kwitansi]|max_size[dokumen_nota_kwitansi,5120]|mime_in[dokumen_nota_kwitansi,application/pdf,image/jpg,image/jpeg,image/png]'];
         if (! $this->validateData($this->request->getPost(), $rules)) return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         $photos = $this->request->getFileMultiple('foto_barang');
         if (empty($photos) || ! array_filter($photos, static fn ($file) => $file && $file->isValid() && ! $file->hasMoved())) return redirect()->back()->withInput()->with('error', 'Minimal satu foto barang wajib diunggah.');
-        $path = WRITEPATH . 'uploads/bhp/' . $data['uuid'];
+        $path = WRITEPATH . 'uploads/bhp/' . $data['uuid'] . '/' . $item['uuid'];
         if (! is_dir($path)) mkdir($path, 0750, true);
-        foreach ($photos as $photo) $this->storeEvidence($photo, $data['id'], 'FOTO_BARANG', $path);
+        foreach ($photos as $photo) $this->storeEvidence($photo, $data['id'], 'FOTO_BARANG', $path, (int) $item['id']);
         $receipt = $this->request->getFile('dokumen_nota_kwitansi');
-        $this->storeEvidence($receipt, $data['id'], 'KWITANSI_NOTA', $path);
-        $this->requestModel->update($data['id'], ['status' => 'EVIDEN_SUBMITTED', 'tanggal_belanja' => $this->request->getPost('tanggal_belanja'), 'realisasi_biaya' => $this->request->getPost('realisasi_biaya'), 'catatan_pembelian' => trim((string) $this->request->getPost('catatan_pembelian'))]);
-        $this->history($data['id'], $data['status'], 'EVIDEN_SUBMITTED', 'Eviden belanja diunggah.');
-        return redirect()->to('/bhp/detail/' . $uuid)->with('success', 'Eviden berhasil dikirim untuk diverifikasi.');
+        $this->storeEvidence($receipt, $data['id'], 'KWITANSI_NOTA', $path, (int) $item['id']);
+
+        $requestUpdate = ['tanggal_belanja' => $this->request->getPost('tanggal_belanja'), 'realisasi_biaya' => $this->request->getPost('realisasi_biaya'), 'catatan_pembelian' => trim((string) $this->request->getPost('catatan_pembelian'))];
+        $itemCount = $this->itemModel->where('pengajuan_id', $data['id'])->countAllResults();
+        $evidencedItemCount = $this->evidenceModel->select('item_id')->where('pengajuan_id', $data['id'])->where('item_id IS NOT NULL', null, false)->groupBy('item_id')->countAllResults();
+        if ($itemCount > 0 && $evidencedItemCount >= $itemCount) {
+            $requestUpdate['status'] = 'EVIDEN_SUBMITTED';
+        }
+        $this->requestModel->update($data['id'], $requestUpdate);
+        if (($requestUpdate['status'] ?? null) === 'EVIDEN_SUBMITTED') {
+            $this->history($data['id'], $data['status'], 'EVIDEN_SUBMITTED', 'Eviden belanja semua item diunggah.');
+        }
+        return redirect()->to('/bhp/detail/' . $uuid)->with('success', 'Eviden item berhasil disimpan.');
     }
 
     public function verify(string $uuid)
@@ -752,10 +764,13 @@ class BhpController extends BaseController
         return $id ? (($this->studyProgramModel->find($id)['name'] ?? null)) : null;
     }
 
-    private function storeEvidence($file, int $requestId, string $type, string $path): void
+    private function storeEvidence($file, int $requestId, string $type, string $path, ?int $itemId = null): void
     {
         $stored = $file->getRandomName();
         $file->move($path, $stored);
-        $this->evidenceModel->insert(['pengajuan_id' => $requestId, 'tipe_file' => $type, 'file_path' => 'bhp/' . basename($path) . '/' . $stored, 'original_name' => $file->getClientName(), 'uploaded_by' => auth()->id(), 'uploaded_at' => date('Y-m-d H:i:s')]);
+        $normalizedPath = str_replace('\\', '/', $path);
+        $uploadsPath = str_replace('\\', '/', WRITEPATH . 'uploads/');
+        $relativePath = str_starts_with($normalizedPath, $uploadsPath) ? substr($normalizedPath, strlen($uploadsPath)) : 'bhp/' . basename($path);
+        $this->evidenceModel->insert(['pengajuan_id' => $requestId, 'item_id' => $itemId, 'tipe_file' => $type, 'file_path' => $relativePath . '/' . $stored, 'original_name' => $file->getClientName(), 'uploaded_by' => auth()->id(), 'uploaded_at' => date('Y-m-d H:i:s')]);
     }
 }
