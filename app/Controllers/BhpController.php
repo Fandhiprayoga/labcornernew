@@ -341,6 +341,10 @@ class BhpController extends BaseController
     {
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
+        $perPage = (int) $this->request->getGet('perPage');
+        if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = self::PER_PAGE_OPTIONS[0];
+        }
         $query = $this->requestModel->select('pengajuan_bhp.*, laboratories.name AS laboratory_name, study_programs.name AS study_program_name')
             ->join('laboratories', 'laboratories.id = pengajuan_bhp.laboratory_id', 'left')
             ->join('study_programs', 'study_programs.id = pengajuan_bhp.study_program_id', 'left')
@@ -348,8 +352,14 @@ class BhpController extends BaseController
         if (in_array($status, ['PENDING_REVIEW', 'EVIDEN_SUBMITTED'], true)) $query->where('pengajuan_bhp.status', $status);
         else $status = '';
         if ($search !== '') $query->groupStart()->like('pengajuan_bhp.kode_pengajuan', $search)->orLike('laboratories.name', $search)->orLike('study_programs.name', $search)->orLike('pengajuan_bhp.nama_lab_snapshot', $search)->groupEnd();
-        $requests = $query->orderBy('pengajuan_bhp.created_at', 'ASC')->paginate(15);
-        return $this->renderView('bhp/approval', ['title' => 'Review Pengajuan BHP', 'page_title' => 'Review Pengajuan BHP', 'requests' => $requests, 'pager' => $this->requestModel->pager, 'search' => $search, 'status' => $status]);
+        $requests = $query->orderBy('pengajuan_bhp.created_at', 'ASC')->paginate($perPage);
+        $pager = $this->requestModel->pager;
+        return $this->renderView('bhp/approval', [
+            'title' => 'Review Pengajuan BHP', 'page_title' => 'Review Pengajuan BHP',
+            'requests' => $requests, 'pager' => $pager, 'search' => $search, 'status' => $status,
+            'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE_OPTIONS,
+            'currentPage' => $pager->getCurrentPage(), 'totalRows' => $pager->getTotal(),
+        ]);
     }
 
     public function approve(string $uuid)
