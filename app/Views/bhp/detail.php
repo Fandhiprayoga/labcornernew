@@ -4,24 +4,27 @@
 /** @var array $evidences */
 /** @var array $history */
 /** @var array $overrides */
+/** @var array $laboranSubmissions */
 $labels = ['DRAFT' => 'Draft', 'PENDING_REVIEW' => 'Menunggu Review', 'NEED_REVISION' => 'Perlu Revisi', 'APPROVED_BY_KALAB' => 'Disetujui', 'FUND_DISBURSED' => 'Anggaran Cair', 'EVIDEN_SUBMITTED' => 'Eviden Dikirim', 'COMPLETED' => 'Selesai', 'REJECTED' => 'Ditolak'];
 $canReview = activeGroupIs('superadmin', 'kepala_lab');
 $laboranSummaries = [];
 $laboranOptions = [];
 $laboratoryOptions = [];
+$readyLaboranIds = array_map('intval', array_column($laboranSubmissions ?? [], 'laboran_id'));
 foreach ($items as $item) {
+	$laboranId = (int) ($item['laboran_id'] ?? 0);
 	$laboranName = $item['laboran_name'] ?? 'Tidak diketahui';
 	$laboratoryName = $item['laboratory_name'] ?? '-';
-	if (! isset($laboranSummaries[$laboranName])) {
-		$laboranSummaries[$laboranName] = ['name' => $laboranName, 'laboratories' => [], 'item_count' => 0, 'total' => 0];
+	if (! isset($laboranSummaries[$laboranId])) {
+		$laboranSummaries[$laboranId] = ['id' => $laboranId, 'name' => $laboranName, 'laboratories' => [], 'item_count' => 0, 'total' => 0];
 	}
 	if (! empty($item['laboratory_name'])) {
-		$laboranSummaries[$laboranName]['laboratories'][$item['laboratory_name']] = true;
+		$laboranSummaries[$laboranId]['laboratories'][$item['laboratory_name']] = true;
 	}
 	$laboranOptions[$laboranName] = $laboranName;
 	$laboratoryOptions[$laboratoryName] = $laboratoryName;
-	$laboranSummaries[$laboranName]['item_count']++;
-	$laboranSummaries[$laboranName]['total'] += (float) ($item['total_harga'] ?? 0);
+	$laboranSummaries[$laboranId]['item_count']++;
+	$laboranSummaries[$laboranId]['total'] += (float) ($item['total_harga'] ?? 0);
 }
 ksort($laboranOptions);
 ksort($laboratoryOptions);
@@ -59,7 +62,8 @@ ksort($laboratoryOptions);
 		<?php else: ?>
 			<div class="bhp-detail__submitters-list">
 				<?php foreach ($laboranSummaries as $summary): ?>
-					<div class="bhp-detail__submitter"><div><strong><?= esc($summary['name']) ?></strong><div class="bhp-detail__submitter-meta"><?= esc(implode(', ', array_keys($summary['laboratories'])) ?: '-') ?></div></div><div class="text-end"><span class="badge badge--soft badge--secondary"><?= (int) $summary['item_count'] ?> item</span><div class="bhp-detail__submitter-meta">Rp <?= number_format((float) $summary['total'], 0, ',', '.') ?></div></div></div>
+					<?php $isReadyForReview = in_array($summary['id'], $readyLaboranIds, true); ?>
+					<div class="bhp-detail__submitter"><div><strong><?= esc($summary['name']) ?></strong><div class="bhp-detail__submitter-meta"><?= esc(implode(', ', array_keys($summary['laboratories'])) ?: '-') ?></div></div><div class="text-end"><span class="badge badge--soft badge--secondary"><?= (int) $summary['item_count'] ?> item</span><div class="bhp-detail__submitter-meta">Rp <?= number_format((float) $summary['total'], 0, ',', '.') ?></div><?php if ($isReadyForReview): ?><span class="badge badge--soft badge--success">Siap Review</span><?php elseif ($requestData['status'] === 'DRAFT' || $requestData['status'] === 'NEED_REVISION'): ?><?php if (activeGroupIs('laboran') && $summary['id'] === (int) auth()->id() && activeGroupCan('bhp.edit')): ?><form method="post" action="<?= base_url('bhp/ready/' . $requestData['uuid']) ?>" style="margin-top:.5rem"><?= csrf_field() ?><button class="button button--primary button--sm" type="submit">Siap Review</button></form><?php else: ?><span class="badge badge--soft badge--warning">Belum Siap</span><?php endif; ?><?php endif; ?></div></div>
 				<?php endforeach; ?>
 			</div>
 		<?php endif; ?>
@@ -140,7 +144,7 @@ ksort($laboratoryOptions);
 	</table>
 </div>
 <?php if (! empty($overrides)): ?><div class="table-responsive" style="margin-top:1rem"><table class="table"><thead><tr><th>Waktu</th><th>Oleh</th><th>Perubahan</th><th>Alasan</th></tr></thead><tbody><?php foreach ($overrides as $override): $before = json_decode($override['before_data'], true) ?: []; $after = json_decode($override['after_data'], true) ?: []; ?><tr><td><?= esc($override['created_at']) ?></td><td><?= esc($override['changed_by_name']) ?></td><td><?= esc(($before['nama_barang'] ?? '-') . ' (' . ($before['qty'] ?? '-') . ') menjadi ' . ($after['nama_barang'] ?? '-') . ' (' . ($after['qty'] ?? '-') . ')') ?></td><td><?= esc($override['reason']) ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
-<div class="flex gap-2" style="flex-wrap:wrap;margin-top:1rem"><?php if ($canReview && ($requestData['status'] === 'DRAFT' || $requestData['status'] === 'NEED_REVISION')): ?><form method="post" action="<?= base_url('bhp/submit/' . $requestData['uuid']) ?>"><?= csrf_field() ?><button class="button button--primary">Ajukan ke Review</button></form><?php endif; ?><?php if ($canReview && $requestData['status'] === 'APPROVED_BY_KALAB'): ?><form method="post" action="<?= base_url('bhp/disburse/' . $requestData['uuid']) ?>" class="flex gap-2"><?= csrf_field() ?><input class="input" type="date" name="tanggal_cair" required><input class="input" type="number" min="0" step="0.01" name="nominal_cair" placeholder="Nominal cair" required><button class="button button--primary">Tandai Anggaran Cair</button></form><?php endif; ?></div>
+<div class="flex gap-2" style="flex-wrap:wrap;margin-top:1rem"><?php if ($canReview && $requestData['status'] === 'APPROVED_BY_KALAB'): ?><form method="post" action="<?= base_url('bhp/disburse/' . $requestData['uuid']) ?>" class="flex gap-2"><?= csrf_field() ?><input class="input" type="date" name="tanggal_cair" required><input class="input" type="number" min="0" step="0.01" name="nominal_cair" placeholder="Nominal cair" required><button class="button button--primary">Tandai Anggaran Cair</button></form><?php endif; ?></div>
 </section>
 <section class="bhp-detail__panel" id="bhp-detail-evidence" role="tabpanel" hidden>
 <?php if ($requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence')): ?><form method="post" enctype="multipart/form-data" action="<?= base_url('bhp/evidence/' . $requestData['uuid']) ?>" class="grid grid-cols-1 md:grid-cols-2 gap-4"><?= csrf_field() ?><input class="input" type="date" name="tanggal_belanja" required><input class="input" type="number" min="0" step="0.01" name="realisasi_biaya" placeholder="Total realisasi" required><input class="input" type="file" name="foto_barang[]" accept="image/jpeg,image/png" multiple required><input class="input" type="file" name="dokumen_nota_kwitansi" accept="application/pdf,image/jpeg,image/png" required><textarea class="input" name="catatan_pembelian" placeholder="Catatan pembelian"></textarea><button class="button button--primary">Kirim Eviden</button></form><?php endif; ?>

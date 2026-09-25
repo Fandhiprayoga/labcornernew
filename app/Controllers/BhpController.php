@@ -6,6 +6,7 @@ use App\Models\BhpAuditLogModel;
 use App\Models\BhpEvidenceModel;
 use App\Models\BhpItemModel;
 use App\Models\BhpItemOverrideModel;
+use App\Models\BhpLaboranSubmissionModel;
 use App\Models\BhpPeriodModel;
 use App\Models\BhpRequestModel;
 use App\Models\LaboratoryModel;
@@ -20,6 +21,7 @@ class BhpController extends BaseController
     protected BhpRequestModel $requestModel;
     protected BhpItemModel $itemModel;
     protected BhpItemOverrideModel $itemOverrideModel;
+    protected BhpLaboranSubmissionModel $laboranSubmissionModel;
     protected BhpPeriodModel $periodModel;
     protected BhpEvidenceModel $evidenceModel;
     protected BhpAuditLogModel $auditModel;
@@ -31,6 +33,7 @@ class BhpController extends BaseController
         $this->requestModel = new BhpRequestModel();
         $this->itemModel = new BhpItemModel();
         $this->itemOverrideModel = new BhpItemOverrideModel();
+        $this->laboranSubmissionModel = new BhpLaboranSubmissionModel();
         $this->periodModel = new BhpPeriodModel();
         $this->evidenceModel = new BhpEvidenceModel();
         $this->auditModel = new BhpAuditLogModel();
@@ -147,6 +150,7 @@ class BhpController extends BaseController
         } else {
             $requestId = (int) $request['id'];
         }
+        $this->laboranSubmissionModel->where(['pengajuan_id' => $requestId, 'laboran_id' => auth()->id()])->delete();
         foreach ($items as $item) {
             $item['pengajuan_id'] = $requestId;
             $item['laboran_id'] = auth()->id();
@@ -203,6 +207,7 @@ class BhpController extends BaseController
         }
         $db = db_connect();
         $db->transStart();
+        $this->laboranSubmissionModel->where(['pengajuan_id' => $requestData['id'], 'laboran_id' => auth()->id()])->delete();
         $this->itemModel->where(['pengajuan_id' => $requestData['id'], 'laboran_id' => auth()->id()])->delete(null, true);
         foreach ($items as $item) {
             $item['pengajuan_id'] = $requestData['id'];
@@ -217,10 +222,6 @@ class BhpController extends BaseController
 
     public function submit(string $uuid)
     {
-        if (! activeGroupIs('superadmin', 'kepala_lab')) {
-            return redirect()->to('/bhp')->with('error', 'Pengajuan BHP tidak dikirim per laboran. Kepala lab menilai pengajuan secara kolektif.');
-        }
-
         $requestData = $this->accessible($uuid);
         if (! $requestData || ! in_array($requestData['status'], ['DRAFT', 'NEED_REVISION'], true)) {
             return redirect()->to('/bhp')->with('error', 'Hanya pengajuan draft atau revisi yang dapat diajukan untuk review.');
@@ -229,15 +230,52 @@ class BhpController extends BaseController
         if (! activeGroupIs('superadmin') && (! $period || ! $this->periodIsActive($period))) {
             return redirect()->to('/bhp')->with('error', 'Jendela pengajuan sedang ditutup.');
         }
-        $items = $this->itemModel->where('pengajuan_id', $requestData['id'])->findAll();
-        if (empty($items)) {
+        $laboranIds = $this->requestLaboranIds((int) $requestData['id']);
+        if (empty($laboranIds)) {
             return redirect()->to('/bhp')->with('error', 'Pengajuan harus memiliki minimal satu item.');
+        }
+        $readyLaboranIds = $this->readyLaboranIds((int) $requestData['id']);
+        if (array_diff($laboranIds, $readyLaboranIds)) {
+            return redirect()->to('/bhp/detail/' . $uuid)->with('error', 'Pengajuan menunggu semua laboran menandai itemnya siap review.');
         }
         $this->transition($requestData, 'PENDING_REVIEW', 'Pengajuan siap ditinjau oleh kepala lab.');
         if (activeGroupIs('superadmin') && ! $this->periodIsActive($period)) {
             $this->auditModel->insert(['admin_id' => auth()->id(), 'action_type' => 'OVERRIDE_WINDOW', 'target_entity_id' => $requestData['id'], 'notes' => 'Submit di luar periode aktif.']);
         }
         return redirect()->to('/bhp/detail/' . $uuid)->with('success', 'Pengajuan BHP berhasil diajukan untuk review.');
+    }
+
+    public function readyForReview(string $uuid)
+    {
+        $requestData = $this->accessible($uuid);
+        if (! $requestData || ! in_array($requestData['status'], ['DRAFT', 'NEED_REVISION'], true)) {
+            return redirect()->to('/bhp')->with('error', 'Pengajuan tidak dapat disiapkan untuk review.');
+        }
+        if (! activeGroupIs('laboran')) {
+            return redirect()->to('/bhp/detail/' . $uuid)->with('error', 'Hanya laboran pengaju yang dapat menandai item siap review.');
+        }
+        $period = $this->periodModel->find($requestData['periode_id']);
+        if (! $this->periodIsActive($period)) {
+            return redirect()->to('/bhp/detail/' . $uuid)->with('error', 'Jendela pengajuan sedang ditutup.');
+        }
+
+        $laboranId = (int) auth()->id();
+        if (! in_array($laboranId, $this->requestLaboranIds((int) $requestData['id']), true)) {
+            return redirect()->to('/bhp/detail/' . $uuid)->with('error', 'Anda belum memiliki item pada pengajuan ini.');
+        }
+
+        if (! $this->laboranSubmissionModel->where(['pengajuan_id' => $requestData['id'], 'laboran_id' => $laboranId])->first()) {
+            $this->laboranSubmissionModel->insert(['pengajuan_id' => $requestData['id'], 'laboran_id' => $laboranId, 'submitted_at' => date('Y-m-d H:i:s')]);
+        }
+
+        $laboranIds = $this->requestLaboranIds((int) $requestData['id']);
+        $readyLaboranIds = $this->readyLaboranIds((int) $requestData['id']);
+        if (! array_diff($laboranIds, $readyLaboranIds)) {
+            $this->transition($requestData, 'PENDING_REVIEW', 'Semua laboran telah menandai itemnya siap review.');
+            return redirect()->to('/bhp/detail/' . $uuid)->with('success', 'Semua laboran siap. Pengajuan dikirim untuk review kepala lab.');
+        }
+
+        return redirect()->to('/bhp/detail/' . $uuid)->with('success', 'Item Anda sudah ditandai siap review.');
     }
 
     public function overrideItem(string $itemUuid)
@@ -396,7 +434,7 @@ class BhpController extends BaseController
             ->select('pengajuan_bhp_status_history.*, users.username AS changed_by_name')
             ->join('users', 'users.id = pengajuan_bhp_status_history.changed_by', 'left')
             ->where('pengajuan_id', $data['id'])->orderBy('pengajuan_bhp_status_history.id', 'DESC')->findAll();
-        return $this->renderView('bhp/detail', ['title' => 'Detail Pengajuan BHP', 'page_title' => 'Detail pengajuan', 'requestData' => $data, 'items' => $items, 'overrides' => $overrides, 'evidences' => $this->evidenceModel->where('pengajuan_id', $data['id'])->findAll(), 'history' => $history]);
+        return $this->renderView('bhp/detail', ['title' => 'Detail Pengajuan BHP', 'page_title' => 'Detail pengajuan', 'requestData' => $data, 'items' => $items, 'overrides' => $overrides, 'evidences' => $this->evidenceModel->where('pengajuan_id', $data['id'])->findAll(), 'history' => $history, 'laboranSubmissions' => $this->laboranSubmissionModel->where('pengajuan_id', $data['id'])->findAll()]);
     }
 
     public function downloadEvidence(string $uuid, string $evidenceUuid)
@@ -570,6 +608,22 @@ class BhpController extends BaseController
         $query = $this->itemModel->where('pengajuan_id', $requestData['id']);
         if (activeGroupIs('laboran', 'user')) $query->where('laboran_id', auth()->id());
         return $query->findAll();
+    }
+
+    private function requestLaboranIds(int $requestId): array
+    {
+        return array_map('intval', array_column(
+            $this->itemModel->select('laboran_id')->where('pengajuan_id', $requestId)->where('laboran_id IS NOT NULL', null, false)->groupBy('laboran_id')->findAll(),
+            'laboran_id'
+        ));
+    }
+
+    private function readyLaboranIds(int $requestId): array
+    {
+        return array_map('intval', array_column(
+            $this->laboranSubmissionModel->select('laboran_id')->where('pengajuan_id', $requestId)->findAll(),
+            'laboran_id'
+        ));
     }
 
     private function recalculateTotal(int $requestId): void
