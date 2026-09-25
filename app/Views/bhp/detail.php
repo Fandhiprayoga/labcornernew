@@ -157,6 +157,31 @@ ksort($laboratoryOptions);
 <?php if (! empty($overrides)): ?><div class="table-responsive" style="margin-top:1rem"><table class="table"><thead><tr><th>Waktu</th><th>Oleh</th><th>Perubahan</th><th>Alasan</th></tr></thead><tbody><?php foreach ($overrides as $override): $before = json_decode($override['before_data'], true) ?: []; $after = json_decode($override['after_data'], true) ?: []; ?><tr><td><?= esc($override['created_at']) ?></td><td><?= esc($override['changed_by_name']) ?></td><td><?= esc(($before['nama_barang'] ?? '-') . ' (' . ($before['qty'] ?? '-') . ') menjadi ' . ($after['nama_barang'] ?? '-') . ' (' . ($after['qty'] ?? '-') . ')') ?></td><td><?= esc($override['reason']) ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
 </section>
 <section class="bhp-detail__panel" id="bhp-detail-evidence" role="tabpanel" hidden>
+<div class="bhp-detail__item-filters" data-bhp-evidence-filters>
+	<div class="bhp-detail__item-filter">
+		<label class="text-xs text-muted-foreground" for="bhp_evidence_filter_laboran">Laboran</label>
+		<select class="select" id="bhp_evidence_filter_laboran" data-bhp-evidence-filter="laboran">
+			<option value="">Semua laboran</option>
+			<?php foreach ($laboranOptions as $laboranOption): ?><option value="<?= esc($laboranOption, 'attr') ?>"><?= esc($laboranOption) ?></option><?php endforeach; ?>
+		</select>
+	</div>
+	<div class="bhp-detail__item-filter">
+		<label class="text-xs text-muted-foreground" for="bhp_evidence_filter_laboratory">Laboratorium</label>
+		<select class="select" id="bhp_evidence_filter_laboratory" data-bhp-evidence-filter="laboratory">
+			<option value="">Semua laboratorium</option>
+			<?php foreach ($laboratoryOptions as $laboratoryOption): ?><option value="<?= esc($laboratoryOption, 'attr') ?>"><?= esc($laboratoryOption) ?></option><?php endforeach; ?>
+		</select>
+	</div>
+	<div class="bhp-detail__item-filter">
+		<label class="text-xs text-muted-foreground" for="bhp_evidence_filter_status">Status Eviden</label>
+		<select class="select" id="bhp_evidence_filter_status" data-bhp-evidence-filter="status">
+			<option value="">Semua status</option>
+			<option value="complete">Sudah ada eviden</option>
+			<option value="missing">Belum ada eviden</option>
+		</select>
+	</div>
+	<button type="button" class="button button--outline button--neutral button--sm" data-bhp-evidence-filter-reset>Reset</button>
+</div>
 <div class="table-responsive">
 	<table class="table">
 		<thead>
@@ -175,7 +200,7 @@ ksort($laboratoryOptions);
 			<?php endif; ?>
 			<?php foreach ($items as $item): ?>
 				<?php $itemEvidences = $evidencesByItem[(int) $item['id']] ?? []; ?>
-				<tr>
+				<tr data-bhp-evidence-row data-laboran="<?= esc($item['laboran_name'] ?? 'Tidak diketahui', 'attr') ?>" data-laboratory="<?= esc($item['laboratory_name'] ?? '-', 'attr') ?>" data-evidence-status="<?= empty($itemEvidences) ? 'missing' : 'complete' ?>">
 					<td><strong><?= esc($item['nama_barang']) ?></strong><div class="text-xs text-muted-foreground"><?= esc($item['spesifikasi'] ?: '-') ?></div></td>
 					<td><?= esc($item['laboratory_name'] ?? '-') ?></td>
 					<td><?= esc($item['qty'] . ' ' . $item['satuan']) ?></td>
@@ -196,6 +221,9 @@ ksort($laboratoryOptions);
 					<?php endif; ?>
 				</tr>
 			<?php endforeach; ?>
+			<?php if (! empty($items)): ?>
+				<tr data-bhp-evidence-empty-filter hidden><td colspan="<?= $requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence') ? 6 : 5 ?>"><?= view('partials/empty_table_state', ['message' => 'Tidak ada data eviden yang sesuai dengan filter.']) ?></td></tr>
+			<?php endif; ?>
 		</tbody>
 	</table>
 </div>
@@ -299,6 +327,12 @@ ksort($laboratoryOptions);
 		const itemFilterReset = document.querySelector('[data-bhp-item-filter-reset]');
 		const itemRows = document.querySelectorAll('[data-bhp-item-row]');
 		const itemEmptyFilter = document.querySelector('[data-bhp-item-empty-filter]');
+		const evidenceFilterLaboran = document.querySelector('[data-bhp-evidence-filter="laboran"]');
+		const evidenceFilterLaboratory = document.querySelector('[data-bhp-evidence-filter="laboratory"]');
+		const evidenceFilterStatus = document.querySelector('[data-bhp-evidence-filter="status"]');
+		const evidenceFilterReset = document.querySelector('[data-bhp-evidence-filter-reset]');
+		const evidenceRows = document.querySelectorAll('[data-bhp-evidence-row]');
+		const evidenceEmptyFilter = document.querySelector('[data-bhp-evidence-empty-filter]');
 		tabs.forEach((tab) => tab.addEventListener('click', () => {
 			tabs.forEach((item) => {
 				const active = item === tab;
@@ -328,6 +362,32 @@ ksort($laboratoryOptions);
 			if (itemFilterLaboran) itemFilterLaboran.value = '';
 			if (itemFilterLaboratory) itemFilterLaboratory.value = '';
 			applyItemFilters();
+		});
+
+		const applyEvidenceFilters = () => {
+			const laboran = evidenceFilterLaboran ? evidenceFilterLaboran.value : '';
+			const laboratory = evidenceFilterLaboratory ? evidenceFilterLaboratory.value : '';
+			const status = evidenceFilterStatus ? evidenceFilterStatus.value : '';
+			let visibleRows = 0;
+			evidenceRows.forEach((row) => {
+				const matchesLaboran = !laboran || row.dataset.laboran === laboran;
+				const matchesLaboratory = !laboratory || row.dataset.laboratory === laboratory;
+				const matchesStatus = !status || row.dataset.evidenceStatus === status;
+				const visible = matchesLaboran && matchesLaboratory && matchesStatus;
+				row.hidden = !visible;
+				if (visible) visibleRows++;
+			});
+			if (evidenceEmptyFilter) evidenceEmptyFilter.hidden = visibleRows > 0;
+		};
+
+		if (evidenceFilterLaboran) evidenceFilterLaboran.addEventListener('change', applyEvidenceFilters);
+		if (evidenceFilterLaboratory) evidenceFilterLaboratory.addEventListener('change', applyEvidenceFilters);
+		if (evidenceFilterStatus) evidenceFilterStatus.addEventListener('change', applyEvidenceFilters);
+		if (evidenceFilterReset) evidenceFilterReset.addEventListener('click', () => {
+			if (evidenceFilterLaboran) evidenceFilterLaboran.value = '';
+			if (evidenceFilterLaboratory) evidenceFilterLaboratory.value = '';
+			if (evidenceFilterStatus) evidenceFilterStatus.value = '';
+			applyEvidenceFilters();
 		});
 
 		if (disburseOpen && disburseDialog) {
