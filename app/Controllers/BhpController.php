@@ -490,11 +490,6 @@ class BhpController extends BaseController
             return redirect()->to('/bhp/periods')->with('error', 'Periode tidak ditemukan.');
         }
 
-        $now = date('Y-m-d H:i:s');
-        if ($period['tanggal_selesai'] < $now) {
-            return redirect()->to('/bhp/periods')->with('error', 'Periode yang sudah berakhir tidak dapat diedit.');
-        }
-
         return $this->renderView('bhp/period_form', [
             'title' => 'Edit Periode Pengajuan BHP',
             'page_title' => 'Edit Periode Pengajuan BHP',
@@ -531,11 +526,6 @@ class BhpController extends BaseController
         $period = $this->periodModel->find($id);
         if (! $period) {
             return redirect()->to('/bhp/periods')->with('error', 'Periode tidak ditemukan.');
-        }
-
-        $now = date('Y-m-d H:i:s');
-        if ($period['tanggal_selesai'] < $now) {
-            return redirect()->to('/bhp/periods')->with('error', 'Periode yang sudah berakhir tidak dapat diedit.');
         }
 
         $data = $this->request->getPost();
