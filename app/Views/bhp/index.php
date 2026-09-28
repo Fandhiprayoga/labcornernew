@@ -29,7 +29,7 @@ $statusColors = ['DRAFT' => 'secondary', 'PENDING_REVIEW' => 'warning', 'NEED_RE
             <option value="">Semua status</option><?php foreach ($statuses as $value): ?><option value="<?= esc($value) ?>" <?= $status === $value ? 'selected' : '' ?>><?= esc($statusLabels[$value]) ?></option><?php endforeach; ?>
           </select></div>
         <div style="flex:0 1 220px;min-width:190px;"><label class="text-xs text-muted-foreground" for="periode_id">Periode</label><select class="select" id="periode_id" name="periode_id">
-            <option value="">Semua periode</option><?php foreach ($periods as $period): ?><option value="<?= (int) $period['id'] ?>" <?= $periodId === (int) $period['id'] ? 'selected' : '' ?>><?= esc($period['nama_periode']) ?></option><?php endforeach; ?>
+            <option value="">Pilih periode</option><?php foreach ($periods as $period): ?><option value="<?= (int) $period['id'] ?>" <?= $periodId === (int) $period['id'] ? 'selected' : '' ?>><?= esc($period['nama_periode']) ?></option><?php endforeach; ?>
           </select></div>
         <div style="flex:0 0 110px;"><label class="text-xs text-muted-foreground" for="perPage">Per Halaman</label><select class="select" id="perPage" name="perPage"><?php foreach ($perPageOptions as $option): ?><option value="<?= $option ?>" <?= $perPage === $option ? 'selected' : '' ?>><?= $option ?></option><?php endforeach; ?></select></div>
         <button class="button button--primary button--sm" type="submit">Filter</button>
@@ -48,7 +48,7 @@ $statusColors = ['DRAFT' => 'secondary', 'PENDING_REVIEW' => 'warning', 'NEED_RE
           </thead>
           <tbody>
             <?php if (empty($requests)): ?><tr>
-                <td colspan="6"><?= view('partials/empty_table_state', ['message' => 'Belum ada pengajuan BHP.']) ?></td>
+                <td colspan="6"><?= view('partials/empty_table_state', ['message' => $periodId > 0 ? 'Belum ada pengajuan BHP pada periode ini.' : 'Pilih periode untuk menampilkan pengajuan BHP.']) ?></td>
               </tr><?php endif; ?>
             <?php foreach ($requests as $row): ?>
               <?php $editableItemCount = (int) ($row['editable_item_count'] ?? 0); ?>

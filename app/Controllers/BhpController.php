@@ -57,7 +57,22 @@ class BhpController extends BaseController
 
         $search = trim((string) $this->request->getGet('q'));
         $status = trim((string) $this->request->getGet('status'));
-        $periodId = (int) $this->request->getGet('periode_id');
+        $get = $this->request->getGet();
+        $periods = $this->periodModel->orderBy('tanggal_mulai', 'DESC')->findAll();
+        $periodId = array_key_exists('periode_id', $get)
+            ? (int) $get['periode_id']
+            : (int) session()->get('bhp_index_period_id');
+        $availablePeriodIds = array_map('intval', array_column($periods, 'id'));
+        if ($periodId > 0 && ! in_array($periodId, $availablePeriodIds, true)) {
+            $periodId = 0;
+        }
+        if (array_key_exists('periode_id', $get)) {
+            if ($periodId > 0) {
+                session()->set('bhp_index_period_id', $periodId);
+            } else {
+                session()->remove('bhp_index_period_id');
+            }
+        }
         $perPage = (int) $this->request->getGet('perPage');
         if (! in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
             $perPage = self::PER_PAGE_OPTIONS[0];
@@ -76,16 +91,19 @@ class BhpController extends BaseController
             $query->groupStart()->like('pengajuan_bhp.kode_pengajuan', $search)->orLike('laboratories.name', $search)->orLike('users.username', $search)->orLike('pengajuan_bhp.status', $search)->groupEnd();
         }
 
-        $requests = $query->orderBy('pengajuan_bhp.created_at', 'DESC')->paginate($perPage);
+        $requests = $periodId > 0
+            ? $query->orderBy('pengajuan_bhp.created_at', 'DESC')->paginate($perPage)
+            : [];
         $pager = $this->requestModel->pager;
         return $this->renderView('bhp/index', [
             'title' => 'Pengajuan BHP', 'page_title' => 'Pengajuan Bahan Habis Pakai',
             'requests' => $requests, 'pager' => $pager,
             'search' => $search, 'status' => $status, 'periodId' => $periodId, 'statuses' => self::STATUSES,
-            'periods' => $this->periodModel->orderBy('tanggal_mulai', 'DESC')->findAll(),
+            'periods' => $periods,
             'availablePrograms' => $this->availableBhpPrograms(),
             'perPage' => $perPage, 'perPageOptions' => self::PER_PAGE_OPTIONS,
-            'currentPage' => $pager->getCurrentPage(), 'totalRows' => $pager->getTotal(),
+            'currentPage' => $periodId > 0 ? $pager->getCurrentPage() : 1,
+            'totalRows' => $periodId > 0 ? $pager->getTotal() : 0,
         ]);
     }
 
