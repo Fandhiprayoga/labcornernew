@@ -10,7 +10,7 @@ class BhpReportController extends BaseController
     {
         $filters = $this->filters();
         $rows = $this->reportQuery($filters)
-            ->select('study_programs.code AS program_code, study_programs.name AS program_name, COUNT(DISTINCT pengajuan_bhp.id) AS total_pengajuan, SUM(pengajuan_bhp.grand_total_estimasi) AS total_estimasi, SUM(COALESCE(pengajuan_bhp.realisasi_biaya, 0)) AS total_realisasi, GROUP_CONCAT(DISTINCT laboratories.name ORDER BY laboratories.name SEPARATOR ", ") AS laboratories')
+            ->select('study_programs.code AS program_code, study_programs.name AS program_name, COUNT(DISTINCT pengajuan_bhp.id) AS total_pengajuan, SUM(pengajuan_bhp.grand_total_estimasi) AS total_estimasi, SUM(COALESCE(pengajuan_bhp.realisasi_biaya, 0)) AS total_realisasi, GROUP_CONCAT(DISTINCT COALESCE(bhp_laboratories.laboratories, laboratories.name) ORDER BY COALESCE(bhp_laboratories.laboratories, laboratories.name) SEPARATOR ", ") AS laboratories')
             ->groupBy('pengajuan_bhp.study_program_id, study_programs.code, study_programs.name')
             ->orderBy('study_programs.name', 'ASC')
             ->findAll();
@@ -27,7 +27,7 @@ class BhpReportController extends BaseController
     {
         $filters = $this->filters();
         $rows = $this->reportQuery($filters)
-            ->select('study_programs.code AS program_code, study_programs.name AS program_name, COUNT(DISTINCT pengajuan_bhp.id) AS total_pengajuan, SUM(pengajuan_bhp.grand_total_estimasi) AS total_estimasi, SUM(COALESCE(pengajuan_bhp.realisasi_biaya, 0)) AS total_realisasi, GROUP_CONCAT(DISTINCT laboratories.name ORDER BY laboratories.name SEPARATOR ", ") AS laboratories')
+            ->select('study_programs.code AS program_code, study_programs.name AS program_name, COUNT(DISTINCT pengajuan_bhp.id) AS total_pengajuan, SUM(pengajuan_bhp.grand_total_estimasi) AS total_estimasi, SUM(COALESCE(pengajuan_bhp.realisasi_biaya, 0)) AS total_realisasi, GROUP_CONCAT(DISTINCT COALESCE(bhp_laboratories.laboratories, laboratories.name) ORDER BY COALESCE(bhp_laboratories.laboratories, laboratories.name) SEPARATOR ", ") AS laboratories')
             ->groupBy('pengajuan_bhp.study_program_id, study_programs.code, study_programs.name')
             ->orderBy('study_programs.name', 'ASC')
             ->findAll();
@@ -46,13 +46,14 @@ class BhpReportController extends BaseController
     private function reportQuery(array $filters)
     {
         $query = (new BhpRequestModel())
-            ->join('laboratories', 'laboratories.id = pengajuan_bhp.laboratory_id')
+            ->join('laboratories', 'laboratories.id = pengajuan_bhp.laboratory_id', 'left')
+            ->join('(SELECT bhp_report_items.pengajuan_id, GROUP_CONCAT(DISTINCT bhp_report_laboratories.name ORDER BY bhp_report_laboratories.name SEPARATOR ", ") AS laboratories FROM pengajuan_bhp_item bhp_report_items JOIN laboratories bhp_report_laboratories ON bhp_report_laboratories.id = bhp_report_items.laboratory_id WHERE bhp_report_items.deleted_at IS NULL GROUP BY bhp_report_items.pengajuan_id) bhp_laboratories', 'bhp_laboratories.pengajuan_id = pengajuan_bhp.id', 'left', false)
             ->join('study_programs', 'study_programs.id = pengajuan_bhp.study_program_id', 'left')
             ->whereNotIn('pengajuan_bhp.status', ['DRAFT', 'REJECTED']);
         if ($filters['start_date'] !== '') $query->where('pengajuan_bhp.created_at >=', $filters['start_date'] . ' 00:00:00');
         if ($filters['end_date'] !== '') $query->where('pengajuan_bhp.created_at <=', $filters['end_date'] . ' 23:59:59');
         if ($filters['status'] !== '') $query->where('pengajuan_bhp.status', $filters['status']);
-        if ($filters['q'] !== '') $query->groupStart()->like('study_programs.code', $filters['q'])->orLike('study_programs.name', $filters['q'])->orLike('laboratories.name', $filters['q'])->groupEnd();
+        if ($filters['q'] !== '') $query->groupStart()->like('study_programs.code', $filters['q'])->orLike('study_programs.name', $filters['q'])->orLike('bhp_laboratories.laboratories', $filters['q'])->orLike('laboratories.name', $filters['q'])->groupEnd();
         return $query;
     }
 
