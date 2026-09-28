@@ -8,6 +8,8 @@
 $labels = ['DRAFT' => 'Draft', 'PENDING_REVIEW' => 'Menunggu Review', 'NEED_REVISION' => 'Perlu Revisi', 'APPROVED_BY_KALAB' => 'Disetujui', 'FUND_DISBURSED' => 'Anggaran Cair', 'EVIDEN_SUBMITTED' => 'Eviden Dikirim', 'COMPLETED' => 'Selesai', 'REJECTED' => 'Ditolak'];
 $canReview = activeGroupIs('superadmin', 'kepala_lab');
 $canDisburse = activeGroupIs('kepala_lab') && activeGroupCan('bhp.disburse') && $requestData['status'] === 'APPROVED_BY_KALAB';
+$canDeleteEvidence = $requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence');
+$canVerifyEvidence = activeGroupIs('kepala_lab') && activeGroupCan('bhp.verify') && $requestData['status'] === 'EVIDEN_SUBMITTED';
 $laboranSummaries = [];
 $laboranOptions = [];
 $laboratoryOptions = [];
@@ -190,13 +192,14 @@ ksort($laboratoryOptions);
 				<th>Laboratorium</th>
 				<th>Qty</th>
 				<th>Total Estimasi</th>
+				<th>Realisasi</th>
 				<th>Eviden</th>
 				<?php if ($requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence')): ?><th class="text-end">Aksi</th><?php endif; ?>
 			</tr>
 		</thead>
 		<tbody>
 			<?php if (empty($items)): ?>
-				<tr><td colspan="<?= $requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence') ? 6 : 5 ?>"><?= view('partials/empty_table_state', ['message' => 'Belum ada item pengajuan.']) ?></td></tr>
+				<tr><td colspan="<?= $requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence') ? 7 : 6 ?>"><?= view('partials/empty_table_state', ['message' => 'Belum ada item pengajuan.']) ?></td></tr>
 			<?php endif; ?>
 			<?php foreach ($items as $item): ?>
 				<?php $itemEvidences = $evidencesByItem[(int) $item['id']] ?? []; ?>
@@ -205,13 +208,15 @@ ksort($laboratoryOptions);
 					<td><?= esc($item['laboratory_name'] ?? '-') ?></td>
 					<td><?= esc($item['qty'] . ' ' . $item['satuan']) ?></td>
 					<td>Rp <?= number_format((float) $item['total_harga'], 0, ',', '.') ?></td>
+					<td><?= $item['realisasi_biaya'] !== null ? 'Rp ' . number_format((float) $item['realisasi_biaya'], 0, ',', '.') : '-' ?></td>
 					<td>
 						<?php if (empty($itemEvidences)): ?>
 							<span class="badge badge--soft badge--warning">Belum ada eviden</span>
 						<?php else: ?>
-							<ul style="margin:0;padding-left:1rem">
+							<ul style="display:flex;flex-wrap:wrap;align-items:center;gap:.35rem;margin:0;padding:0;list-style:none">
 								<?php foreach ($itemEvidences as $evidence): ?>
-									<li><?= esc($evidence['tipe_file']) ?>: <a href="<?= base_url('bhp/evidence/' . $requestData['uuid'] . '/' . $evidence['uuid']) ?>"><?= esc($evidence['original_name']) ?></a></li>
+									<?php $isPhotoEvidence = $evidence['tipe_file'] === 'FOTO_BARANG'; $previewLabel = $evidence['tipe_file'] === 'INVOICE' ? 'Preview invoice' : ($isPhotoEvidence ? 'Preview foto barang' : 'Preview nota/kwitansi'); ?>
+									<li><button type="button" class="button button--<?= $isPhotoEvidence ? 'info' : 'primary' ?> button--icon-only button--sm" title="<?= $previewLabel ?>" aria-label="<?= $previewLabel ?>" data-bhp-evidence-preview data-preview-url="<?= esc(base_url('bhp/evidence/' . $requestData['uuid'] . '/' . $evidence['uuid']), 'attr') ?>" data-preview-title="<?= $previewLabel ?>" data-delete-url="<?= $canDeleteEvidence ? esc(base_url('bhp/evidence/' . $requestData['uuid'] . '/' . $evidence['uuid'] . '/delete'), 'attr') : '' ?>"><?php if ($isPhotoEvidence): ?><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6.5A1.5 1.5 0 0 1 5.5 5h2l1.2-1.5h6.6L16.5 5h2A1.5 1.5 0 0 1 20 6.5v11A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-11Z" /><circle cx="11.5" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.5" /></svg><?php else: ?><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 3.5h8l4 4V20.5H6z" /><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" d="M14 3.5v4h4M8.5 12h7M8.5 15.5h7" /></svg><?php endif; ?></button></li>
 								<?php endforeach; ?>
 							</ul>
 						<?php endif; ?>
@@ -222,13 +227,13 @@ ksort($laboratoryOptions);
 				</tr>
 			<?php endforeach; ?>
 			<?php if (! empty($items)): ?>
-				<tr data-bhp-evidence-empty-filter hidden><td colspan="<?= $requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence') ? 6 : 5 ?>"><?= view('partials/empty_table_state', ['message' => 'Tidak ada data eviden yang sesuai dengan filter.']) ?></td></tr>
+				<tr data-bhp-evidence-empty-filter hidden><td colspan="<?= $requestData['status'] === 'FUND_DISBURSED' && activeGroupCan('bhp.evidence') ? 7 : 6 ?>"><?= view('partials/empty_table_state', ['message' => 'Tidak ada data eviden yang sesuai dengan filter.']) ?></td></tr>
 			<?php endif; ?>
 		</tbody>
 	</table>
 </div>
-<?php if (! empty($generalEvidences)): ?><div style="margin-top:1rem"><strong>Eviden umum</strong><ul><?php foreach ($generalEvidences as $evidence): ?><li><?= esc($evidence['tipe_file']) ?>: <a href="<?= base_url('bhp/evidence/' . $requestData['uuid'] . '/' . $evidence['uuid']) ?>"><?= esc($evidence['original_name']) ?></a></li><?php endforeach; ?></ul></div><?php endif; ?>
-<?php if ($requestData['status'] === 'EVIDEN_SUBMITTED' && $canReview): ?><div class="flex gap-2" style="margin-top:1rem"><form method="post" action="<?= base_url('bhp/verify/' . $requestData['uuid']) ?>"><?= csrf_field() ?><input class="input" name="note" placeholder="Catatan verifikasi"><button class="button button--success">Validasi & Tutup</button></form><form method="post" action="<?= base_url('bhp/reject-evidence/' . $requestData['uuid']) ?>"><?= csrf_field() ?><input class="input" name="note" placeholder="Feedback wajib" required><button class="button button--danger">Kembalikan</button></form></div><?php endif; ?>
+<?php if (! empty($generalEvidences)): ?><div style="margin-top:1rem"><strong>Eviden umum</strong><ul style="display:flex;flex-wrap:wrap;align-items:center;gap:.35rem;margin:.5rem 0 0;padding:0;list-style:none"><?php foreach ($generalEvidences as $evidence): ?><?php $isPhotoEvidence = $evidence['tipe_file'] === 'FOTO_BARANG'; $previewLabel = $evidence['tipe_file'] === 'INVOICE' ? 'Preview invoice' : ($isPhotoEvidence ? 'Preview foto barang' : 'Preview nota/kwitansi'); ?><li><button type="button" class="button button--<?= $isPhotoEvidence ? 'info' : 'primary' ?> button--icon-only button--sm" title="<?= $previewLabel ?>" aria-label="<?= $previewLabel ?>" data-bhp-evidence-preview data-preview-url="<?= esc(base_url('bhp/evidence/' . $requestData['uuid'] . '/' . $evidence['uuid']), 'attr') ?>" data-preview-title="<?= $previewLabel ?>" data-delete-url="<?= $canDeleteEvidence ? esc(base_url('bhp/evidence/' . $requestData['uuid'] . '/' . $evidence['uuid'] . '/delete'), 'attr') : '' ?>"><?php if ($isPhotoEvidence): ?><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6.5A1.5 1.5 0 0 1 5.5 5h2l1.2-1.5h6.6L16.5 5h2A1.5 1.5 0 0 1 20 6.5v11A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5v-11Z" /><circle cx="11.5" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.5" /></svg><?php else: ?><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 3.5h8l4 4V20.5H6z" /><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" d="M14 3.5v4h4M8.5 12h7M8.5 15.5h7" /></svg><?php endif; ?></button></li><?php endforeach; ?></ul></div><?php endif; ?>
+<?php if ($canVerifyEvidence): ?><div class="flex gap-2" style="margin-top:1rem"><button type="button" class="button button--success" data-bhp-verify-open>Validasi & Tutup</button><button type="button" class="button button--danger" data-bhp-reject-evidence-open>Kembalikan</button></div><?php endif; ?>
 </section>
 <section class="bhp-detail__panel" id="bhp-detail-history" role="tabpanel" hidden>
 	<?php if (empty($history)): ?>
@@ -302,6 +307,7 @@ ksort($laboratoryOptions);
 						<div class="field"><label class="field__label" for="bhp_evidence_realization">Total Realisasi <span class="text-danger">*</span></label><input class="input" type="number" min="0" step="0.01" id="bhp_evidence_realization" name="realisasi_biaya" required></div>
 						<div class="field"><label class="field__label" for="bhp_evidence_photos">Foto Barang <span class="text-danger">*</span></label><input class="input" type="file" id="bhp_evidence_photos" name="foto_barang[]" accept="image/jpeg,image/png" multiple required></div>
 						<div class="field"><label class="field__label" for="bhp_evidence_receipt">Nota/Kwitansi <span class="text-danger">*</span></label><input class="input" type="file" id="bhp_evidence_receipt" name="dokumen_nota_kwitansi" accept="application/pdf,image/jpeg,image/png" required></div>
+						<div class="field"><label class="field__label" for="bhp_evidence_invoice">Invoice <span class="text-danger">*</span></label><input class="input" type="file" id="bhp_evidence_invoice" name="dokumen_invoice" accept="application/pdf,image/jpeg,image/png" required></div>
 					</div>
 					<div class="field" style="margin-top:1rem;"><label class="field__label" for="bhp_evidence_note">Catatan Pembelian</label><textarea class="input" id="bhp_evidence_note" name="catatan_pembelian" rows="3" placeholder="Catatan pembelian"></textarea></div>
 				</div>
@@ -314,12 +320,117 @@ ksort($laboratoryOptions);
 	</div>
 </div>
 <?php endif; ?>
+<?php if ($canVerifyEvidence): ?>
+<div class="dialog dialog--sm" id="bhpVerifyEvidenceConfirm" data-stisla-dialog data-state="closed" role="alertdialog" aria-modal="true" aria-labelledby="bhpVerifyEvidenceConfirmLabel" aria-describedby="bhpVerifyEvidenceConfirmDesc" aria-hidden="true" tabindex="-1">
+	<div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+	<div class="dialog__panel">
+		<div class="dialog__content">
+			<button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">&times;</button>
+			<div class="dialog__body text-center pt-6">
+				<span class="icon-box icon-box--success icon-box--circle icon-box--lg mb-3"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="m5 12 4 4L19 6" /></svg></span>
+				<h3 class="dialog__title mb-1" id="bhpVerifyEvidenceConfirmLabel">Validasi Evidence?</h3>
+				<p class="text-muted-foreground" id="bhpVerifyEvidenceConfirmDesc">Evidence akan divalidasi dan pengajuan ditandai selesai.</p>
+			</div>
+			<form id="bhpVerifyEvidenceForm" method="post" action="<?= base_url('bhp/verify/' . $requestData['uuid']) ?>">
+				<?= csrf_field() ?>
+				<div class="dialog__body">
+					<label class="field__label" for="bhp_verify_note">Remark Verifikasi</label>
+					<textarea class="input" id="bhp_verify_note" name="note" rows="3" placeholder="Tambahkan remark verifikasi (opsional)"></textarea>
+				</div>
+				<div class="dialog__footer justify-center">
+					<button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button>
+					<button type="submit" class="button button--success">Ya, Validasi</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
+<div class="dialog dialog--sm" id="bhpRejectEvidenceConfirm" data-stisla-dialog data-state="closed" role="dialog" aria-modal="true" aria-labelledby="bhpRejectEvidenceConfirmLabel" aria-describedby="bhpRejectEvidenceConfirmDesc" aria-hidden="true" tabindex="-1">
+	<div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+	<div class="dialog__panel">
+		<div class="dialog__content">
+			<div class="dialog__header">
+				<h3 class="dialog__title" id="bhpRejectEvidenceConfirmLabel">Kembalikan Evidence</h3>
+				<button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">&times;</button>
+			</div>
+			<form id="bhpRejectEvidenceForm" method="post" action="<?= base_url('bhp/reject-evidence/' . $requestData['uuid']) ?>">
+				<?= csrf_field() ?>
+				<div class="dialog__body">
+					<p class="text-muted-foreground text-sm mb-4" id="bhpRejectEvidenceConfirmDesc">Evidence akan dikembalikan untuk diperbaiki oleh pengaju.</p>
+					<label class="field__label" for="bhp_reject_evidence_note">Remark Pengembalian <span class="text-danger">*</span></label>
+					<textarea class="input" id="bhp_reject_evidence_note" name="note" rows="3" required placeholder="Tuliskan alasan pengembalian evidence..."></textarea>
+				</div>
+				<div class="dialog__footer">
+					<button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button>
+					<button type="submit" class="button button--danger">Kembalikan Evidence</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+<?php endif; ?>
+<div class="dialog dialog--lg" id="bhpEvidencePreview" data-stisla-dialog data-state="closed" role="dialog" aria-modal="true" aria-labelledby="bhpEvidencePreviewLabel" aria-hidden="true" tabindex="-1">
+	<div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+	<div class="dialog__panel">
+		<div class="dialog__content">
+			<div class="dialog__header">
+				<h3 class="dialog__title" id="bhpEvidencePreviewLabel">Preview Evidence</h3>
+				<button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">&times;</button>
+			</div>
+			<div class="dialog__body" style="padding:0;min-height:24rem;background:var(--color-muted);">
+				<iframe id="bhpEvidencePreviewFrame" title="Preview evidence" src="about:blank" style="display:block;width:100%;height:min(70vh,42rem);border:0;background:var(--color-surface);"></iframe>
+			</div>
+			<div class="dialog__footer">
+				<form id="bhpEvidenceDeleteForm" method="post" style="margin-right:auto;display:none">
+					<?= csrf_field() ?>
+					<button type="button" class="button button--danger button--icon-only button--sm" title="Hapus evidence" aria-label="Hapus evidence" data-bhp-evidence-delete-open><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 6H4m12 0v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6m-2 0 .5-2h11l.5 2" /></svg></button>
+				</form>
+				<button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Tutup</button>
+			</div>
+		</div>
+	</div>
+</div>
+<?php if ($canDeleteEvidence): ?>
+<div class="dialog dialog--sm" id="bhpEvidenceDeleteConfirm" data-stisla-dialog data-state="closed" role="alertdialog" aria-modal="true" aria-labelledby="bhpEvidenceDeleteConfirmLabel" aria-describedby="bhpEvidenceDeleteConfirmDesc" aria-hidden="true" tabindex="-1">
+	<div class="dialog__backdrop" data-stisla-dialog-dismiss></div>
+	<div class="dialog__panel">
+		<div class="dialog__content">
+			<button type="button" class="dialog__close" data-stisla-dialog-dismiss aria-label="Tutup">&times;</button>
+			<div class="dialog__body text-center pt-6">
+				<span class="icon-box icon-box--danger icon-box--circle icon-box--lg mb-3"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M6 7h12m-9 0v10m6-10v10M8 7l.75-2h6.5L16 7m-9 0 .75 13h6.5L15 7" /></svg></span>
+				<h3 class="dialog__title mb-1" id="bhpEvidenceDeleteConfirmLabel">Hapus Evidence?</h3>
+				<p class="text-muted-foreground" id="bhpEvidenceDeleteConfirmDesc">File evidence yang dihapus tidak dapat dipulihkan.</p>
+			</div>
+			<form id="bhpEvidenceDeleteConfirmForm" method="post">
+				<?= csrf_field() ?>
+				<div class="dialog__footer justify-center">
+					<button type="button" class="button button--outline button--neutral" data-stisla-dialog-dismiss>Batal</button>
+					<button type="submit" class="button button--danger">Ya, Hapus</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+<?php endif; ?>
 <script>
 	(() => {
 		const disburseDialog = document.getElementById('bhpDisburseConfirm');
 		const disburseOpen = document.querySelector('[data-bhp-disburse-open]');
 		const evidenceDialog = document.getElementById('bhpEvidenceConfirm');
 		const evidenceForm = document.getElementById('bhpEvidenceForm');
+		const evidencePreviewDialog = document.getElementById('bhpEvidencePreview');
+		const evidencePreviewFrame = document.getElementById('bhpEvidencePreviewFrame');
+		const evidenceDeleteForm = document.getElementById('bhpEvidenceDeleteForm');
+		const evidenceDeleteOpen = document.querySelector('[data-bhp-evidence-delete-open]');
+		const evidenceDeleteDialog = document.getElementById('bhpEvidenceDeleteConfirm');
+		const evidenceDeleteConfirmForm = document.getElementById('bhpEvidenceDeleteConfirmForm');
+		const verifyEvidenceOpen = document.querySelector('[data-bhp-verify-open]');
+		const verifyEvidenceDialog = document.getElementById('bhpVerifyEvidenceConfirm');
+		const verifyEvidenceForm = document.getElementById('bhpVerifyEvidenceForm');
+		const rejectEvidenceOpen = document.querySelector('[data-bhp-reject-evidence-open]');
+		const rejectEvidenceDialog = document.getElementById('bhpRejectEvidenceConfirm');
+		const rejectEvidenceForm = document.getElementById('bhpRejectEvidenceForm');
 		const tabs = document.querySelectorAll('[data-bhp-detail-tab]');
 		const panels = document.querySelectorAll('.bhp-detail__panel');
 		const itemFilterLaboran = document.querySelector('[data-bhp-item-filter="laboran"]');
@@ -333,14 +444,31 @@ ksort($laboratoryOptions);
 		const evidenceFilterReset = document.querySelector('[data-bhp-evidence-filter-reset]');
 		const evidenceRows = document.querySelectorAll('[data-bhp-evidence-row]');
 		const evidenceEmptyFilter = document.querySelector('[data-bhp-evidence-empty-filter]');
-		tabs.forEach((tab) => tab.addEventListener('click', () => {
+		const tabStorageKey = <?= json_encode('bhp-detail-active-tab-' . $requestData['uuid']) ?>;
+		const activateTab = (tabId, persist = true) => {
+			const selectedTab = Array.from(tabs).find((tab) => tab.dataset.bhpDetailTab === tabId);
+			if (! selectedTab) return;
+
 			tabs.forEach((item) => {
-				const active = item === tab;
+				const active = item === selectedTab;
 				item.setAttribute('aria-checked', active ? 'true' : 'false');
 				item.dataset.state = active ? 'active' : 'inactive';
 			});
-			panels.forEach((panel) => { panel.hidden = panel.id !== tab.dataset.bhpDetailTab; });
-		}));
+			panels.forEach((panel) => { panel.hidden = panel.id !== tabId; });
+			if (persist) {
+				try {
+					localStorage.setItem(tabStorageKey, tabId);
+				} catch (error) {
+				}
+			}
+		};
+
+		tabs.forEach((tab) => tab.addEventListener('click', () => activateTab(tab.dataset.bhpDetailTab)));
+		try {
+			activateTab(localStorage.getItem(tabStorageKey) || tabs[0]?.dataset.bhpDetailTab, false);
+		} catch (error) {
+			activateTab(tabs[0]?.dataset.bhpDetailTab, false);
+		}
 
 		const applyItemFilters = () => {
 			const laboran = itemFilterLaboran ? itemFilterLaboran.value : '';
@@ -441,6 +569,98 @@ ksort($laboratoryOptions);
 
 			evidenceForm.addEventListener('submit', () => {
 				const submitButton = evidenceForm.querySelector('button[type="submit"]');
+				if (submitButton) submitButton.disabled = true;
+			});
+		}
+
+		if (evidencePreviewDialog && evidencePreviewFrame) {
+			document.querySelectorAll('[data-bhp-evidence-preview]').forEach((button) => {
+				button.addEventListener('click', () => {
+					evidencePreviewFrame.src = button.dataset.previewUrl || 'about:blank';
+					if (evidenceDeleteForm) {
+						evidenceDeleteForm.action = button.dataset.deleteUrl || '';
+						evidenceDeleteForm.style.display = button.dataset.deleteUrl ? 'block' : 'none';
+					}
+					const title = button.dataset.previewTitle || 'Preview Evidence';
+					const titleElement = document.getElementById('bhpEvidencePreviewLabel');
+					if (titleElement) titleElement.textContent = title;
+					evidencePreviewDialog.dataset.state = 'open';
+					evidencePreviewDialog.setAttribute('aria-hidden', 'false');
+				});
+			});
+
+			evidencePreviewDialog.querySelectorAll('[data-stisla-dialog-dismiss]').forEach((element) => {
+				element.addEventListener('click', () => {
+					evidencePreviewDialog.dataset.state = 'closed';
+					evidencePreviewDialog.setAttribute('aria-hidden', 'true');
+					evidencePreviewFrame.src = 'about:blank';
+					if (evidenceDeleteForm) {
+						evidenceDeleteForm.action = '';
+						evidenceDeleteForm.style.display = 'none';
+					}
+				});
+			});
+		}
+
+		if (evidenceDeleteOpen && evidenceDeleteDialog && evidenceDeleteForm && evidenceDeleteConfirmForm) {
+			evidenceDeleteOpen.addEventListener('click', () => {
+				evidenceDeleteConfirmForm.action = evidenceDeleteForm.action;
+				evidenceDeleteDialog.dataset.state = 'open';
+				evidenceDeleteDialog.setAttribute('aria-hidden', 'false');
+			});
+
+			evidenceDeleteDialog.querySelectorAll('[data-stisla-dialog-dismiss]').forEach((element) => {
+				element.addEventListener('click', () => {
+					evidenceDeleteDialog.dataset.state = 'closed';
+					evidenceDeleteDialog.setAttribute('aria-hidden', 'true');
+				});
+			});
+
+			evidenceDeleteConfirmForm.addEventListener('submit', () => {
+				const submitButton = evidenceDeleteConfirmForm.querySelector('button[type="submit"]');
+				if (submitButton) submitButton.disabled = true;
+			});
+		}
+
+		if (verifyEvidenceOpen && verifyEvidenceDialog && verifyEvidenceForm) {
+			verifyEvidenceOpen.addEventListener('click', () => {
+				verifyEvidenceDialog.dataset.state = 'open';
+				verifyEvidenceDialog.setAttribute('aria-hidden', 'false');
+				window.requestAnimationFrame(() => {
+					const note = verifyEvidenceForm.querySelector('textarea[name="note"]');
+					if (note) note.focus();
+				});
+			});
+			verifyEvidenceDialog.querySelectorAll('[data-stisla-dialog-dismiss]').forEach((element) => {
+				element.addEventListener('click', () => {
+					verifyEvidenceDialog.dataset.state = 'closed';
+					verifyEvidenceDialog.setAttribute('aria-hidden', 'true');
+				});
+			});
+			verifyEvidenceForm.addEventListener('submit', () => {
+				const submitButton = verifyEvidenceForm.querySelector('button[type="submit"]');
+				if (submitButton) submitButton.disabled = true;
+			});
+		}
+
+		if (rejectEvidenceOpen && rejectEvidenceDialog && rejectEvidenceForm) {
+			rejectEvidenceOpen.addEventListener('click', () => {
+				const note = rejectEvidenceForm.querySelector('textarea[name="note"]');
+				if (note) note.value = '';
+				rejectEvidenceDialog.dataset.state = 'open';
+				rejectEvidenceDialog.setAttribute('aria-hidden', 'false');
+				window.requestAnimationFrame(() => {
+					if (note) note.focus();
+				});
+			});
+			rejectEvidenceDialog.querySelectorAll('[data-stisla-dialog-dismiss]').forEach((element) => {
+				element.addEventListener('click', () => {
+					rejectEvidenceDialog.dataset.state = 'closed';
+					rejectEvidenceDialog.setAttribute('aria-hidden', 'true');
+				});
+			});
+			rejectEvidenceForm.addEventListener('submit', () => {
+				const submitButton = rejectEvidenceForm.querySelector('button[type="submit"]');
 				if (submitButton) submitButton.disabled = true;
 			});
 		}

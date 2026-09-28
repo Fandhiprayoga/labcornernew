@@ -59,6 +59,7 @@ $routes->group('', ['filter' => 'session'], static function ($routes) {
         $routes->get('detail/(:uuid)', 'BhpController::detail/$1', ['filter' => 'permission:bhp.list']);
         $routes->post('evidence/(:uuid)', 'BhpController::evidence/$1', ['filter' => 'permission:bhp.evidence']);
         $routes->get('evidence/(:uuid)/(:uuid)', 'BhpController::downloadEvidence/$1/$2', ['filter' => 'permission:bhp.list']);
+        $routes->post('evidence/(:uuid)/(:uuid)/delete', 'BhpController::deleteEvidence/$1/$2', ['filter' => 'permission:bhp.evidence']);
         $routes->post('disburse/(:uuid)', 'BhpController::disburse/$1', ['filter' => 'permission:bhp.disburse']);
         $routes->post('verify/(:uuid)', 'BhpController::verify/$1', ['filter' => 'permission:bhp.verify']);
         $routes->post('reject-evidence/(:uuid)', 'BhpController::rejectEvidence/$1', ['filter' => 'permission:bhp.verify']);
